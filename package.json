@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "npm run build --prefix frontend"
+  },
   "dependencies": {
     "@netlify/functions": "^5.1.2",
     "apify-client": "^2.22.0",
