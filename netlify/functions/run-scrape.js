@@ -56,7 +56,7 @@ exports.handler = async (event, context) => {
       // "New In" pages are listings/categories, so we use listingUrls
       listingUrls: startUrls,
       scrapeMode: 'AUTO',
-      maxItems: 400,
+      maxProductResults: 400,
       proxyConfiguration: {
         useApifyProxy: true
       }
