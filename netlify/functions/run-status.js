@@ -35,6 +35,11 @@ exports.handler = async (event, context) => {
         const dataset = await client.dataset(run.defaultDatasetId).listItems();
         const items = dataset.items;
 
+        console.log(`Fetched ${items.length} items from Apify dataset.`);
+        if (items.length > 0) {
+            console.log('First item structure:', JSON.stringify(items[0], null, 2));
+        }
+
         // Google Sheets Auth
         const serviceAccountAuth = new JWT({
             email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -56,8 +61,13 @@ exports.handler = async (event, context) => {
 
         for (const item of items) {
             // Normalize Item - Handle multiple possible field names from different actors
-            const url = item.url || item.productUrl || item.product_url;
-            if (!url) continue; // Skip if no URL
+            // LOGGING: Check if we are finding the URL
+            const url = item.url || item.productUrl || item.product_url || item.canonicalUrl;
+
+            if (!url) {
+                console.log('Skipping item with no URL:', JSON.stringify(item));
+                continue;
+            }
 
             if (existingUrls.has(url)) {
                 duplicateCount++;
