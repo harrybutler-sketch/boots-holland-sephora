@@ -87,20 +87,19 @@ exports.handler = async (event, context) => {
             }
 
             newRows.push({
-                date_found: new Date().toISOString().split('T')[0],
-                retailer: retailer,
-                product_name: item.title || item.name || item.productName || item.product_name || '',
-                brand: item.brand || '',
-                category: item.category || item.breadcrumbs?.[0] || '', // standardized scrapers often have breadcrumbs
-                product_url: url,
-                price_value: price,
-                price_currency: currency,
-                price_display: item.price_display || `${currency} ${price}`,
-                rating_value: item.rating || item.rating_value || item.stars || '',
-                rating_count: item.reviewCount || item.rating_count || item.reviewsCount || item.reviews || '',
-                review_snippet: item.review_snippet ? item.review_snippet.substring(0, 200) : (item.description ? item.description.substring(0, 200) : ''),
-                run_id: runId,
-                scrape_timestamp: new Date().toISOString(),
+                'product': item.title || item.name || item.productName || item.product_name || '',
+                'retailer': retailer,
+                'product url': url,
+                'price': item.price_display || `${currency} ${price}`,
+                'reviews': item.reviewCount || item.rating_count || item.reviewsCount || item.reviews || '',
+                // Keeping other fields as potential extras if they add columns, or purely for logging if needed
+                // But for the sheet to work, these Main Keys must match the Header Row 1 exactly
+                'date_found': new Date().toISOString().split('T')[0],
+                'brand': item.brand || '',
+                'category': item.category || item.breadcrumbs?.[0] || '',
+                'rating_value': item.rating || item.rating_value || item.stars || '',
+                'run_id': runId,
+                'scrape_timestamp': new Date().toISOString(),
             });
 
             // Add to set to prevent duplicates within the same batch
