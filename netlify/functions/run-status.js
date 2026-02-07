@@ -55,33 +55,46 @@ exports.handler = async (event, context) => {
         const newRows = [];
 
         for (const item of items) {
-            if (!item.product_url) continue;
+            // Normalize Item - Handle multiple possible field names from different actors
+            const url = item.url || item.productUrl || item.product_url;
+            if (!url) continue; // Skip if no URL
 
-            if (existingUrls.has(item.product_url)) {
+            if (existingUrls.has(url)) {
                 duplicateCount++;
                 continue;
             }
 
-            // Normalize Item
+            const price = item.price || item.price_value || 0;
+            const currency = item.currency || item.price_currency || 'GBP';
+
+            // Derive retailer if missing
+            let retailer = item.retailer;
+            if (!retailer && url) {
+                if (url.includes('sephora.co.uk')) retailer = 'Sephora';
+                else if (url.includes('boots.com')) retailer = 'Boots';
+                else if (url.includes('hollandandbarrett.com')) retailer = 'Holland & Barrett';
+                else retailer = 'Unknown';
+            }
+
             newRows.push({
                 date_found: new Date().toISOString().split('T')[0],
-                retailer: item.retailer || 'Unknown', // Should come from userData or scrape
-                product_name: item.product_name,
-                brand: item.brand,
-                category: item.category,
-                product_url: item.product_url,
-                price_value: item.price_value,
-                price_currency: item.price_currency || 'GBP',
-                price_display: item.price_display,
-                rating_value: item.rating_value,
-                rating_count: item.rating_count,
-                review_snippet: item.review_snippet ? item.review_snippet.substring(0, 200) : '',
+                retailer: retailer,
+                product_name: item.title || item.name || item.productName || item.product_name || '',
+                brand: item.brand || '',
+                category: item.category || item.breadcrumbs?.[0] || '', // standardized scrapers often have breadcrumbs
+                product_url: url,
+                price_value: price,
+                price_currency: currency,
+                price_display: item.price_display || `${currency} ${price}`,
+                rating_value: item.rating || item.rating_value || item.stars || '',
+                rating_count: item.reviewCount || item.rating_count || item.reviewsCount || item.reviews || '',
+                review_snippet: item.review_snippet ? item.review_snippet.substring(0, 200) : (item.description ? item.description.substring(0, 200) : ''),
                 run_id: runId,
                 scrape_timestamp: new Date().toISOString(),
             });
 
             // Add to set to prevent duplicates within the same batch
-            existingUrls.add(item.product_url);
+            existingUrls.add(url);
         }
 
         if (newRows.length > 0) {
