@@ -55,7 +55,7 @@ export default async function handler(request, response) {
         // Call the actor
         const run = await client.actor(process.env.APIFY_ACTOR_ID).start({
             listingUrls: startUrls,
-            scrapeMode: 'AUTO',
+            scrapeMode: 'BROWSER',
             // Dynamic limit: 200 per retailer (e.g., 2 retailers = 400 items)
             maxProductResults: retailers.length * 200,
             proxyConfiguration: {
