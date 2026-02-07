@@ -51,39 +51,43 @@ export default async function handler(request, response) {
                 const brand = (row.get('brand') || '').toLowerCase();
                 return name.includes(searchLower) || brand.includes(searchLower);
             });
+            // 4. Require Product Name
+            filteredRows = filteredRows.filter(row => {
+                const name = row.get('product') || row.get('product_name');
+                return name && name.trim().length > 0;
+            });
+
+            // Sort by date_found descending (newest first)
+            filteredRows.sort((a, b) => {
+                const dateA = a.get('date_found');
+                const dateB = b.get('date_found');
+                if (dateA < dateB) return 1;
+                if (dateA > dateB) return -1;
+                return 0;
+            });
+
+            // Apply Limit
+            const validLimit = parseInt(limit);
+            const slicedRows = filteredRows.slice(0, validLimit);
+
+            // Map to JSON
+            const results = slicedRows.map(row => ({
+                date_found: row.get('date_found'),
+                retailer: row.get('retailer'),
+                product_name: row.get('product') || row.get('product_name'), // Fallback for old rows
+                brand: row.get('brand'),
+                category: row.get('category'),
+                product_url: row.get('product url') || row.get('product_url'), // Fallback for old rows
+                price_display: row.get('price') || row.get('price_display'), // Fallback
+                reviews: row.get('reviews') || row.get('rating_count'), // Fallback
+                rating: row.get('rating_value'),
+                status: 'Active' // Placeholder or derived
+            }));
+
+            return response.status(200).json(results);
+
+        } catch (error) {
+            console.error('Error fetching results:', error);
+            return response.status(500).json({ error: 'Internal Server Error' });
         }
-
-        // Sort by date_found descending (newest first)
-        filteredRows.sort((a, b) => {
-            const dateA = a.get('date_found');
-            const dateB = b.get('date_found');
-            if (dateA < dateB) return 1;
-            if (dateA > dateB) return -1;
-            return 0;
-        });
-
-        // Apply Limit
-        const validLimit = parseInt(limit);
-        const slicedRows = filteredRows.slice(0, validLimit);
-
-        // Map to JSON
-        const results = slicedRows.map(row => ({
-            date_found: row.get('date_found'),
-            retailer: row.get('retailer'),
-            product_name: row.get('product') || row.get('product_name'), // Fallback for old rows
-            brand: row.get('brand'),
-            category: row.get('category'),
-            product_url: row.get('product url') || row.get('product_url'), // Fallback for old rows
-            price_display: row.get('price') || row.get('price_display'), // Fallback
-            reviews: row.get('reviews') || row.get('rating_count'), // Fallback
-            rating: row.get('rating_value'),
-            status: 'Active' // Placeholder or derived
-        }));
-
-        return response.status(200).json(results);
-
-    } catch (error) {
-        console.error('Error fetching results:', error);
-        return response.status(500).json({ error: 'Internal Server Error' });
     }
-}

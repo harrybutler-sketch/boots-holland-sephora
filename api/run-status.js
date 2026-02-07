@@ -77,8 +77,15 @@ export default async function handler(request, response) {
                 else retailer = 'Unknown';
             }
 
+            const name = item.title || item.name || item.productName || item.product_name || '';
+
+            if (!name) {
+                console.log('Skipping item with no product name:', JSON.stringify(item));
+                continue;
+            }
+
             newRows.push({
-                'product': item.title || item.name || item.productName || item.product_name || '',
+                'product': name,
                 'retailer': retailer,
                 'product url': url,
                 'price': item.price_display || `${currency} ${price}`,
