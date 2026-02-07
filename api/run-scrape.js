@@ -7,7 +7,18 @@ export default async function handler(request, response) {
     }
 
     try {
-        const { retailers, mode } = request.body;
+        let { retailers, mode } = request.body || {};
+
+        // Handle case where body is a string (e.g. missing header)
+        if (typeof request.body === 'string') {
+            try {
+                const parsed = JSON.parse(request.body);
+                retailers = parsed.retailers;
+                mode = parsed.mode;
+            } catch (e) {
+                console.error('Failed to parse body:', e);
+            }
+        }
 
         if (!retailers || !Array.isArray(retailers) || retailers.length === 0) {
             return response.status(400).json({ error: 'Retailers list is required' });

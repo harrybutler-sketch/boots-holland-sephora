@@ -95,6 +95,9 @@ function App() {
     try {
       const response = await fetch('/api/run-scrape', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           retailers: activeRetailers,
           mode: 'new-in'
