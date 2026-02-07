@@ -78,8 +78,7 @@ function App() {
 
   const [selectedRetailers, setSelectedRetailers] = useState({
     'Sephora': true,
-    'Holland & Barrett': true,
-    'Boots': true
+    'Holland & Barrett': true
   });
 
   const handleRunScrape = async () => {

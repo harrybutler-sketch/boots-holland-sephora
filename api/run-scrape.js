@@ -37,16 +37,6 @@ export default async function handler(request, response) {
                 userData: { retailer: 'Sephora' },
             });
         }
-        if (retailers.includes('Boots')) {
-            startUrls.push({
-                url: 'https://www.boots.com/new-to-boots/new-in-beauty',
-                userData: { retailer: 'Boots' },
-            });
-            startUrls.push({
-                url: 'https://www.boots.com/new-to-boots/new-in-skincare',
-                userData: { retailer: 'Boots' },
-            });
-        }
         if (retailers.includes('Holland & Barrett')) {
             startUrls.push({
                 url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue',

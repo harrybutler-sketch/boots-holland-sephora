@@ -20,7 +20,7 @@ const Filters = ({ filters, onFilterChange }) => {
                     <option value="All">All Retailers</option>
                     <option value="Sephora">Sephora</option>
                     <option value="Holland & Barrett">Holland & Barrett</option>
-                    <option value="Boots">Boots</option>
+                    <option value="Holland & Barrett">Holland & Barrett</option>
                 </select>
             </div>
 
