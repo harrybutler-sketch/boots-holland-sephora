@@ -1,7 +1,10 @@
 [build]
-  command = "npm run build"
+  command = "npm install --prefix frontend && npm run build --prefix frontend"
   publish = "frontend/dist"
   functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
 
 [dev]
   command = "npm run dev --prefix frontend"
