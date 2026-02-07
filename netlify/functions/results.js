@@ -45,7 +45,7 @@ exports.handler = async (event, context) => {
         if (q) {
             const searchLower = q.toLowerCase();
             filteredRows = filteredRows.filter(row => {
-                const name = (row.get('product_name') || '').toLowerCase();
+                const name = (row.get('product') || row.get('product_name') || '').toLowerCase();
                 const brand = (row.get('brand') || '').toLowerCase();
                 return name.includes(searchLower) || brand.includes(searchLower);
             });
@@ -69,12 +69,12 @@ exports.handler = async (event, context) => {
         const results = slicedRows.map(row => ({
             date_found: row.get('date_found'),
             retailer: row.get('retailer'),
-            product_name: row.get('product_name'),
+            product_name: row.get('product') || row.get('product_name'), // Fallback for old rows
             brand: row.get('brand'),
             category: row.get('category'),
-            product_url: row.get('product_url'),
-            price_display: row.get('price_display'),
-            reviews: row.get('rating_count'), // prompt asked for 'reviews' column in frontend, mapping rating_count
+            product_url: row.get('product url') || row.get('product_url'), // Fallback for old rows
+            price_display: row.get('price') || row.get('price_display'), // Fallback
+            reviews: row.get('reviews') || row.get('rating_count'), // Fallback
             rating: row.get('rating_value'),
             status: 'Active' // Placeholder or derived
         }));
