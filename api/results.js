@@ -6,6 +6,9 @@ export default async function handler(request, response) {
         return response.status(405).send('Method Not Allowed');
     }
 
+    // Disable caching to ensure fresh results
+    response.setHeader('Cache-Control', 'no-store, max-age=0');
+
     try {
         const { limit = 200, retailer, days, q } = request.query;
 
