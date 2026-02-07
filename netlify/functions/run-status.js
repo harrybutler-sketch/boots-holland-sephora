@@ -53,7 +53,7 @@ exports.handler = async (event, context) => {
 
         // Fetch existing rows for deduplication
         const rows = await sheet.getRows();
-        const existingUrls = new Set(rows.map((row) => row.get('product_url')));
+        const existingUrls = new Set(rows.map((row) => row.get('product url')));
 
         let appendedCount = 0;
         let duplicateCount = 0;
