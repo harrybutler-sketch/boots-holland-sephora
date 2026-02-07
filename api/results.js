@@ -1,5 +1,5 @@
 import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
+import { getGoogleAuth } from '../lib/google-auth.js';
 
 export default async function handler(request, response) {
     if (request.method !== 'GET') {
@@ -13,11 +13,8 @@ export default async function handler(request, response) {
         const { limit = 200, retailer, days, q } = request.query;
 
         // Google Sheets Auth
-        const serviceAccountAuth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: process.env.GOOGLE_SERVICE_ACCOUNT_KEY.replace(/\\n/g, '\n'),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
+        // Google Sheets Auth
+        const serviceAccountAuth = getGoogleAuth();
 
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
