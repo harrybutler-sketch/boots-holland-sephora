@@ -1,4 +1,4 @@
-const { ApifyClient } = require('apify-client');
+import { ApifyClient } from 'apify-client';
 
 export default async function handler(request, response) {
     // Only allow POST

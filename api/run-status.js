@@ -1,6 +1,6 @@
-const { ApifyClient } = require('apify-client');
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
+import { ApifyClient } from 'apify-client';
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { JWT } from 'google-auth-library';
 
 export default async function handler(request, response) {
     if (request.method !== 'GET') {
