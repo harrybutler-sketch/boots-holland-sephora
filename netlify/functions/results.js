@@ -36,7 +36,9 @@ exports.handler = async (event, context) => {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
             filteredRows = filteredRows.filter(row => {
-                const rowDate = new Date(row.get('date_found'));
+                const dateVal = row.get('date_found');
+                if (!dateVal) return true; // Keep rows with no date (legacy/missing header)
+                const rowDate = new Date(dateVal);
                 return rowDate >= cutoffDate;
             });
         }
