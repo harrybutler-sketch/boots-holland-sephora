@@ -139,6 +139,17 @@ function App() {
         onReset={handleReset}
         selectedRetailers={selectedRetailers}
         onToggleRetailer={(retailer) => setSelectedRetailers(prev => ({ ...prev, [retailer]: !prev[retailer] }))}
+        onTestConnection={async () => {
+          const proceed = window.confirm("Run a connection test? This will add a 'Netlify Test' row to your Google Sheet.");
+          if (!proceed) return;
+          try {
+            const res = await fetch('/api/test-connection');
+            const data = await res.json();
+            alert(JSON.stringify(data, null, 2));
+          } catch (e) {
+            alert('Test Failed: ' + e.message);
+          }
+        }}
       />
 
       <Filters

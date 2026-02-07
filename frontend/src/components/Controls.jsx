@@ -1,6 +1,5 @@
-import React from 'react';
 
-function Controls({ runStatus, lastRun, onRunScrape, onReset, selectedRetailers, onToggleRetailer }) {
+function Controls({ runStatus, lastRun, onRunScrape, onReset, selectedRetailers, onToggleRetailer, onTestConnection }) {
     const isRunning = runStatus === 'RUNNING';
 
     return (
@@ -30,6 +29,20 @@ function Controls({ runStatus, lastRun, onRunScrape, onReset, selectedRetailers,
                     </button>
 
                     <div style={{ display: 'flex', gap: '1rem', marginLeft: '1rem', alignItems: 'center' }}>
+                        <button
+                            className="btn"
+                            onClick={onTestConnection}
+                            disabled={isRunning}
+                            style={{
+                                backgroundColor: 'transparent',
+                                color: 'var(--color-primary)',
+                                border: '1px solid var(--color-primary)',
+                                fontSize: '0.8rem',
+                                padding: '0.25rem 0.5rem'
+                            }}
+                        >
+                            Test Sheet
+                        </button>
                         {selectedRetailers && Object.keys(selectedRetailers).map(retailer => (
                             <label key={retailer} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
                                 <input
