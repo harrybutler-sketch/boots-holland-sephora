@@ -39,7 +39,11 @@ export default async function handler(request, response) {
         }
         if (retailers.includes('Boots')) {
             startUrls.push({
-                url: 'https://www.boots.com/new-to-boots',
+                url: 'https://www.boots.com/new-to-boots/new-in-beauty',
+                userData: { retailer: 'Boots' },
+            });
+            startUrls.push({
+                url: 'https://www.boots.com/new-to-boots/new-in-skincare',
                 userData: { retailer: 'Boots' },
             });
         }
