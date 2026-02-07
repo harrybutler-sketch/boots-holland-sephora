@@ -52,9 +52,10 @@ exports.handler = async (event, context) => {
     // Call the actor
     // Using a placeholder Actor ID from environment variables
     const run = await client.actor(process.env.APIFY_ACTOR_ID).call({
-      startUrls: startUrls,
-      // e-commerce-scraping-tool specific options
-      // It effectively detects listing vs detail pages
+      // e-commerce-scraping-tool requires specific url arrays
+      // "New In" pages are listings/categories, so we use listingUrls
+      listingUrls: startUrls,
+      scrapeMode: 'Auto',
       maxItems: 200,
       proxyConfiguration: {
         useApifyProxy: true
