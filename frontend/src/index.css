@@ -4,13 +4,15 @@
   --color-surface: #ffffff;
   --color-text-primary: #1f2937;
   --color-text-secondary: #6b7280;
-  --color-accent: #6366f1; /* Indigo 500 */
-  --color-accent-hover: #4f46e5; /* Indigo 600 */
+  --color-accent: #6366f1;
+  /* Indigo 500 */
+  --color-accent-hover: #4f46e5;
+  /* Indigo 600 */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-border: #e5e7eb;
-  
+
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --radius-md: 0.5rem;
@@ -114,14 +116,34 @@ h1 {
   background-color: var(--color-text-secondary);
 }
 
-.status-dot.running { background-color: var(--color-warning); animation: pulse 1.5s infinite; }
-.status-dot.succeeded { background-color: var(--color-success); }
-.status-dot.failed { background-color: var(--color-error); }
+.status-dot.running {
+  background-color: var(--color-warning);
+  animation: pulse 1.5s infinite;
+}
+
+.status-dot.succeeded {
+  background-color: var(--color-success);
+}
+
+.status-dot.failed {
+  background-color: var(--color-error);
+}
 
 @keyframes pulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Filters */
@@ -143,7 +165,8 @@ h1 {
   color: var(--color-text-secondary);
 }
 
-.input, .select {
+.input,
+.select {
   padding: 0.625rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -153,7 +176,8 @@ h1 {
   transition: border-color 0.15s ease;
 }
 
-.input:focus, .select:focus {
+.input:focus,
+.select:focus {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
@@ -229,4 +253,29 @@ tr:hover td {
   text-align: center;
   padding: 4rem 2rem;
   color: var(--color-text-secondary);
+}
+
+/* New Buttons */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.btn-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.btn-success:hover {
+  filter: brightness(0.9);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+}
+
+.btn-outline:hover {
+  background-color: #f5f3ff;
 }
