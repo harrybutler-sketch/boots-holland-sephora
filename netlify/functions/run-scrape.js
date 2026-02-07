@@ -53,34 +53,12 @@ exports.handler = async (event, context) => {
     // Using a placeholder Actor ID from environment variables
     const run = await client.actor(process.env.APIFY_ACTOR_ID).call({
       startUrls: startUrls,
-      // Generic page function to extract basic metadata (MUST BE A STRING)
-      pageFunction: `async function pageFunction(context) {
-          const { request, log, jQuery: $ } = context;
-          const title = $('title').text();
-          const h1 = $('h1').text();
-          const url = request.url;
-          
-          let price = $('[itemprop="price"]').text() || 
-                      $('.price').text() || 
-                      $('.product-price').text() ||
-                      '';
-
-          return {
-              url,
-              title,
-              h1,
-              price: price ? price.trim() : '',
-              retailer: request.userData.retailer
-          };
-      }`,
-      // simple link selector to traverse pagination if needed, 
-      // or just keep it restricted to startUrls for "New In"
-      linkSelector: 'a[href]',
-      pseudoUrls: [
-        { purl: 'https://www.sephora.co.uk/[.*]' },
-        { purl: 'https://www.boots.com/[.*]' },
-        { purl: 'https://www.hollandandbarrett.com/[.*]' }
-      ]
+      // e-commerce-scraping-tool specific options
+      // It effectively detects listing vs detail pages
+      maxItems: 200,
+      proxyConfiguration: {
+        useApifyProxy: true
+      }
     });
 
     return {
