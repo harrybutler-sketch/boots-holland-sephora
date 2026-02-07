@@ -38,7 +38,7 @@ exports.handler = async (event, context) => {
       });
     }
     if (retailers.includes('Holland & Barrett')) {
-        // H&B has two provided URLs, adding both
+      // H&B has two provided URLs, adding both
       startUrls.push({
         url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue',
         userData: { retailer: 'Holland & Barrett' },
@@ -69,7 +69,7 @@ exports.handler = async (event, context) => {
     console.error('Error triggering scrape:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to trigger scrape' }),
+      body: JSON.stringify({ error: `Failed to trigger scrape: ${error.message}` }),
     };
   }
 };
