@@ -46,6 +46,10 @@ export default async function handler(request, response) {
                 url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue',
                 userData: { retailer: 'Holland & Barrett' },
             });
+            startUrls.push({
+                url: 'https://www.hollandandbarrett.com/shop/highlights/new-in/?page=5',
+                userData: { retailer: 'Holland & Barrett' },
+            });
         }
 
         // Call the actor
