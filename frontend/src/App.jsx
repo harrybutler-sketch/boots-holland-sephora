@@ -76,13 +76,27 @@ function App() {
     return () => clearInterval(intervalId);
   }, [runStatus, runId, fetchResults]);
 
+  const [selectedRetailers, setSelectedRetailers] = useState({
+    'Sephora': true,
+    'Holland & Barrett': true,
+    'Boots': true
+  });
+
   const handleRunScrape = async () => {
+    // Get list of selected retailers
+    const activeRetailers = Object.keys(selectedRetailers).filter(r => selectedRetailers[r]);
+
+    if (activeRetailers.length === 0) {
+      alert('Please select at least one retailer to scrape.');
+      return;
+    }
+
     setRunStatus('RUNNING');
     try {
       const response = await fetch('/api/run-scrape', {
         method: 'POST',
         body: JSON.stringify({
-          retailers: ['Sephora', 'Holland & Barrett', 'Boots'],
+          retailers: activeRetailers,
           mode: 'new-in'
         })
       });
@@ -123,6 +137,8 @@ function App() {
         lastRun={lastRunTime}
         onRunScrape={handleRunScrape}
         onReset={handleReset}
+        selectedRetailers={selectedRetailers}
+        onToggleRetailer={(retailer) => setSelectedRetailers(prev => ({ ...prev, [retailer]: !prev[retailer] }))}
       />
 
       <Filters
