@@ -50,8 +50,8 @@ exports.handler = async (event, context) => {
     }
 
     // Call the actor
-    // Using a placeholder Actor ID from environment variables
-    const run = await client.actor(process.env.APIFY_ACTOR_ID).call({
+    // Using .start() instead of .call() to return immediately and avoid Netlify 10s timeout
+    const run = await client.actor(process.env.APIFY_ACTOR_ID).start({
       // e-commerce-scraping-tool requires specific url arrays
       // "New In" pages are listings/categories, so we use listingUrls
       listingUrls: startUrls,
