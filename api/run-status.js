@@ -99,8 +99,14 @@ export default async function handler(request, response) {
             existingUrls.add(url);
         }
 
+        // Batch write to avoid timeouts/limits
         if (newRows.length > 0) {
-            await sheet.addRows(newRows);
+            const BATCH_SIZE = 50;
+            for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
+                const chunk = newRows.slice(i, i + BATCH_SIZE);
+                console.log(`Writing batch ${i / BATCH_SIZE + 1} of ${Math.ceil(newRows.length / BATCH_SIZE)}...`);
+                await sheet.addRows(chunk);
+            }
             appendedCount = newRows.length;
         }
 
