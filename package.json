@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "npm run build --prefix frontend"
+    "build": "npm install --prefix frontend && npm run build --prefix frontend"
   },
   "dependencies": {
     "@netlify/functions": "^5.1.2",
