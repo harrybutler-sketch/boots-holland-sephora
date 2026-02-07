@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@netlify/functions": "^5.1.2",
+    "apify-client": "^2.22.0",
+    "dotenv": "^17.2.4",
+    "google-auth-library": "^10.5.0",
+    "google-spreadsheet": "^5.0.2",
+    "jwt-decode": "^4.0.0"
+  }
+}

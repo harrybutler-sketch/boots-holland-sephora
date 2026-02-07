@@ -1,0 +1,21 @@
+# Netlify
+.netlify/
+
+# Environment Variables
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build
+dist/
+frontend/dist/
+
+# OS
+.DS_Store
