@@ -74,8 +74,8 @@ exports.handler = async (event, context) => {
                 continue;
             }
 
-            const price = item.price || item.price_value || 0;
-            const currency = item.currency || item.price_currency || 'GBP';
+            const price = item.price || item.price_value || (item.offers && item.offers.price) || 0;
+            const currency = item.currency || item.price_currency || (item.offers && item.offers.priceCurrency) || 'GBP';
 
             // Derive retailer if missing
             let retailer = item.retailer;
@@ -95,9 +95,9 @@ exports.handler = async (event, context) => {
                 // Keeping other fields as potential extras if they add columns, or purely for logging if needed
                 // But for the sheet to work, these Main Keys must match the Header Row 1 exactly
                 'date_found': new Date().toISOString().split('T')[0],
-                'brand': item.brand || '',
+                'brand': (typeof item.brand === 'string' ? item.brand : (item.brand && item.brand.name)) || '',
                 'category': item.category || item.breadcrumbs?.[0] || '',
-                'rating_value': item.rating || item.rating_value || item.stars || '',
+                'rating_value': item.rating || item.rating_value || item.stars || (item.aggregateRating && item.aggregateRating.ratingValue) || '',
                 'run_id': runId,
                 'scrape_timestamp': new Date().toISOString(),
             });
