@@ -55,7 +55,7 @@ exports.handler = async (event, context) => {
       // e-commerce-scraping-tool requires specific url arrays
       // "New In" pages are listings/categories, so we use listingUrls
       listingUrls: startUrls,
-      scrapeMode: 'Auto',
+      scrapeMode: 'AUTO',
       maxItems: 200,
       proxyConfiguration: {
         useApifyProxy: true
