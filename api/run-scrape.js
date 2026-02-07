@@ -52,8 +52,8 @@ export default async function handler(request, response) {
         const run = await client.actor(process.env.APIFY_ACTOR_ID).start({
             listingUrls: startUrls,
             scrapeMode: 'AUTO',
-            // Dynamic limit: 250 per retailer (e.g., 3 retailers = 750 items)
-            maxProductResults: retailers.length * 250,
+            // Dynamic limit: 400 per retailer (e.g., 2 retailers = 800 items)
+            maxProductResults: retailers.length * 400,
             proxyConfiguration: {
                 useApifyProxy: true
             }
