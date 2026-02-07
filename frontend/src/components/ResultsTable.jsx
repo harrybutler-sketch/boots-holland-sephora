@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ResultsTable = ({ data, loading }) => {
+const ResultsTable = ({ data, loading, onToggleStatus }) => {
     if (loading) {
         return <div className="card empty-state">Loading results...</div>;
     }
@@ -14,18 +14,19 @@ const ResultsTable = ({ data, loading }) => {
             <table>
                 <thead>
                     <tr>
-                        <th>Date</th>
+                        <th style={{ width: '100px' }}>Date</th>
                         <th>Retailer</th>
                         <th>Brand</th>
                         <th>Product</th>
-                        <th>Price</th>
-                        <th>Rating</th>
+                        <th style={{ width: '100px' }}>Price</th>
+                        <th style={{ width: '100px' }}>Rating</th>
+                        <th style={{ width: '120px' }}>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {data.map((item, index) => (
-                        <tr key={`${item.product_url}-${index}`}>
-                            <td>{item.date_found}</td>
+                        <tr key={`${item.product_url}-${index}`} className={item.status === 'Dealt With' ? 'row-dealt-with' : ''}>
+                            <td style={{ fontSize: '0.85rem' }}>{item.date_found}</td>
                             <td>
                                 <span className="badge badge-retailer">{item.retailer}</span>
                             </td>
@@ -46,6 +47,15 @@ const ResultsTable = ({ data, loading }) => {
                                     <span>{item.rating || '-'}</span>
                                     <span style={{ color: '#9ca3af', fontSize: '0.8em' }}>({item.reviews || 0})</span>
                                 </div>
+                            </td>
+                            <td>
+                                <button
+                                    className={`btn btn-sm ${item.status === 'Dealt With' ? 'btn-success' : 'btn-outline'}`}
+                                    onClick={() => onToggleStatus(item.product_url, item.status === 'Dealt With' ? 'Pending' : 'Dealt With')}
+                                    style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                                >
+                                    {item.status === 'Dealt With' ? '✓ Dealt With' : 'Mark Dealt'}
+                                </button>
                             </td>
                         </tr>
                     ))}

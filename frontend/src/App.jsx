@@ -162,6 +162,24 @@ function App() {
       <ResultsTable
         data={data}
         loading={loading}
+        onToggleStatus={async (url, newStatus) => {
+          // Optimistic update
+          setData(prev => prev.map(item =>
+            item.product_url === url ? { ...item, status: newStatus } : item
+          ));
+
+          try {
+            await fetch('/api/update-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productUrl: url, status: newStatus })
+            });
+          } catch (e) {
+            console.error('Failed to update status:', e);
+            // Revert on error
+            fetchResults();
+          }
+        }}
       />
     </div>
   );

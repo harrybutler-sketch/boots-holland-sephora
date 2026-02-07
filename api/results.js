@@ -82,7 +82,7 @@ export default async function handler(request, response) {
             price_display: row.get('price') || row.get('price_display'), // Fallback
             reviews: row.get('reviews') || row.get('rating_count'), // Fallback
             rating: row.get('rating_value'),
-            status: 'Active' // Placeholder or derived
+            status: row.get('status') || 'Pending'
         }));
 
         return response.status(200).json(results);

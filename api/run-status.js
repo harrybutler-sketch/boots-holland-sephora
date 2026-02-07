@@ -95,6 +95,7 @@ export default async function handler(request, response) {
                 'brand': (typeof item.brand === 'string' ? item.brand : (item.brand && item.brand.name)) || '',
                 'category': item.category || item.breadcrumbs?.[0] || '',
                 'rating_value': item.rating || item.rating_value || item.stars || (item.aggregateRating && item.aggregateRating.ratingValue) || '',
+                'status': 'Pending',
                 'run_id': runId,
                 'scrape_timestamp': new Date().toISOString(),
             });
