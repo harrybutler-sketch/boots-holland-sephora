@@ -43,17 +43,6 @@ function Controls({ runStatus, lastRun, onRunScrape, onReset, selectedRetailers,
                         >
                             Test Sheet
                         </button>
-                        {selectedRetailers && Object.keys(selectedRetailers).map(retailer => (
-                            <label key={retailer} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={selectedRetailers[retailer]}
-                                    onChange={() => onToggleRetailer(retailer)}
-                                    disabled={isRunning}
-                                />
-                                {retailer}
-                            </label>
-                        ))}
                     </div>
                 </div>
 
