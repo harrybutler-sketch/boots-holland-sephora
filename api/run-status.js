@@ -168,6 +168,27 @@ export default async function handler(request, response) {
                 }
             }
 
+            // FILTER: Skip own brands
+            const ownBrandMap = {
+                'Sephora': ['sephora'],
+                'Holland & Barrett': ['holland', 'barrett', 'h&b'],
+                'Sainsburys': ['sainsbury', 'hubbard'],
+                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman'],
+                'Asda': ['asda', 'extra special', 'just essentials'],
+                'Morrisons': ['morrison', 'the best', 'savers'],
+                'Ocado': ['ocado'],
+                'Waitrose': ['waitrose', 'essential waitrose']
+            };
+
+            const lowercaseManufacturer = (manufacturer || '').toLowerCase();
+            const ownBrandKeywords = ownBrandMap[retailer] || [];
+
+            const isOwnBrand = ownBrandKeywords.some(kw => lowercaseManufacturer.includes(kw));
+            if (isOwnBrand) {
+                console.log(`Skipping own-brand product: ${name} (${manufacturer}) at ${retailer}`);
+                continue;
+            }
+
             // ROBUST CATEGORY MAPPING
             const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || item.section || '';
             const categoryName = (typeof rawCategory === 'string' ? rawCategory : (rawCategory && (rawCategory.name || rawCategory.title || rawCategory.label))) || '';
