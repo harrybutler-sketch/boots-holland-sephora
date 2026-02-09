@@ -88,9 +88,16 @@ export default async function handler(request, response) {
 
             let retailer = item.retailer;
             if (!retailer && url) {
-                if (url.includes('sephora.co.uk')) retailer = 'Sephora';
-                else if (url.includes('boots.com')) retailer = 'Boots';
-                else if (url.includes('hollandandbarrett.com')) retailer = 'Holland & Barrett';
+                const lowerUrl = url.toLowerCase();
+                if (lowerUrl.includes('sephora.co.uk')) retailer = 'Sephora';
+                else if (lowerUrl.includes('boots.com')) retailer = 'Boots';
+                else if (lowerUrl.includes('hollandandbarrett.com')) retailer = 'Holland & Barrett';
+                else if (lowerUrl.includes('sainsburys.co.uk')) retailer = 'Sainsburys';
+                else if (lowerUrl.includes('tesco.com')) retailer = 'Tesco';
+                else if (lowerUrl.includes('asda.com')) retailer = 'Asda';
+                else if (lowerUrl.includes('morrisons.com')) retailer = 'Morrisons';
+                else if (lowerUrl.includes('ocado.com')) retailer = 'Ocado';
+                else if (lowerUrl.includes('waitrose.com')) retailer = 'Waitrose';
                 else retailer = 'Unknown';
             }
 
@@ -111,9 +118,18 @@ export default async function handler(request, response) {
             const rawBrand = item.brand || item.brandName || (item.attributes && item.attributes.brand) || '';
             let brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
 
-            // 1. Clean up "Shop all" prefix FIRST
+            // 1. Clean up "Shop all" prefix and corporate suffixes
             if (brandName) {
-                brandName = brandName.replace(/^Shop all\s+/i, '').replace(/\.$/, '').trim();
+                brandName = brandName
+                    .replace(/^Shop all\s+/i, '')
+                    .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
+                    .replace(/\.$/, '')
+                    .trim();
+
+                // If brand name is the same as the product name (common scraper error), clear it
+                if (brandName.toLowerCase() === name.toLowerCase()) {
+                    brandName = '';
+                }
             }
 
             // 2. Filter out ONLY true promotional text
@@ -135,11 +151,22 @@ export default async function handler(request, response) {
                 }
             }
 
-            const manufacturer = brandName ||
+            let manufacturer = brandName ||
                 (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
                 item.vendor ||
                 item.merchant ||
                 '';
+
+            // Clean manufacturer too
+            if (manufacturer) {
+                manufacturer = manufacturer
+                    .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
+                    .trim();
+
+                if (manufacturer.toLowerCase() === name.toLowerCase()) {
+                    manufacturer = '';
+                }
+            }
 
             // ROBUST CATEGORY MAPPING
             const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || item.section || '';
