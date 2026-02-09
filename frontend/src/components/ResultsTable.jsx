@@ -33,10 +33,11 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                             <td>
                                 {item.manufacturer ? (
                                     <a
-                                        href={`https://www.google.com/search?q=${encodeURIComponent(item.manufacturer)}+official+website`}
+                                        href={`https://duckduckgo.com/?q=%21ducky+${encodeURIComponent(item.manufacturer)}+official+website`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="brand-link"
+                                        title={`Go to ${item.manufacturer} website`}
                                     >
                                         {item.manufacturer}
                                     </a>
