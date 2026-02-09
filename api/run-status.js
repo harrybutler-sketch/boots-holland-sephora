@@ -92,7 +92,12 @@ export default async function handler(request, response) {
 
             // ROBUST BRAND MAPPING
             const rawBrand = item.brand || item.brandName || item.manufacturer || item.vendor || item.merchant || (item.attributes && item.attributes.brand) || '';
-            const brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
+            let brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
+
+            // Clean up common "Shop all" prefix from H&B
+            if (brandName) {
+                brandName = brandName.replace(/^Shop all\s+/i, '').replace(/\.$/, '').trim();
+            }
 
             // ROBUST CATEGORY MAPPING
             const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || item.section || '';
