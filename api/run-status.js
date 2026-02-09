@@ -151,6 +151,26 @@ export default async function handler(request, response) {
                 }
             }
 
+            // 4. Final Fallback for Grocery: Take first 1-2 words of name if they look like a brand
+            if (!brandName && name) {
+                const words = name.split(' ');
+                if (words.length > 0) {
+                    const firstOne = words[0];
+                    const firstTwo = words.slice(0, 2).join(' ');
+
+                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks'];
+                    const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
+
+                    if (isRetailerName) {
+                        // It's likely an own-brand, extract it so it can be filtered/labeled correctly
+                        brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
+                    } else if (words.length > 1 && /^[A-Z]/.test(firstOne)) {
+                        // Heuristic: First word capitalized is often the brand
+                        brandName = firstOne;
+                    }
+                }
+            }
+
             let manufacturer = brandName ||
                 (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
                 item.vendor ||
@@ -161,6 +181,7 @@ export default async function handler(request, response) {
             if (manufacturer) {
                 manufacturer = manufacturer
                     .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
+                    .replace(/\.$/, '')
                     .trim();
 
                 if (manufacturer.toLowerCase() === name.toLowerCase()) {
@@ -172,20 +193,25 @@ export default async function handler(request, response) {
             const ownBrandMap = {
                 'Sephora': ['sephora'],
                 'Holland & Barrett': ['holland', 'barrett', 'h&b'],
-                'Sainsburys': ['sainsbury', 'hubbard'],
-                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman'],
+                'Sainsburys': ['sainsbury', 'hubbard', 'by sainsbury'],
+                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest'],
                 'Asda': ['asda', 'extra special', 'just essentials'],
                 'Morrisons': ['morrison', 'the best', 'savers'],
                 'Ocado': ['ocado'],
-                'Waitrose': ['waitrose', 'essential waitrose']
+                'Waitrose': ['waitrose', 'essential waitrose', 'no.1']
             };
 
             const lowercaseManufacturer = (manufacturer || '').toLowerCase();
+            const lowercaseName = name.toLowerCase();
             const ownBrandKeywords = ownBrandMap[retailer] || [];
 
-            const isOwnBrand = ownBrandKeywords.some(kw => lowercaseManufacturer.includes(kw));
+            const isOwnBrand = ownBrandKeywords.some(kw =>
+                lowercaseManufacturer.includes(kw) ||
+                (lowercaseManufacturer === '' && lowercaseName.startsWith(kw))
+            );
+
             if (isOwnBrand) {
-                console.log(`Skipping own-brand product: ${name} (${manufacturer}) at ${retailer}`);
+                console.log(`Skipping own-brand: ${name} (${manufacturer || 'Unknown Brand'})`);
                 continue;
             }
 
