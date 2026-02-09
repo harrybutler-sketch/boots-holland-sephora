@@ -56,8 +56,8 @@ export default async function handler(request, response) {
         const run = await client.actor(process.env.APIFY_ACTOR_ID).start({
             listingUrls: startUrls,
             scrapeMode: 'BROWSER',
-            // Limit to 2 products as requested
-            maxProductResults: 2,
+            // Increased limit for production
+            maxProductResults: 200,
             proxyConfiguration: {
                 useApifyProxy: true
             }

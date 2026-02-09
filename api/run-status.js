@@ -85,6 +85,12 @@ export default async function handler(request, response) {
 
             const name = item.title || item.name || item.productName || item.product_name || '';
 
+            // FILTER: Skip generic "Choose a shade" listings
+            if (name.toLowerCase().includes('choose a shade')) {
+                console.log(`Skipping generic variation listing: ${name}`);
+                continue;
+            }
+
             if (!name) {
                 console.log('Skipping item with no product name:', JSON.stringify(item));
                 continue;
