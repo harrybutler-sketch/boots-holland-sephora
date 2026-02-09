@@ -4,6 +4,7 @@ import Filters from './components/Filters';
 import ResultsTable from './components/ResultsTable';
 
 function App() {
+  const [workspace, setWorkspace] = useState('beauty'); // 'beauty' or 'grocery'
   const [runStatus, setRunStatus] = useState('Idle');
   const [runId, setRunId] = useState(null);
   const [lastRunTime, setLastRunTime] = useState(null);
@@ -23,7 +24,8 @@ function App() {
         limit: '200',
         retailer: filters.retailer,
         days: filters.days,
-        q: filters.q
+        q: filters.q,
+        workspace: workspace
       });
 
       const response = await fetch(`/api/results?${queryParams}`);
@@ -41,7 +43,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, workspace]);
 
   // Initial Fetch & Filter Change
   useEffect(() => {
@@ -55,7 +57,7 @@ function App() {
     if (runStatus === 'RUNNING' && runId) {
       intervalId = setInterval(async () => {
         try {
-          const response = await fetch(`/api/run-status?runId=${runId}`);
+          const response = await fetch(`/api/run-status?runId=${runId}&workspace=${workspace}`);
           const result = await response.json();
 
           if (result.status === 'SUCCEEDED' || result.status === 'FAILED') {
@@ -74,16 +76,26 @@ function App() {
     }
 
     return () => clearInterval(intervalId);
-  }, [runStatus, runId, fetchResults]);
+  }, [runStatus, runId, fetchResults, workspace]);
 
   const [selectedRetailers, setSelectedRetailers] = useState({
     'Sephora': true,
-    'Holland & Barrett': true
+    'Holland & Barrett': true,
+    'Sainsburys': true,
+    'Tesco': true,
+    'Asda': true,
+    'Morrisons': true,
+    'Ocado': true,
+    'Waitrose': true
   });
 
   const handleRunScrape = async () => {
-    // Get list of selected retailers
-    const activeRetailers = Object.keys(selectedRetailers).filter(r => selectedRetailers[r]);
+    // Get list of selected retailers based on workspace
+    const beautyRetailers = ['Sephora', 'Holland & Barrett'];
+    const groceryRetailers = ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
+
+    const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : groceryRetailers;
+    const activeRetailers = activeWorkspaceRetailers.filter(r => selectedRetailers[r]);
 
     if (activeRetailers.length === 0) {
       alert('Please select at least one retailer to scrape.');
@@ -99,7 +111,8 @@ function App() {
         },
         body: JSON.stringify({
           retailers: activeRetailers,
-          mode: 'new-in'
+          mode: 'new-in',
+          workspace: workspace
         })
       });
       const result = await response.json();
@@ -128,6 +141,38 @@ function App() {
     });
   };
 
+  const handleExportCSV = () => {
+    if (data.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const headers = ['Date', 'Retailer', 'Manufacturer', 'Product Name', 'Price', 'Rating', 'Reviews', 'Product URL'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(item => [
+        item.date_found,
+        `"${item.retailer}"`,
+        `"${item.manufacturer}"`,
+        `"${item.product_name.replace(/"/g, '""')}"`,
+        `"${item.price_display}"`,
+        item.rating,
+        item.reviews,
+        item.product_url
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `scraper_export_${workspace}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
   return (
     <div className="container">
       <header>
@@ -135,10 +180,16 @@ function App() {
       </header>
 
       <Controls
+        workspace={workspace}
+        onWorkspaceChange={(ws) => {
+          setWorkspace(ws);
+          setFilters(f => ({ ...f, retailer: 'All' }));
+        }}
         runStatus={runStatus}
         lastRun={lastRunTime}
         onRunScrape={handleRunScrape}
         onReset={handleReset}
+        onExportCSV={handleExportCSV}
         selectedRetailers={selectedRetailers}
         onToggleRetailer={(retailer) => setSelectedRetailers(prev => ({ ...prev, [retailer]: !prev[retailer] }))}
         onTestConnection={async () => {
@@ -155,6 +206,7 @@ function App() {
       />
 
       <Filters
+        workspace={workspace}
         filters={filters}
         onFilterChange={setFilters}
       />

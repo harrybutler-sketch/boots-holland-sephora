@@ -7,7 +7,7 @@ export default async function handler(request, response) {
         return response.status(405).send('Method Not Allowed');
     }
 
-    const { runId } = request.query;
+    const { runId, workspace = 'beauty' } = request.query;
     if (!runId) {
         return response.status(400).json({ error: 'runId is required' });
     }
@@ -42,7 +42,18 @@ export default async function handler(request, response) {
 
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
-        const sheet = doc.sheetsByIndex[0];
+
+        // Select tab based on workspace
+        const sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
+        let sheet = doc.sheetsByTitle[sheetTitle];
+
+        if (!sheet) {
+            console.log(`Creating new sheet tab: ${sheetTitle}`);
+            sheet = await doc.addSheet({
+                title: sheetTitle,
+                headerValues: ['date_found', 'retailer', 'manufacturer', 'product', 'brand', 'price', 'reviews', 'rating_value', 'product url', 'status', 'run_id', 'scrape_timestamp', 'category']
+            });
+        }
 
         // Fetch existing rows for deduplication
         const rows = await sheet.getRows();

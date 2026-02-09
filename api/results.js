@@ -10,14 +10,20 @@ export default async function handler(request, response) {
     response.setHeader('Cache-Control', 'no-store, max-age=0');
 
     try {
-        const { limit = 200, retailer, days, q } = request.query;
+        const { limit = 200, retailer, days, q, workspace = 'beauty' } = request.query;
 
         // Google Sheets Auth
         const serviceAccountAuth = getGoogleAuth();
 
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
-        const sheet = doc.sheetsByIndex[0];
+
+        const sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
+        const sheet = doc.sheetsByTitle[sheetTitle];
+
+        if (!sheet) {
+            return response.status(200).json([]); // No data yet for this workspace
+        }
 
         // Fetch rows
         const rows = await sheet.getRows();

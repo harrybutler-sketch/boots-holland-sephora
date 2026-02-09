@@ -1,10 +1,14 @@
 import React from 'react';
 
-const Filters = ({ filters, onFilterChange }) => {
+const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         onFilterChange({ ...filters, [name]: value });
     };
+
+    const retailers = workspace === 'beauty'
+        ? ['Sephora', 'Holland & Barrett']
+        : ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
 
     return (
         <div className="card filters">
@@ -18,8 +22,9 @@ const Filters = ({ filters, onFilterChange }) => {
                     onChange={handleChange}
                 >
                     <option value="All">All Retailers</option>
-                    <option value="Sephora">Sephora</option>
-                    <option value="Holland & Barrett">Holland & Barrett</option>
+                    {retailers.map(r => (
+                        <option key={r} value={r}>{r}</option>
+                    ))}
                 </select>
             </div>
 
