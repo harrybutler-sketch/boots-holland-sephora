@@ -92,11 +92,11 @@ export default async function handler(request, response) {
 
             // ROBUST BRAND MAPPING
             const rawBrand = item.brand || item.brandName || item.manufacturer || item.vendor || item.merchant || (item.attributes && item.attributes.brand) || '';
-            const brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title))) || '';
+            const brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
 
             // ROBUST CATEGORY MAPPING
-            const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || '';
-            const categoryName = (typeof rawCategory === 'string' ? rawCategory : (rawCategory && (rawCategory.name || rawCategory.title))) || '';
+            const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || item.section || '';
+            const categoryName = (typeof rawCategory === 'string' ? rawCategory : (rawCategory && (rawCategory.name || rawCategory.title || rawCategory.label))) || '';
 
             // ROBUST REVIEWS/RATING MAPPING
             const reviewCount = item.reviewCount || item.reviewsCount || item.reviews_count || item.rating_count ||
