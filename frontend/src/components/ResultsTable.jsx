@@ -16,6 +16,7 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                     <tr>
                         <th style={{ width: '100px' }}>Date</th>
                         <th>Retailer</th>
+                        <th>Manufacturer</th>
                         <th>Brand</th>
                         <th>Product</th>
                         <th style={{ width: '100px' }}>Price</th>
@@ -30,6 +31,7 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                             <td>
                                 <span className="badge badge-retailer">{item.retailer}</span>
                             </td>
+                            <td>{item.manufacturer}</td>
                             <td>{item.brand}</td>
                             <td>
                                 {item.product_url ? (

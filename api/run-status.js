@@ -53,6 +53,12 @@ export default async function handler(request, response) {
         let duplicateCount = 0;
         const newRows = [];
 
+        // Ensure Manufacturer column exists
+        if (!sheet.headerValues.includes('manufacturer')) {
+            console.log('Adding manufacturer column to sheet...');
+            await sheet.setHeaderRow([...sheet.headerValues, 'manufacturer']);
+        }
+
         for (const item of items) {
             const url = item.url || item.productUrl || item.product_url || item.canonicalUrl;
 
@@ -84,15 +90,17 @@ export default async function handler(request, response) {
                 continue;
             }
 
+            const brandName = (typeof item.brand === 'string' ? item.brand : (item.brand && item.brand.name)) || '';
+
             newRows.push({
                 'product': name,
                 'retailer': retailer,
                 'product url': url,
                 'price': item.price_display || `${currency} ${price}`,
                 'reviews': item.reviewCount || item.rating_count || item.reviews_count || item.reviewsCount || (item.reviews && (item.reviews.count || item.reviews.total || item.reviews)) || '',
-                // Keeping other fields as potential extras
                 'date_found': new Date().toISOString().split('T')[0],
-                'brand': (typeof item.brand === 'string' ? item.brand : (item.brand && item.brand.name)) || '',
+                'brand': brandName,
+                'manufacturer': item.manufacturer || item.vendor || item.merchant || brandName || '',
                 'category': item.category || item.breadcrumbs?.[0] || '',
                 'rating_value': item.rating || item.rating_value || item.ratingValue || item.stars || (item.aggregateRating && item.aggregateRating.ratingValue) || '',
                 'status': 'Pending',

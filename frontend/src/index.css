@@ -223,6 +223,17 @@ tr:hover td {
   text-decoration: underline;
 }
 
+/* Rows handled */
+.row-dealt-with {
+  opacity: 0.6;
+  background-color: #f9fafb;
+}
+
+.row-dealt-with .product-link {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
 .badge {
   display: inline-flex;
   padding: 0.25rem 0.625rem;
