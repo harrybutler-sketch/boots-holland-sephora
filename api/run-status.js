@@ -91,11 +91,16 @@ export default async function handler(request, response) {
             }
 
             // ROBUST BRAND MAPPING
-            const rawBrand = item.brand || item.brandName || item.manufacturer || item.vendor || item.merchant || (item.attributes && item.attributes.brand) || '';
+            const rawBrand = item.brand || item.brandName || (item.attributes && item.attributes.brand) || '';
             let brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
 
-            // Filter out promotional text that sometimes ends up in the brand field
-            const promoPhrases = ['3 for 2', '2 for', '1/2 price', 'save', 'buy one', 'get one', 'off', 'points', 'shop all', 'new in'];
+            // 1. Clean up "Shop all" prefix FIRST
+            if (brandName) {
+                brandName = brandName.replace(/^Shop all\s+/i, '').replace(/\.$/, '').trim();
+            }
+
+            // 2. Filter out ONLY true promotional text
+            const promoPhrases = ['3 for 2', '2 for', '1/2 price', 'save ', 'buy one', 'get one', 'points'];
             const isPromo = brandName && promoPhrases.some(p => brandName.toLowerCase().includes(p));
 
             if (isPromo) {
@@ -103,18 +108,21 @@ export default async function handler(request, response) {
                 brandName = '';
             }
 
-            // Clean up common "Shop all" prefix from H&B
-            if (brandName) {
-                brandName = brandName.replace(/^Shop all\s+/i, '').replace(/\.$/, '').trim();
-            }
-
-            // Fallback: If brand is still missing, try to find it in the description
+            // 3. Fallback: Search description if brand is missing or was a promo
             if (!brandName && item.description) {
-                // Look for "By [Brand]" or similar patterns, or just a direct mention of "7th Heaven"
                 if (item.description.includes('7th Heaven')) {
                     brandName = '7th Heaven';
+                } else {
+                    const descMatch = item.description.match(/(?:By|Manufacturer|Brand):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
+                    if (descMatch) brandName = descMatch[1].trim();
                 }
             }
+
+            const manufacturer = brandName ||
+                (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
+                item.vendor ||
+                item.merchant ||
+                '';
 
             // ROBUST CATEGORY MAPPING
             const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || item.section || '';
@@ -136,7 +144,7 @@ export default async function handler(request, response) {
                 'reviews': reviewCount,
                 'date_found': new Date().toISOString().split('T')[0],
                 'brand': brandName,
-                'manufacturer': item.manufacturer || item.vendor || item.merchant || brandName || '',
+                'manufacturer': manufacturer,
                 'category': categoryName,
                 'rating_value': ratingValue,
                 'status': 'Pending',
