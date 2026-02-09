@@ -45,14 +45,31 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                     item.manufacturer
                                 )}
                             </td>
-                            <td>
-                                {item.product_url ? (
-                                    <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="product-link">
-                                        {item.product_name}
-                                    </a>
-                                ) : (
-                                    item.product_name
-                                )}
+                            <td className="product-cell">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {item.product_url ? (
+                                        <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="product-link">
+                                            {item.product_name}
+                                        </a>
+                                    ) : (
+                                        <span>{item.product_name}</span>
+                                    )}
+                                    {item.product_url && (
+                                        <button
+                                            className="btn-copy"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(item.product_url);
+                                                const btn = document.activeElement;
+                                                const originalText = btn.innerHTML;
+                                                btn.innerHTML = '📋 Copied!';
+                                                setTimeout(() => { btn.innerHTML = '🔗 Copy'; }, 2000);
+                                            }}
+                                            title="Copy product URL"
+                                        >
+                                            🔗 Copy
+                                        </button>
+                                    )}
+                                </div>
                             </td>
                             <td className="price">{item.price_display}</td>
                             <td>
