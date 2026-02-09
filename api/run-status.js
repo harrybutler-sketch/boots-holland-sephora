@@ -94,9 +94,26 @@ export default async function handler(request, response) {
             const rawBrand = item.brand || item.brandName || item.manufacturer || item.vendor || item.merchant || (item.attributes && item.attributes.brand) || '';
             let brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
 
+            // Filter out promotional text that sometimes ends up in the brand field
+            const promoPhrases = ['3 for 2', '2 for', '1/2 price', 'save', 'buy one', 'get one', 'off', 'points', 'shop all', 'new in'];
+            const isPromo = brandName && promoPhrases.some(p => brandName.toLowerCase().includes(p));
+
+            if (isPromo) {
+                console.log(`Ignoring promo brand: ${brandName}`);
+                brandName = '';
+            }
+
             // Clean up common "Shop all" prefix from H&B
             if (brandName) {
                 brandName = brandName.replace(/^Shop all\s+/i, '').replace(/\.$/, '').trim();
+            }
+
+            // Fallback: If brand is still missing, try to find it in the description
+            if (!brandName && item.description) {
+                // Look for "By [Brand]" or similar patterns, or just a direct mention of "7th Heaven"
+                if (item.description.includes('7th Heaven')) {
+                    brandName = '7th Heaven';
+                }
             }
 
             // ROBUST CATEGORY MAPPING
