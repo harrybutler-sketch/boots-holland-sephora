@@ -55,12 +55,12 @@ export default async function handler(request, response) {
             }
         } else if (workspace === 'grocery') {
             const groceryMap = {
-                'Sainsburys': 'https://www.sainsburys.co.uk/shop/gb/groceries/new-products',
-                'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/new-products',
-                'Asda': 'https://groceries.asda.com/shelf/new',
-                'Morrisons': 'https://groceries.morrisons.com/search?entry=new%20in',
-                'Ocado': 'https://www.ocado.com/browse/new-trending-all-products-190699',
-                'Waitrose': 'https://www.waitrose.com/ecom/shop/browse/offers/new'
+                'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in',
+                'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in',
+                'Asda': 'https://groceries.asda.com/search/new%20in',
+                'Morrisons': 'https://groceries.morrisons.com/categories/new/192077',
+                'Ocado': 'https://www.ocado.com/search?entry=new%20in',
+                'Waitrose': 'https://www.waitrose.com/ecom/shop/browse/groceries/new'
             };
 
             retailers.forEach(retailer => {
