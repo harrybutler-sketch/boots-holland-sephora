@@ -72,18 +72,32 @@ export default async function handler(request, response) {
         const slicedRows = filteredRows.slice(0, validLimit);
 
         // Map to JSON
-        const results = slicedRows.map(row => ({
-            date_found: row.get('date_found'),
-            retailer: row.get('retailer'),
-            product_name: row.get('product') || row.get('product_name'), // Fallback for old rows
-            brand: row.get('brand'),
-            category: row.get('category'),
-            product_url: row.get('product url') || row.get('product_url'), // Fallback for old rows
-            price_display: row.get('price') || row.get('price_display'), // Fallback
-            reviews: row.get('reviews') || row.get('rating_count'), // Fallback
-            rating: row.get('rating_value'),
-            status: row.get('status') || 'Pending'
-        }));
+        const results = slicedRows.map(row => {
+            const data = row.toObject();
+
+            // Debug log for the first row to catch header issues
+            if (slicedRows.indexOf(row) === 0) {
+                console.log('Sample Row Keys:', Object.keys(data));
+            }
+
+            const productName = data.product || data.product_name || '';
+            const brand = data.brand || '';
+            const manufacturer = data.manufacturer || brand || '';
+
+            return {
+                date_found: data.date_found,
+                retailer: data.retailer,
+                product_name: productName,
+                brand: brand,
+                manufacturer: manufacturer,
+                category: data.category,
+                product_url: data['product url'] || data.product_url || '',
+                price_display: data.price || data.price_display || '',
+                reviews: data.reviews || data.rating_count || 0,
+                rating: data.rating_value,
+                status: data.status || 'Pending'
+            };
+        });
 
         return response.status(200).json(results);
 
