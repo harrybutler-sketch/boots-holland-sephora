@@ -31,6 +31,7 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                             <td>
                                 <span className="badge badge-retailer">{item.retailer}</span>
                             </td>
+                            <td>{item.manufacturer}</td>
                             <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{item.category}</td>
                             <td>
                                 {item.product_url ? (
