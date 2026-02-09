@@ -90,19 +90,33 @@ export default async function handler(request, response) {
                 continue;
             }
 
-            const brandName = (typeof item.brand === 'string' ? item.brand : (item.brand && item.brand.name)) || '';
+            // ROBUST BRAND MAPPING
+            const rawBrand = item.brand || item.brandName || item.manufacturer || item.vendor || item.merchant || (item.attributes && item.attributes.brand) || '';
+            const brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title))) || '';
+
+            // ROBUST CATEGORY MAPPING
+            const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || '';
+            const categoryName = (typeof rawCategory === 'string' ? rawCategory : (rawCategory && (rawCategory.name || rawCategory.title))) || '';
+
+            // ROBUST REVIEWS/RATING MAPPING
+            const reviewCount = item.reviewCount || item.reviewsCount || item.reviews_count || item.rating_count ||
+                (item.reviews && (typeof item.reviews === 'number' ? item.reviews : (item.reviews.count || item.reviews.total || item.reviews.total_reviews))) ||
+                (item.aggregateRating && item.aggregateRating.reviewCount) || 0;
+
+            const ratingValue = item.rating || item.rating_value || item.ratingValue || item.stars || item.score ||
+                (item.aggregateRating && item.aggregateRating.ratingValue) || '';
 
             newRows.push({
                 'product': name,
                 'retailer': retailer,
                 'product url': url,
                 'price': item.price_display || `${currency} ${price}`,
-                'reviews': item.reviewCount || item.rating_count || item.reviews_count || item.reviewsCount || (item.reviews && (item.reviews.count || item.reviews.total || item.reviews)) || '',
+                'reviews': reviewCount,
                 'date_found': new Date().toISOString().split('T')[0],
                 'brand': brandName,
                 'manufacturer': item.manufacturer || item.vendor || item.merchant || brandName || '',
-                'category': item.category || item.breadcrumbs?.[0] || '',
-                'rating_value': item.rating || item.rating_value || item.ratingValue || item.stars || (item.aggregateRating && item.aggregateRating.ratingValue) || '',
+                'category': categoryName,
+                'rating_value': ratingValue,
                 'status': 'Pending',
                 'run_id': runId,
                 'scrape_timestamp': new Date().toISOString(),
