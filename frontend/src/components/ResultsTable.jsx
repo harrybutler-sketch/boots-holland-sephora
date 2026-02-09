@@ -30,7 +30,20 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                             <td>
                                 <span className="badge badge-retailer">{item.retailer}</span>
                             </td>
-                            <td>{item.manufacturer}</td>
+                            <td>
+                                {item.manufacturer ? (
+                                    <a
+                                        href={`https://www.google.com/search?q=${encodeURIComponent(item.manufacturer)}+official+website`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="brand-link"
+                                    >
+                                        {item.manufacturer}
+                                    </a>
+                                ) : (
+                                    item.manufacturer
+                                )}
+                            </td>
                             <td>
                                 {item.product_url ? (
                                     <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="product-link">
