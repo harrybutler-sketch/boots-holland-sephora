@@ -18,6 +18,7 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                         <th>Retailer</th>
                         <th>Manufacturer</th>
                         <th>Brand</th>
+                        <th>Category</th>
                         <th>Product</th>
                         <th style={{ width: '100px' }}>Price</th>
                         <th style={{ width: '100px' }}>Rating</th>
@@ -33,6 +34,7 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                             </td>
                             <td>{item.manufacturer}</td>
                             <td>{item.brand}</td>
+                            <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{item.category}</td>
                             <td>
                                 {item.product_url ? (
                                     <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="product-link">
