@@ -61,7 +61,7 @@ exports.handler = async (event, context) => {
       }
     } else if (workspace === 'grocery') {
       const groceryMap = {
-        'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new',
+        'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in',
         'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in',
         'Asda': 'https://groceries.asda.com/search/new%20in',
         'Morrisons': 'https://groceries.morrisons.com/categories/new/192077',
@@ -90,7 +90,8 @@ exports.handler = async (event, context) => {
       maxProductResults: retailers.length * 150,
       proxyConfiguration: {
         useApifyProxy: true
-      }
+      },
+      countryCode: 'US'
     });
 
     return {
