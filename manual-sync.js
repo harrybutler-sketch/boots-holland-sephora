@@ -142,6 +142,7 @@ async function manualSync(runId, workspace = 'beauty') {
             let retailer = 'Unknown';
             if (url.includes('sephora')) retailer = 'Sephora';
             else if (url.includes('hollandandbarrett')) retailer = 'Holland & Barrett';
+            else if (url.includes('superdrug')) retailer = 'Superdrug';
             else if (url.includes('sainsburys')) retailer = 'Sainsburys';
             else if (url.includes('tesco')) retailer = 'Tesco';
             else if (url.includes('asda')) retailer = 'Asda';

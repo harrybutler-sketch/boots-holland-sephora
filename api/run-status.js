@@ -98,6 +98,7 @@ export default async function handler(request, response) {
                 if (lowerUrl.includes('sephora.co.uk')) retailer = 'Sephora';
                 else if (lowerUrl.includes('boots.com')) retailer = 'Boots';
                 else if (lowerUrl.includes('hollandandbarrett.com')) retailer = 'Holland & Barrett';
+                else if (lowerUrl.includes('superdrug.com')) retailer = 'Superdrug';
                 else if (lowerUrl.includes('sainsburys.co.uk')) retailer = 'Sainsburys';
                 else if (lowerUrl.includes('tesco.com')) retailer = 'Tesco';
                 else if (lowerUrl.includes('asda.com')) retailer = 'Asda';
