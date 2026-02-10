@@ -61,7 +61,7 @@ exports.handler = async (event, context) => {
       }
     } else if (workspace === 'grocery') {
       const groceryMap = {
-        'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/SearchResults/new%20in',
+        'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in',
         'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in',
         'Asda': 'https://groceries.asda.com/search/new%20in',
         'Morrisons': 'https://groceries.morrisons.com/categories/new/192077',
