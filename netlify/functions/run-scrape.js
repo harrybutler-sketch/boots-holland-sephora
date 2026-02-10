@@ -55,7 +55,7 @@ exports.handler = async (event, context) => {
       }
       if (retailers.includes('Superdrug')) {
         startUrls.push({
-          url: 'https://www.superdrug.com/new-in',
+          url: 'https://www.superdrug.com/new-in/c/new',
           userData: { retailer: 'Superdrug' },
         });
       }
