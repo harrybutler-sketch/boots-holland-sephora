@@ -93,7 +93,8 @@ export default async function handler(request, response) {
             maxProductResults: 200,
             proxyConfiguration: {
                 useApifyProxy: true
-            }
+            },
+            countryCode: 'us'
         });
 
         return response.status(200).json({
