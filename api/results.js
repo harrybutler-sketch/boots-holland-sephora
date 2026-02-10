@@ -101,7 +101,8 @@ export default async function handler(request, response) {
                 price_display: data.price || data.price_display || '',
                 reviews: data.reviews || data.rating_count || 0,
                 rating: data.rating_value,
-                status: data.status || 'Pending'
+                status: data.status || 'Pending',
+                image_url: data.image_url || ''
             };
         });
 

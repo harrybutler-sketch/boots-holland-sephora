@@ -4,9 +4,9 @@ import Filters from './components/Filters';
 import ResultsTable from './components/ResultsTable';
 
 function App() {
-  const [workspace, setWorkspace] = useState('beauty'); // 'beauty' or 'grocery'
-  const [runStatus, setRunStatus] = useState('Idle');
-  const [runId, setRunId] = useState(null);
+  const [workspace, setWorkspace] = useState(() => localStorage.getItem('scraper_workspace') || 'beauty'); // 'beauty' or 'grocery'
+  const [runStatus, setRunStatus] = useState(() => localStorage.getItem('scraper_runStatus') || 'Idle');
+  const [runId, setRunId] = useState(() => localStorage.getItem('scraper_runId') || null);
   const [lastRunTime, setLastRunTime] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,6 +15,24 @@ function App() {
     days: '28',
     q: ''
   });
+
+  // Persist State Changes
+  useEffect(() => {
+    localStorage.setItem('scraper_workspace', workspace);
+  }, [workspace]);
+
+  useEffect(() => {
+    if (runId) {
+      localStorage.setItem('scraper_runId', runId);
+    } else {
+      localStorage.removeItem('scraper_runId');
+    }
+  }, [runId]);
+
+  useEffect(() => {
+    localStorage.setItem('scraper_runStatus', runStatus);
+  }, [runStatus]);
+
 
   // Fetch Results
   const fetchResults = useCallback(async () => {
@@ -64,6 +82,11 @@ function App() {
             setRunStatus(result.status);
             setLastRunTime(new Date().toISOString());
             clearInterval(intervalId);
+
+            // Clear running state from storage
+            localStorage.removeItem('scraper_runId');
+            localStorage.setItem('scraper_runStatus', result.status);
+
             // Refresh results on success
             if (result.status === 'SUCCEEDED') {
               fetchResults();
@@ -81,6 +104,8 @@ function App() {
   const [selectedRetailers, setSelectedRetailers] = useState({
     'Sephora': true,
     'Holland & Barrett': true,
+    'Boots': true,
+    'Superdrug': true,
     'Sainsburys': true,
     'Tesco': true,
     'Asda': true,
@@ -91,7 +116,7 @@ function App() {
 
   const handleRunScrape = async () => {
     // Get list of selected retailers based on workspace
-    const beautyRetailers = ['Sephora', 'Holland & Barrett'];
+    const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug'];
     const groceryRetailers = ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
 
     const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : groceryRetailers;
@@ -147,7 +172,7 @@ function App() {
       return;
     }
 
-    const headers = ['Date', 'Retailer', 'Manufacturer', 'Product Name', 'Price', 'Rating', 'Reviews', 'Product URL'];
+    const headers = ['Date', 'Retailer', 'Manufacturer', 'Product Name', 'Price', 'Rating', 'Reviews', 'Product URL', 'Image URL'];
     const csvContent = [
       headers.join(','),
       ...data.map(item => [
@@ -158,7 +183,8 @@ function App() {
         `"${item.price_display}"`,
         item.rating,
         item.reviews,
-        item.product_url
+        item.product_url,
+        item.image_url
       ].join(','))
     ].join('\n');
 
@@ -178,6 +204,22 @@ function App() {
       <header>
         <h1>Brand Allies Scraper</h1>
       </header>
+
+      {runStatus === 'RUNNING' && (
+        <div style={{
+          backgroundColor: '#fff3cd',
+          color: '#856404',
+          padding: '12px',
+          borderRadius: '4px',
+          marginBottom: '20px',
+          border: '1px solid #ffeeba',
+          textAlign: 'center'
+        }}>
+          ⚠️ <strong>Scraping in progress.</strong> Please keep this tab open to ensure data is saved to Google Sheets.
+          <br />
+          <small>If you close this tab, the scraper will finish but data won't be synced.</small>
+        </div>
+      )}
 
       <Controls
         workspace={workspace}

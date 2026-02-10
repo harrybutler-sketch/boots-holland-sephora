@@ -70,6 +70,12 @@ export default async function handler(request, response) {
             await sheet.setHeaderRow([...sheet.headerValues, 'manufacturer']);
         }
 
+        // Ensure image_url column exists
+        if (!sheet.headerValues.includes('image_url')) {
+            console.log('Adding image_url column to sheet...');
+            await sheet.setHeaderRow([...sheet.headerValues, 'image_url']);
+        }
+
         for (const item of items) {
             const url = item.url || item.productUrl || item.product_url || item.canonicalUrl;
 
@@ -113,6 +119,52 @@ export default async function handler(request, response) {
                 console.log('Skipping item with no product name:', JSON.stringify(item));
                 continue;
             }
+
+            // FILTER: exclude non-food items in Grocery workspace
+            // Specifically targeting the "Kettle" (appliance) vs "Kettle Chips" issue
+            const lowerName = name.toLowerCase();
+            const lowerCategory = (item.category || '').toLowerCase(); // Fallback if category extraction above isn't eager enough, but we should use the one we define later or just check raw item
+
+            // Should properly extract category first if we want to use it, but `item.category` might exist from Apify
+            // Let's rely on name mainly as it's most reliable
+
+            const bannedKeywords = ['toaster', 'blender', 'microwave', 'electrical', 'appliance', 'menswear', 'womenswear', 'clothing'];
+
+            // Smart "Kettle" check
+            if (lowerName.includes('kettle') &&
+                !lowerName.includes('chips') &&
+                !lowerName.includes('crisps') &&
+                !lowerName.includes('popcorn') &&
+                !lowerName.includes('salt') &&
+                !lowerName.includes('seasoning') &&
+                !lowerName.includes('soup') && // Sometimes soups
+                !lowerName.includes('vegetable') &&
+                !lowerName.includes('foods')) {
+
+                // If it's just "Kettle" or "Electric Kettle" or in a non-food category
+                if (lowerName.includes('electric') || lowerName.includes('cordless') || lowerName.includes('jug') || lowerCategory.includes('appliance')) {
+                    console.log(`Skipping non-food item (Kettle appliance): ${name}`);
+                    continue;
+                }
+
+                // If the name is VERY short and just "Kettles" or similar, skip
+                if (lowerName === 'kettle' || lowerName === 'kettles') {
+                    console.log(`Skipping non-food item (Generic Kettle): ${name}`);
+                    continue;
+                }
+
+                // If it's likely an appliance brand
+                if (item.brand === 'Swan' || item.brand === 'Breville' || item.brand === 'Russell Hobbs') {
+                    console.log(`Skipping non-food item (Appliance Brand): ${name}`);
+                    continue;
+                }
+            }
+
+            if (bannedKeywords.some(kw => lowerName.includes(kw))) {
+                console.log(`Skipping non-food item (Banned Keyword): ${name}`);
+                continue;
+            }
+
 
             // ROBUST BRAND MAPPING
             const rawBrand = item.brand || item.brandName || (item.attributes && item.attributes.brand) || '';
@@ -191,27 +243,39 @@ export default async function handler(request, response) {
 
             // FILTER: Skip own brands
             const ownBrandMap = {
-                'Sephora': ['sephora'],
-                'Holland & Barrett': ['holland', 'barrett', 'h&b'],
-                'Sainsburys': ['sainsbury', 'hubbard', 'by sainsbury'],
-                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest'],
-                'Asda': ['asda', 'extra special', 'just essentials'],
-                'Morrisons': ['morrison', 'the best', 'savers'],
-                'Ocado': ['ocado'],
-                'Waitrose': ['waitrose', 'essential waitrose', 'no.1']
+                'Sephora': ['sephora', 'sephora collection'],
+                'Holland & Barrett': ['holland', 'barrett', 'h&b', 'holland & barrett', 'holland and barrett'],
+                'Sainsburys': ['sainsbury', 'hubbard', 'by sainsbury', 'sainsbury\'s', 'stamford street'],
+                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\'s harvest', 'hearty food co', 'romano', 'willow farm', 'redmere', 'nightingale', 'boswell'],
+                'Asda': ['asda', 'extra special', 'just essentials', 'asda logo', 'george home'],
+                'Morrisons': ['morrison', 'the best', 'savers', 'morrisons', 'nutmeg'],
+                'Ocado': ['ocado', 'ocado own range', 'm&s', 'marks & spencer'], // Ocado sells M&S, which is arguably "own brand" in this context if they want brand allies
+                'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners']
             };
 
             const lowercaseManufacturer = (manufacturer || '').toLowerCase();
+            const lowercaseBrand = (brandName || '').toLowerCase();
             const lowercaseName = name.toLowerCase();
             const ownBrandKeywords = ownBrandMap[retailer] || [];
 
-            const isOwnBrand = ownBrandKeywords.some(kw =>
-                lowercaseManufacturer.includes(kw) ||
-                (lowercaseManufacturer === '' && lowercaseName.startsWith(kw))
-            );
+            // Helper to check if a string contains any keyword
+            const containsKeyword = (str) => ownBrandKeywords.some(kw => str.includes(kw));
+
+            // Logic: 
+            // 1. If Manufacturer/Brand contains retailer keyword -> Skip
+            // 2. If Product Name STARTS with retailer keyword -> Skip
+            // 3. If Brand is the same as Retailer Name -> Skip
+
+            const isOwnBrand =
+                containsKeyword(lowercaseManufacturer) ||
+                containsKeyword(lowercaseBrand) ||
+                (lowercaseBrand === retailer.toLowerCase()) ||
+                (lowercaseBrand === 'asda logo') || // Specific catch
+                (logo => logo.includes(retailer.toLowerCase()))(lowercaseName) && (lowercaseManufacturer === '' || lowercaseManufacturer === retailer.toLowerCase());
+
 
             if (isOwnBrand) {
-                console.log(`Skipping own-brand: ${name} (${manufacturer || 'Unknown Brand'})`);
+                console.log(`Skipping own-brand: ${name} (Result: ${manufacturer || brandName})`);
                 continue;
             }
 
@@ -227,6 +291,8 @@ export default async function handler(request, response) {
             const ratingValue = item.rating || item.rating_value || item.ratingValue || item.stars || item.score ||
                 (item.aggregateRating && item.aggregateRating.ratingValue) || '';
 
+            const imageUrl = item.image || item.imageUrl || item.productImage || '';
+
             newRows.push({
                 'product': name,
                 'retailer': retailer,
@@ -241,6 +307,7 @@ export default async function handler(request, response) {
                 'status': 'Pending',
                 'run_id': runId,
                 'scrape_timestamp': new Date().toISOString(),
+                'image_url': imageUrl
             });
 
             existingUrls.add(url);

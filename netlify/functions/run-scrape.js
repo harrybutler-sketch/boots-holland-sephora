@@ -25,27 +25,57 @@ exports.handler = async (event, context) => {
     // The prompt specified "New In" pages for Sephora, Boots, H&B
     const startUrls = [];
 
-    if (retailers.includes('Sephora')) {
-      startUrls.push({
-        url: 'https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120',
-        userData: { retailer: 'Sephora' },
-      });
-    }
-    if (retailers.includes('Boots')) {
-      startUrls.push({
-        url: 'https://www.boots.com/new-to-boots',
-        userData: { retailer: 'Boots' },
-      });
-    }
-    if (retailers.includes('Holland & Barrett')) {
-      // H&B has two provided URLs, adding both
-      startUrls.push({
-        url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue',
-        userData: { retailer: 'Holland & Barrett' },
-      });
-      startUrls.push({
-        url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue',
-        userData: { retailer: 'Holland & Barrett' },
+    if (workspace === 'beauty') {
+      if (retailers.includes('Sephora')) {
+        startUrls.push({
+          url: 'https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120',
+          userData: { retailer: 'Sephora' },
+        });
+      }
+      if (retailers.includes('Holland & Barrett')) {
+        startUrls.push({
+          url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue',
+          userData: { retailer: 'Holland & Barrett' },
+        });
+        startUrls.push({
+          url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue',
+          userData: { retailer: 'Holland & Barrett' },
+        });
+
+        startUrls.push({
+          url: 'https://www.hollandandbarrett.com/shop/highlights/new-in/?page=5',
+          userData: { retailer: 'Holland & Barrett' },
+        });
+      }
+      if (retailers.includes('Boots')) {
+        startUrls.push({
+          url: 'https://www.boots.com/new-to-boots',
+          userData: { retailer: 'Boots' },
+        });
+      }
+      if (retailers.includes('Superdrug')) {
+        startUrls.push({
+          url: 'https://www.superdrug.com/new-in',
+          userData: { retailer: 'Superdrug' },
+        });
+      }
+    } else if (workspace === 'grocery') {
+      const groceryMap = {
+        'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/SearchResults/new%20in',
+        'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in',
+        'Asda': 'https://groceries.asda.com/search/new%20in',
+        'Morrisons': 'https://groceries.morrisons.com/categories/new/192077',
+        'Ocado': 'https://www.ocado.com/search?entry=new%20in',
+        'Waitrose': 'https://www.waitrose.com/ecom/shop/browse/groceries/new'
+      };
+
+      retailers.forEach(retailer => {
+        if (groceryMap[retailer]) {
+          startUrls.push({
+            url: groceryMap[retailer],
+            userData: { retailer }
+          });
+        }
       });
     }
 
