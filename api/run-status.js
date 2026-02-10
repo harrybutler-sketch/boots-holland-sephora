@@ -178,8 +178,13 @@ export default async function handler(request, response) {
                     .replace(/\.$/, '')
                     .trim();
 
-                // If brand name is the same as the product name (common scraper error), clear it
                 if (brandName.toLowerCase() === name.toLowerCase()) {
+                    brandName = '';
+                }
+
+                // FIX: Ignore "Boots Logo" or just "Boots" if it's not an own-brand item (own-brand logic handles the rest)
+                // But specifically "Boots Logo" is an artifact of the scraper finding the site logo
+                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots') {
                     brandName = '';
                 }
             }
@@ -203,7 +208,8 @@ export default async function handler(request, response) {
                 }
             }
 
-            // 4. Final Fallback for Grocery: Take first 1-2 words of name if they look like a brand
+            // 4. Final Fallback: Take first 1-2 words of name if they look like a brand
+            // Enabled for ALL workspaces now (was just Grocery)
             if (!brandName && name) {
                 const words = name.split(' ');
                 if (words.length > 0) {
