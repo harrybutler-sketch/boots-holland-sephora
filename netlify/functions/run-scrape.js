@@ -85,7 +85,7 @@ exports.handler = async (event, context) => {
       // e-commerce-scraping-tool requires specific url arrays
       // "New In" pages are listings/categories, so we use listingUrls
       listingUrls: startUrls,
-      scrapeMode: 'AUTO',
+      scrapeMode: 'BROWSER',
       // Dynamic limit: 150 per retailer (e.g., 3 retailers = 450 items)
       maxProductResults: retailers.length * 150,
       proxyConfiguration: {

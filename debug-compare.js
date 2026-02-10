@@ -7,34 +7,36 @@ const client = new ApifyClient({
     token: process.env.APIFY_TOKEN,
 });
 
-async function compareReviews() {
-    const runId = 'OWnAbVHgDs9IDSTb0';
+async function compareRuns() {
     try {
-        const dataset = await client.run(runId).dataset();
-        const { items } = await dataset.listItems();
+        const goodRunId = 'H2o74fq6P0z41wKwn'; // From user screenshot
 
-        console.log(`Total items: ${items.length}`);
+        console.log(`--- ANALYZING SUCCEEDED RUN: ${goodRunId} ---`);
+        const goodRun = await client.run(goodRunId).get();
+        const goodInput = await client.keyValueStore(goodRun.defaultKeyValueStoreId).getRecord('INPUT');
+        console.log('Start URLs used:', JSON.stringify(goodInput.value.startUrls || goodInput.value.listingUrls, null, 2));
 
-        const hbItems = items.filter(i => i.url && i.url.includes('hollandandbarrett'));
-        const sephoraItems = items.filter(i => i.url && i.url.includes('sephora'));
+        console.log('\n--- ANALYZING LATEST (FAILED) RUN ---');
+        const runs = await client.runs().list({ limit: 1, desc: true });
+        const badRun = runs.items[0];
+        console.log(`Run ID: ${badRun.id}`);
 
-        const getReviews = (i) => i.reviewCount || i.reviewsCount || i.reviews_count || i.rating_count ||
-            (i.reviews && (i.reviews.total || i.reviews.count)) ||
-            (i.aggregateRating && i.aggregateRating.reviewCount) || 0;
+        const badLog = await client.log(badRun.id).get();
+        const relevantLines = badLog.split('\n').filter(line =>
+            line.includes('URL') ||
+            line.includes('Sainsbury') ||
+            line.includes('WARN') ||
+            line.includes('ERROR')
+        );
+        console.log('Latest Log Snippet:\n', relevantLines.join('\n'));
 
-        const hbWithReviews = hbItems.filter(i => getReviews(i) > 0);
-        const sephoraWithReviews = sephoraItems.filter(i => getReviews(i) > 0);
+        const badInput = await client.keyValueStore(badRun.defaultKeyValueStoreId).getRecord('INPUT');
+        console.log('Latest Start URLs:', JSON.stringify(badInput.value.startUrls || badInput.value.listingUrls, null, 2));
 
-        console.log(`H&B: ${hbItems.length} items, ${hbWithReviews.length} with reviews`);
-        console.log(`Sephora: ${sephoraItems.length} items, ${sephoraWithReviews.length} with reviews`);
 
-        if (sephoraWithReviews.length > 0) {
-            console.log('Sample Sephora with Reviews:', JSON.stringify(sephoraWithReviews[0], null, 2));
-        }
-
-    } catch (e) {
-        console.error(e);
+    } catch (error) {
+        console.error('Error:', error);
     }
 }
 
-compareReviews();
+compareRuns();
