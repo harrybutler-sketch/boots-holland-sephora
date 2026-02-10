@@ -7,7 +7,7 @@ const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
     };
 
     const retailers = workspace === 'beauty'
-        ? ['Sephora', 'Holland & Barrett']
+        ? ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug']
         : ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
 
     return (
