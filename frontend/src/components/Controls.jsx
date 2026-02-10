@@ -3,7 +3,7 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
     const isRunning = runStatus === 'RUNNING';
 
     // Retailer sets
-    const beautyRetailers = ['Sephora', 'Holland & Barrett'];
+    const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug'];
     const groceryRetailers = ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
     const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : groceryRetailers;
 
