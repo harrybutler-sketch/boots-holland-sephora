@@ -73,7 +73,7 @@ export default async (req, context) => {
 
     } catch (error) {
         console.error('Error fetching LinkedIn results:', error);
-        return new Response(JSON.stringify({ error: 'Failed to fetch results' }), {
+        return new Response(JSON.stringify({ error: error.message || 'Failed to fetch results', stack: error.stack }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });
