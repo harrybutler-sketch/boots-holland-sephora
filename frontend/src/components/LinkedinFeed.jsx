@@ -1,39 +1,30 @@
 
-import React, { useState } from 'react';
-
-const MOCK_DATA = [
-    {
-        id: 1,
-        brand: 'SYPS',
-        product: 'Wild Cherry SKU',
-        manufacturer: 'SYPS Drinks Ltd',
-        manufacturerUrl: 'https://sypsdrinks.com',
-        date: 'UNKNOWN', // Matches design
-        retailer: 'Holland & Barrett',
-        managingDirector: 'Roman Rozenson',
-        marketingDirector: 'Roman Rozenson',
-        postSnippet: '"Challenger brand SYPS has launched its third SKU (Wild Cherry) into 700 Holland & Barrett stores."',
-        dealtWith: false,
-        postUrl: '#'
-    },
-    {
-        id: 2,
-        brand: 'XOXO SODA',
-        product: 'Soda',
-        manufacturer: 'XOXO Soda Co',
-        manufacturerUrl: 'https://xoxosoda.com',
-        date: 'UNKNOWN',
-        retailer: 'Boots',
-        managingDirector: 'Rory Hoddell',
-        marketingDirector: 'Shaf Junejo',
-        postSnippet: '"Prebiotic soda brand XOXO has officially launched in Boots UK stores."',
-        dealtWith: false,
-        postUrl: '#'
-    }
-];
+import React, { useState, useEffect } from 'react';
 
 const LinkedinFeed = () => {
-    const [items, setItems] = useState(MOCK_DATA);
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Fetch Logic
+    const fetchLinkedinResults = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/linkedin-results');
+            if (!response.ok) throw new Error('Failed to fetch data');
+            const data = await response.json();
+            setItems(data);
+        } catch (err) {
+            console.error('Error fetching LinkedIn data:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLinkedinResults();
+    }, []);
 
     const toggleDealtWith = (id) => {
         setItems(items.map(item =>
@@ -41,8 +32,36 @@ const LinkedinFeed = () => {
         ));
     };
 
+    const runScrape = async () => {
+        const proceed = window.confirm("Start a new LinkedIn Scrape? This will search for 'launched in Tesco/Boots/etc' and may take a few minutes.");
+        if (!proceed) return;
+
+        try {
+            alert('Scrape Started! Please check back in a few minutes.');
+            await fetch('/api/run-linkedin-scrape', { method: 'POST' });
+            // Ideally we'd poll for status, but for MVP just notify start
+        } catch (e) {
+            alert('Failed to start scrape');
+        }
+    };
+
+    if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading LinkedIn Feed...</div>;
+    if (error) return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Error: {error}</div>;
+
     return (
         <div className="linkedin-feed">
+            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="btn" onClick={runScrape}>
+                    🔄 Run LinkedIn Scraper
+                </button>
+            </div>
+
+            {items.length === 0 && (
+                <div className="empty-state">
+                    No recent LinkedIn results found. Try running a scrape.
+                </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '2rem' }}>
                 {items.map(item => (
                     <div key={item.id} className="card" style={{ opacity: item.dealtWith ? 0.6 : 1, transition: 'opacity 0.2s' }}>

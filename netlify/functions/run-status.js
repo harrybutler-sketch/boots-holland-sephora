@@ -1,15 +1,19 @@
-const { ApifyClient } = require('apify-client');
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
+import { ApifyClient } from 'apify-client';
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { getGoogleAuth } from '../../lib/google-auth.js';
 
-exports.handler = async (event, context) => {
-    if (event.httpMethod !== 'GET') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+export default async (req, context) => {
+    if (req.method !== 'GET') {
+        return new Response('Method Not Allowed', { status: 405 });
     }
 
-    const { runId } = event.queryStringParameters;
+    const { runId, workspace = 'beauty' } = Object.fromEntries(new URL(req.url).searchParams);
+
     if (!runId) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'runId is required' }) };
+        return new Response(JSON.stringify({ error: 'runId is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
@@ -18,17 +22,20 @@ exports.handler = async (event, context) => {
         const run = await client.run(runId).get();
 
         if (!run) {
-            return { statusCode: 404, body: JSON.stringify({ error: 'Run not found' }) };
+            return new Response(JSON.stringify({ error: 'Run not found' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         if (run.status !== 'SUCCEEDED') {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    status: run.status,
-                    datasetId: run.defaultDatasetId,
-                }),
-            };
+            return new Response(JSON.stringify({
+                status: run.status,
+                datasetId: run.defaultDatasetId,
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         // Run succeeded, process data
@@ -41,27 +48,45 @@ exports.handler = async (event, context) => {
         }
 
         // Google Sheets Auth
-        const serviceAccountAuth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: process.env.GOOGLE_SERVICE_ACCOUNT_KEY.replace(/\\n/g, '\n'),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
+        const serviceAccountAuth = getGoogleAuth();
 
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
-        const sheet = doc.sheetsByIndex[0]; // Assuming first sheet
+
+        // Select tab based on workspace
+        const sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
+        let sheet = doc.sheetsByTitle[sheetTitle];
+
+        if (!sheet) {
+            console.log(`Creating new sheet tab: ${sheetTitle}`);
+            sheet = await doc.addSheet({
+                title: sheetTitle,
+                headerValues: ['date_found', 'retailer', 'manufacturer', 'product', 'brand', 'price', 'reviews', 'rating_value', 'product url', 'status', 'run_id', 'scrape_timestamp', 'category']
+            });
+        }
 
         // Fetch existing rows for deduplication
         const rows = await sheet.getRows();
+        // FIXED: Use 'product url' (space) not 'product_url'
         const existingUrls = new Set(rows.map((row) => row.get('product url')));
 
         let appendedCount = 0;
         let duplicateCount = 0;
         const newRows = [];
 
+        // Ensure Manufacturer column exists
+        if (!sheet.headerValues.includes('manufacturer')) {
+            console.log('Adding manufacturer column to sheet...');
+            await sheet.setHeaderRow([...sheet.headerValues, 'manufacturer']);
+        }
+
+        // Ensure image_url column exists
+        if (!sheet.headerValues.includes('image_url')) {
+            console.log('Adding image_url column to sheet...');
+            await sheet.setHeaderRow([...sheet.headerValues, 'image_url']);
+        }
+
         for (const item of items) {
-            // Normalize Item - Handle multiple possible field names from different actors
-            // LOGGING: Check if we are finding the URL
             const url = item.url || item.productUrl || item.product_url || item.canonicalUrl;
 
             if (!url) {
@@ -77,57 +102,302 @@ exports.handler = async (event, context) => {
             const price = item.price || item.price_value || (item.offers && item.offers.price) || 0;
             const currency = item.currency || item.price_currency || (item.offers && item.offers.priceCurrency) || 'GBP';
 
-            // Derive retailer if missing
             let retailer = item.retailer;
             if (!retailer && url) {
-                if (url.includes('sephora.co.uk')) retailer = 'Sephora';
-                else if (url.includes('boots.com')) retailer = 'Boots';
-                else if (url.includes('hollandandbarrett.com')) retailer = 'Holland & Barrett';
+                const lowerUrl = url.toLowerCase();
+                if (lowerUrl.includes('sephora.co.uk')) retailer = 'Sephora';
+                else if (lowerUrl.includes('boots.com')) retailer = 'Boots';
+                else if (lowerUrl.includes('hollandandbarrett.com')) retailer = 'Holland & Barrett';
+                else if (lowerUrl.includes('superdrug.com')) retailer = 'Superdrug';
+                else if (lowerUrl.includes('sainsburys.co.uk')) retailer = 'Sainsburys';
+                else if (lowerUrl.includes('tesco.com')) retailer = 'Tesco';
+                else if (lowerUrl.includes('asda.com')) retailer = 'Asda';
+                else if (lowerUrl.includes('morrisons.com')) retailer = 'Morrisons';
+                else if (lowerUrl.includes('ocado.com')) retailer = 'Ocado';
+                else if (lowerUrl.includes('waitrose.com')) retailer = 'Waitrose';
                 else retailer = 'Unknown';
             }
 
+            const name = item.title || item.name || item.productName || item.product_name || '';
+
+            // FILTER: Skip generic "Choose a shade" listings
+            if (name.toLowerCase().includes('choose a shade')) {
+                console.log(`Skipping generic variation listing: ${name}`);
+                continue;
+            }
+
+            if (!name) {
+                console.log('Skipping item with no product name:', JSON.stringify(item));
+                continue;
+            }
+
+            // FILTER: exclude non-food items in Grocery workspace
+            // Specifically targeting the "Kettle" (appliance) vs "Kettle Chips" issue
+            const lowerName = name.toLowerCase();
+            const lowerCategory = (item.category || '').toLowerCase(); // Fallback if category extraction above isn't eager enough, but we should use the one we define later or just check raw item
+
+            // Should properly extract category first if we want to use it, but `item.category` might exist from Apify
+            // Let's rely on name mainly as it's most reliable
+
+            const bannedKeywords = ['toaster', 'blender', 'microwave', 'electrical', 'appliance', 'menswear', 'womenswear', 'clothing'];
+
+            // Smart "Kettle" check
+            if (lowerName.includes('kettle') &&
+                !lowerName.includes('chips') &&
+                !lowerName.includes('crisps') &&
+                !lowerName.includes('popcorn') &&
+                !lowerName.includes('salt') &&
+                !lowerName.includes('seasoning') &&
+                !lowerName.includes('soup') && // Sometimes soups
+                !lowerName.includes('vegetable') &&
+                !lowerName.includes('foods')) {
+
+                // If it's just "Kettle" or "Electric Kettle" or in a non-food category
+                if (lowerName.includes('electric') || lowerName.includes('cordless') || lowerName.includes('jug') || lowerCategory.includes('appliance')) {
+                    console.log(`Skipping non-food item (Kettle appliance): ${name}`);
+                    continue;
+                }
+
+                // If the name is VERY short and just "Kettles" or similar, skip
+                if (lowerName === 'kettle' || lowerName === 'kettles') {
+                    console.log(`Skipping non-food item (Generic Kettle): ${name}`);
+                    continue;
+                }
+
+                // If it's likely an appliance brand
+                if (item.brand === 'Swan' || item.brand === 'Breville' || item.brand === 'Russell Hobbs') {
+                    console.log(`Skipping non-food item (Appliance Brand): ${name}`);
+                    continue;
+                }
+            }
+
+            if (bannedKeywords.some(kw => lowerName.includes(kw))) {
+                console.log(`Skipping non-food item (Banned Keyword): ${name}`);
+                continue;
+            }
+
+
+            // ROBUST BRAND MAPPING
+            const rawBrand = item.brand || item.brandName || (item.attributes && item.attributes.brand) || '';
+            let brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
+
+            // 1. Clean up "Shop all" prefix and corporate suffixes
+            if (brandName) {
+                brandName = brandName
+                    .replace(/^Shop all\s+/i, '')
+                    .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
+                    .replace(/\.$/, '')
+                    .trim();
+
+                if (brandName.toLowerCase() === name.toLowerCase()) {
+                    brandName = '';
+                }
+
+                // FIX: Ignore "Boots Logo" or just "Boots" if it's not an own-brand item (own-brand logic handles the rest)
+                // But specifically "Boots Logo" is an artifact of the scraper finding the site logo
+                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet' || brandName.toLowerCase().includes('marketplace')) {
+                    brandName = '';
+                }
+            }
+
+            // 2. Filter out ONLY true promotional text
+            const promoPhrases = ['3 for 2', '2 for', '1/2 price', 'save ', 'buy one', 'get one', 'points'];
+            const isPromo = brandName && promoPhrases.some(p => brandName.toLowerCase().includes(p));
+
+            if (isPromo) {
+                console.log(`Ignoring promo brand: ${brandName}`);
+                brandName = '';
+            }
+
+            // 3. Fallback: Search description if brand is missing or was a promo
+            if (!brandName && item.description) {
+                if (item.description.includes('7th Heaven')) {
+                    brandName = '7th Heaven';
+                } else {
+                    const descMatch = item.description.match(/(?:By|Manufacturer|Brand):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
+                    if (descMatch) brandName = descMatch[1].trim();
+                }
+            }
+
+            // 4. Final Fallback: Take first 1-2 words of name if they look like a brand
+            // Enabled for ALL workspaces now (was just Grocery)
+            if (!brandName && name) {
+                const words = name.split(' ');
+                if (words.length > 0) {
+                    const { firstOne, firstTwo } = { firstOne: words[0], firstTwo: words.slice(0, 2).join(' ') };
+
+                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks'];
+                    const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
+
+                    // FIX: Ignore common adjectives/sizes at start of name
+                    const ignoreAdjectives = ['Giant', 'Mini', 'Large', 'Small', 'Medium', 'Multipack', 'Family', 'Love', 'Happy', 'New', 'The', 'A', 'An', 'My', 'Our', 'Your'];
+
+                    let brandStartWords = words;
+                    if (ignoreAdjectives.includes(firstOne) && words.length > 1) {
+                        // Skip the first word if it's a generic adjective
+                        brandStartWords = words.slice(1);
+                        // Re-evaluate firstOne/firstTwo based on new start
+                    }
+
+                    const effectiveFirstOne = brandStartWords[0];
+                    const effectiveFirstTwo = brandStartWords.slice(0, 2).join(' ');
+
+                    if (isRetailerName) {
+                        brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
+                    } else if (brandStartWords.length > 0 && /^[A-Z]/.test(effectiveFirstOne)) {
+
+                        // FIX: Wine/Spirits Multi-word Brands
+                        const winePrefixes = [
+                            'Greasy', 'Oyster', 'Yellow', 'Red', 'Blue', 'Black', 'White', 'Silver', 'Gold',
+                            'Wolf', 'Dark', 'Mud', 'Barefoot', 'Echo', 'Jam', 'Meat', 'Trivento', 'Casillero',
+                            'Campo', 'Villa', 'Santa', 'Saint', 'St', 'Le', 'La', 'Les', 'El', 'Los', 'The',
+                            'I' // "I Heart"
+                        ];
+
+                        // FIX: "19 Crimes" (starts with number)
+                        const isNumberStart = /^\d+$/.test(effectiveFirstOne);
+
+                        if (effectiveFirstOne === 'Diet') {
+                            brandName = effectiveFirstTwo;
+                        } else if (winePrefixes.includes(effectiveFirstOne) || isNumberStart) {
+                            brandName = effectiveFirstTwo;
+                        } else {
+                            brandName = effectiveFirstOne;
+                        }
+
+                        // FIX: "Ink by Grant Burge" -> Extract "Grant Burge"
+                        // This overrides the above if a 'by' pattern is found
+                        if (name.includes(' by ')) {
+                            const byMatch = name.match(/ by ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/);
+                            if (byMatch && byMatch[1]) {
+                                // Check if captured group is not a generic word like "The"
+                                if (byMatch[1].length > 3) {
+                                    brandName = byMatch[1];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let manufacturer = brandName ||
+                (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
+                item.vendor ||
+                item.merchant ||
+                '';
+
+            // Clean manufacturer too
+            if (manufacturer) {
+                manufacturer = manufacturer
+                    .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
+                    .replace(/\.$/, '')
+                    .trim();
+
+                if (manufacturer.toLowerCase() === name.toLowerCase()) {
+                    manufacturer = '';
+                }
+            }
+
+            // FILTER: Skip own brands
+            const ownBrandMap = {
+                'Sephora': ['sephora', 'sephora collection'],
+                'Holland & Barrett': ['holland', 'barrett', 'h&b', 'holland & barrett', 'holland and barrett'],
+                'Sainsburys': ['sainsbury', 'hubbard', 'by sainsbury', 'sainsbury\'s', 'stamford street'],
+                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\'s harvest', 'hearty food co', 'romano', 'willow farm', 'redmere', 'nightingale', 'boswell'],
+                'Asda': ['asda', 'extra special', 'just essentials', 'asda logo', 'george home'],
+                'Morrisons': ['morrison', 'the best', 'savers', 'morrisons', 'nutmeg'],
+                'Ocado': ['ocado', 'ocado own range', 'm&s', 'marks & spencer'], // Ocado sells M&S, which is arguably "own brand" in this context if they want brand allies
+                'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners']
+            };
+
+            const lowercaseManufacturer = (manufacturer || '').toLowerCase();
+            const lowercaseBrand = (brandName || '').toLowerCase();
+            const lowercaseName = name.toLowerCase();
+            const ownBrandKeywords = ownBrandMap[retailer] || [];
+
+            // Helper to check if a string contains any keyword
+            const containsKeyword = (str) => ownBrandKeywords.some(kw => str.includes(kw));
+
+            // Logic: 
+            // 1. If Manufacturer/Brand contains retailer keyword -> Skip
+            // 2. If Product Name STARTS with retailer keyword -> Skip
+            // 3. If Brand is the same as Retailer Name -> Skip
+
+            const isOwnBrand =
+                containsKeyword(lowercaseManufacturer) ||
+                containsKeyword(lowercaseBrand) ||
+                (lowercaseBrand === retailer.toLowerCase()) ||
+                (lowercaseBrand === 'asda logo') || // Specific catch
+                (logo => logo.includes(retailer.toLowerCase()))(lowercaseName) && (lowercaseManufacturer === '' || lowercaseManufacturer === retailer.toLowerCase());
+
+
+            if (isOwnBrand) {
+                console.log(`Skipping own-brand: ${name} (Result: ${manufacturer || brandName})`);
+                continue;
+            }
+
+            // ROBUST CATEGORY MAPPING
+            const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || item.section || '';
+            const categoryName = (typeof rawCategory === 'string' ? rawCategory : (rawCategory && (rawCategory.name || rawCategory.title || rawCategory.label))) || '';
+
+            // ROBUST REVIEWS/RATING MAPPING
+            const reviewCount = item.reviewCount || item.reviewsCount || item.reviews_count || item.rating_count ||
+                (item.reviews && (typeof item.reviews === 'number' ? item.reviews : (item.reviews.count || item.reviews.total || item.reviews.total_reviews))) ||
+                (item.aggregateRating && item.aggregateRating.reviewCount) || 0;
+
+            const ratingValue = item.rating || item.rating_value || item.ratingValue || item.stars || item.score ||
+                (item.aggregateRating && item.aggregateRating.ratingValue) || '';
+
+            const imageUrl = item.image || item.imageUrl || item.productImage || '';
+
             newRows.push({
-                'product': item.title || item.name || item.productName || item.product_name || '',
+                'product': name,
                 'retailer': retailer,
                 'product url': url,
                 'price': item.price_display || `${currency} ${price}`,
-                'reviews': item.reviewCount || item.rating_count || item.reviewsCount || item.reviews || '',
-                // Keeping other fields as potential extras if they add columns, or purely for logging if needed
-                // But for the sheet to work, these Main Keys must match the Header Row 1 exactly
+                'reviews': reviewCount,
                 'date_found': new Date().toISOString().split('T')[0],
-                'brand': (typeof item.brand === 'string' ? item.brand : (item.brand && item.brand.name)) || '',
-                'category': item.category || item.breadcrumbs?.[0] || '',
-                'rating_value': item.rating || item.rating_value || item.stars || (item.aggregateRating && item.aggregateRating.ratingValue) || '',
+                'brand': brandName,
+                'manufacturer': manufacturer,
+                'category': categoryName,
+                'rating_value': ratingValue,
+                'status': 'Pending',
                 'run_id': runId,
                 'scrape_timestamp': new Date().toISOString(),
+                'image_url': imageUrl
             });
 
-            // Add to set to prevent duplicates within the same batch
             existingUrls.add(url);
         }
 
+        // Batch write to avoid timeouts/limits
         if (newRows.length > 0) {
-            await sheet.addRows(newRows);
+            const BATCH_SIZE = 50;
+            for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
+                const chunk = newRows.slice(i, i + BATCH_SIZE);
+                console.log(`Writing batch ${i / BATCH_SIZE + 1} of ${Math.ceil(newRows.length / BATCH_SIZE)}...`);
+                await sheet.addRows(chunk);
+            }
             appendedCount = newRows.length;
         }
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                status: 'SUCCEEDED',
-                datasetId: run.defaultDatasetId,
-                itemCount: items.length,
-                appendedCount,
-                duplicateCount,
-                lastUpdated: new Date().toISOString(),
-            }),
-        };
+        return new Response(JSON.stringify({
+            status: 'SUCCEEDED',
+            datasetId: run.defaultDatasetId,
+            itemCount: items.length,
+            appendedCount,
+            duplicateCount,
+            lastUpdated: new Date().toISOString(),
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
 
     } catch (error) {
         console.error('Error checking status:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Internal Server Error' }),
-        };
+        return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 };
