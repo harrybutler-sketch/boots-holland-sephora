@@ -114,10 +114,33 @@ async function manualSync(runId, workspace = 'beauty') {
                     .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
                     .replace(/\.$/, '')
                     .trim();
-                if (brandName.toLowerCase() === name.toLowerCase()) brandName = '';
+                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet') {
+                    brandName = '';
+                }
             }
 
-            // Match production logic for Manufacturer
+            // 4. Final Fallback: Take first 1-2 words of name if they look like a brand
+            if (!brandName && name) {
+                const words = name.split(' ');
+                if (words.length > 0) {
+                    const firstOne = words[0];
+                    const firstTwo = words.slice(0, 2).join(' ');
+
+                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks'];
+                    const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
+
+                    if (isRetailerName) {
+                        brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
+                    } else if (words.length > 1 && /^[A-Z]/.test(firstOne)) {
+                        // FIX: "Diet" is not a brand, usually "Diet Coke" etc.
+                        if (firstOne === 'Diet') {
+                            brandName = firstTwo;
+                        } else {
+                            brandName = firstOne;
+                        }
+                    }
+                }
+            }
             let manufacturer = brandName ||
                 (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
                 item.vendor || item.merchant || '';
