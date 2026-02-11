@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Controls from './components/Controls';
 import Filters from './components/Filters';
 import ResultsTable from './components/ResultsTable';
+import LinkedinFeed from './components/LinkedinFeed';
 
 function App() {
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'linkedin'
   const [workspace, setWorkspace] = useState(() => localStorage.getItem('scraper_workspace') || 'beauty'); // 'beauty' or 'grocery'
   const [runStatus, setRunStatus] = useState(() => localStorage.getItem('scraper_runStatus') || 'Idle');
   const [runId, setRunId] = useState(() => localStorage.getItem('scraper_runId') || null);
@@ -201,8 +203,48 @@ function App() {
 
   return (
     <div className="container">
-      <header>
-        <h1>Brand Allies Scraper</h1>
+      <header style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '1rem' }}>
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>Brand Allies Scraper</h1>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-border)', width: '100%' }}>
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            style={{
+              padding: '0.75rem 1rem',
+              background: 'none',
+              border: 'none',
+              borderBottom: currentView === 'dashboard' ? '2px solid var(--color-accent)' : '2px solid transparent',
+              color: currentView === 'dashboard' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              fontWeight: currentView === 'dashboard' ? '600' : '500',
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}
+          >
+            Scraper Dashboard
+          </button>
+          <button
+            onClick={() => setCurrentView('linkedin')}
+            style={{
+              padding: '0.75rem 1rem',
+              background: 'none',
+              border: 'none',
+              borderBottom: currentView === 'linkedin' ? '2px solid var(--color-accent)' : '2px solid transparent',
+              color: currentView === 'linkedin' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              fontWeight: currentView === 'linkedin' ? '600' : '500',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>LinkedIn Scraper</span>
+            <span style={{ fontSize: '0.7rem', background: '#e0e7ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>BETA</span>
+          </button>
+        </div>
       </header>
 
       {runStatus === 'RUNNING' && (
@@ -221,60 +263,66 @@ function App() {
         </div>
       )}
 
-      <Controls
-        workspace={workspace}
-        onWorkspaceChange={(ws) => {
-          setWorkspace(ws);
-          setFilters(f => ({ ...f, retailer: 'All' }));
-        }}
-        runStatus={runStatus}
-        lastRun={lastRunTime}
-        onRunScrape={handleRunScrape}
-        onReset={handleReset}
-        onExportCSV={handleExportCSV}
-        selectedRetailers={selectedRetailers}
-        onToggleRetailer={(retailer) => setSelectedRetailers(prev => ({ ...prev, [retailer]: !prev[retailer] }))}
-        onTestConnection={async () => {
-          const proceed = window.confirm("Run a connection test? This will add a 'Netlify Test' row to your Google Sheet.");
-          if (!proceed) return;
-          try {
-            const res = await fetch('/api/test-connection');
-            const data = await res.json();
-            alert(JSON.stringify(data, null, 2));
-          } catch (e) {
-            alert('Test Failed: ' + e.message);
-          }
-        }}
-      />
+      {currentView === 'dashboard' ? (
+        <>
+          <Controls
+            workspace={workspace}
+            onWorkspaceChange={(ws) => {
+              setWorkspace(ws);
+              setFilters(f => ({ ...f, retailer: 'All' }));
+            }}
+            runStatus={runStatus}
+            lastRun={lastRunTime}
+            onRunScrape={handleRunScrape}
+            onReset={handleReset}
+            onExportCSV={handleExportCSV}
+            selectedRetailers={selectedRetailers}
+            onToggleRetailer={(retailer) => setSelectedRetailers(prev => ({ ...prev, [retailer]: !prev[retailer] }))}
+            onTestConnection={async () => {
+              const proceed = window.confirm("Run a connection test? This will add a 'Netlify Test' row to your Google Sheet.");
+              if (!proceed) return;
+              try {
+                const res = await fetch('/api/test-connection');
+                const data = await res.json();
+                alert(JSON.stringify(data, null, 2));
+              } catch (e) {
+                alert('Test Failed: ' + e.message);
+              }
+            }}
+          />
 
-      <Filters
-        workspace={workspace}
-        filters={filters}
-        onFilterChange={setFilters}
-      />
+          <Filters
+            workspace={workspace}
+            filters={filters}
+            onFilterChange={setFilters}
+          />
 
-      <ResultsTable
-        data={data}
-        loading={loading}
-        onToggleStatus={async (url, newStatus) => {
-          // Optimistic update
-          setData(prev => prev.map(item =>
-            item.product_url === url ? { ...item, status: newStatus } : item
-          ));
+          <ResultsTable
+            data={data}
+            loading={loading}
+            onToggleStatus={async (url, newStatus) => {
+              // Optimistic update
+              setData(prev => prev.map(item =>
+                item.product_url === url ? { ...item, status: newStatus } : item
+              ));
 
-          try {
-            await fetch('/api/update-status', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ productUrl: url, status: newStatus })
-            });
-          } catch (e) {
-            console.error('Failed to update status:', e);
-            // Revert on error
-            fetchResults();
-          }
-        }}
-      />
+              try {
+                await fetch('/api/update-status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ productUrl: url, status: newStatus })
+                });
+              } catch (e) {
+                console.error('Failed to update status:', e);
+                // Revert on error
+                fetchResults();
+              }
+            }}
+          />
+        </>
+      ) : (
+        <LinkedinFeed />
+      )}
     </div>
   );
 }
