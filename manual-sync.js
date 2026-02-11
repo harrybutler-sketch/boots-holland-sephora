@@ -123,15 +123,26 @@ async function manualSync(runId, workspace = 'beauty') {
             if (!brandName && name) {
                 const words = name.split(' ');
                 if (words.length > 0) {
-                    const firstOne = words[0];
-                    const firstTwo = words.slice(0, 2).join(' ');
+                    const { firstOne, firstTwo } = { firstOne: words[0], firstTwo: words.slice(0, 2).join(' ') };
 
                     const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks'];
                     const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
 
+                    // FIX: Ignore common adjectives/sizes at start of name
+                    const ignoreAdjectives = ['Giant', 'Mini', 'Large', 'Small', 'Medium', 'Multipack', 'Family', 'Love', 'Happy', 'New', 'The', 'A', 'An', 'My', 'Our', 'Your'];
+
+                    let brandStartWords = words;
+                    if (ignoreAdjectives.includes(firstOne) && words.length > 1) {
+                        // Skip the first word if it's a generic adjective
+                        brandStartWords = words.slice(1);
+                    }
+
+                    const effectiveFirstOne = brandStartWords[0];
+                    const effectiveFirstTwo = brandStartWords.slice(0, 2).join(' ');
+
                     if (isRetailerName) {
                         brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
-                    } else if (words.length > 1 && /^[A-Z]/.test(firstOne)) {
+                    } else if (brandStartWords.length > 0 && /^[A-Z]/.test(effectiveFirstOne)) {
 
                         // FIX: Wine/Spirits Multi-word Brands
                         const winePrefixes = [
@@ -142,14 +153,14 @@ async function manualSync(runId, workspace = 'beauty') {
                         ];
 
                         // FIX: "19 Crimes" (starts with number)
-                        const isNumberStart = /^\d+$/.test(firstOne);
+                        const isNumberStart = /^\d+$/.test(effectiveFirstOne);
 
-                        if (firstOne === 'Diet') {
-                            brandName = firstTwo;
-                        } else if (winePrefixes.includes(firstOne) || isNumberStart) {
-                            brandName = firstTwo;
+                        if (effectiveFirstOne === 'Diet') {
+                            brandName = effectiveFirstTwo;
+                        } else if (winePrefixes.includes(effectiveFirstOne) || isNumberStart) {
+                            brandName = effectiveFirstTwo;
                         } else {
-                            brandName = firstOne;
+                            brandName = effectiveFirstOne;
                         }
 
                         // FIX: "Ink by Grant Burge" -> Extract "Grant Burge"
