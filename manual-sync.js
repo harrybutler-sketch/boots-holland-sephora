@@ -114,7 +114,7 @@ async function manualSync(runId, workspace = 'beauty') {
                     .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
                     .replace(/\.$/, '')
                     .trim();
-                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet') {
+                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet' || brandName.toLowerCase().includes('marketplace')) {
                     brandName = '';
                 }
             }

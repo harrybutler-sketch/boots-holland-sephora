@@ -185,7 +185,7 @@ export default async function handler(request, response) {
 
                 // FIX: Ignore "Boots Logo" or just "Boots" if it's not an own-brand item (own-brand logic handles the rest)
                 // But specifically "Boots Logo" is an artifact of the scraper finding the site logo
-                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet') {
+                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet' || brandName.toLowerCase().includes('marketplace')) {
                     brandName = '';
                 }
             }
