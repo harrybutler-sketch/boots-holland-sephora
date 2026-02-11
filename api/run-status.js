@@ -217,7 +217,7 @@ export default async function handler(request, response) {
                     const firstOne = words[0];
                     const firstTwo = words.slice(0, 2).join(' ');
 
-                    const { firstOne, firstTwo } = { firstOne: words[0], firstTwo: words.slice(0, 2).join(' ') };
+
 
                     const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks'];
                     const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
