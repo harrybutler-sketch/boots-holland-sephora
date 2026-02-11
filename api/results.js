@@ -10,7 +10,7 @@ export default async function handler(request, response) {
     response.setHeader('Cache-Control', 'no-store, max-age=0');
 
     try {
-        const { limit = 200, retailer, days, q, workspace = 'beauty' } = request.query;
+        const { limit = 5000, retailer, days, q, workspace = 'beauty' } = request.query;
 
         // Google Sheets Auth
         const serviceAccountAuth = getGoogleAuth();

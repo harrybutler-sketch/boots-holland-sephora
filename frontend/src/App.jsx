@@ -39,7 +39,7 @@ function App() {
     setLoading(true);
     try {
       const queryParams = new URLSearchParams({
-        limit: '200',
+        limit: '5000',
         retailer: filters.retailer,
         days: filters.days,
         q: filters.q,
