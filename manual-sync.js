@@ -132,11 +132,34 @@ async function manualSync(runId, workspace = 'beauty') {
                     if (isRetailerName) {
                         brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
                     } else if (words.length > 1 && /^[A-Z]/.test(firstOne)) {
-                        // FIX: "Diet" is not a brand, usually "Diet Coke" etc.
+
+                        // FIX: Wine/Spirits Multi-word Brands
+                        const winePrefixes = [
+                            'Greasy', 'Oyster', 'Yellow', 'Red', 'Blue', 'Black', 'White', 'Silver', 'Gold',
+                            'Wolf', 'Dark', 'Mud', 'Barefoot', 'Echo', 'Jam', 'Meat', 'Trivento', 'Casillero',
+                            'Campo', 'Villa', 'Santa', 'Saint', 'St', 'Le', 'La', 'Les', 'El', 'Los', 'The',
+                            'I' // "I Heart"
+                        ];
+
+                        // FIX: "19 Crimes" (starts with number)
+                        const isNumberStart = /^\d+$/.test(firstOne);
+
                         if (firstOne === 'Diet') {
+                            brandName = firstTwo;
+                        } else if (winePrefixes.includes(firstOne) || isNumberStart) {
                             brandName = firstTwo;
                         } else {
                             brandName = firstOne;
+                        }
+
+                        // FIX: "Ink by Grant Burge" -> Extract "Grant Burge"
+                        if (name.includes(' by ')) {
+                            const byMatch = name.match(/ by ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/);
+                            if (byMatch && byMatch[1]) {
+                                if (byMatch[1].length > 3) {
+                                    brandName = byMatch[1];
+                                }
+                            }
                         }
                     }
                 }

@@ -217,19 +217,44 @@ export default async function handler(request, response) {
                     const firstOne = words[0];
                     const firstTwo = words.slice(0, 2).join(' ');
 
+                    const { firstOne, firstTwo } = { firstOne: words[0], firstTwo: words.slice(0, 2).join(' ') };
+
                     const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks'];
                     const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
 
                     if (isRetailerName) {
-                        // It's likely an own-brand, extract it so it can be filtered/labeled correctly
                         brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
                     } else if (words.length > 1 && /^[A-Z]/.test(firstOne)) {
-                        // Heuristic: First word capitalized is often the brand
-                        // FIX: "Diet" is not a brand, usually "Diet Coke" etc.
+
+                        // FIX: Wine/Spirits Multi-word Brands
+                        const winePrefixes = [
+                            'Greasy', 'Oyster', 'Yellow', 'Red', 'Blue', 'Black', 'White', 'Silver', 'Gold',
+                            'Wolf', 'Dark', 'Mud', 'Barefoot', 'Echo', 'Jam', 'Meat', 'Trivento', 'Casillero',
+                            'Campo', 'Villa', 'Santa', 'Saint', 'St', 'Le', 'La', 'Les', 'El', 'Los', 'The',
+                            'I' // "I Heart"
+                        ];
+
+                        // FIX: "19 Crimes" (starts with number)
+                        const isNumberStart = /^\d+$/.test(firstOne);
+
                         if (firstOne === 'Diet') {
+                            brandName = firstTwo;
+                        } else if (winePrefixes.includes(firstOne) || isNumberStart) {
                             brandName = firstTwo;
                         } else {
                             brandName = firstOne;
+                        }
+
+                        // FIX: "Ink by Grant Burge" -> Extract "Grant Burge"
+                        // This overrides the above if a 'by' pattern is found
+                        if (name.includes(' by ')) {
+                            const byMatch = name.match(/ by ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/);
+                            if (byMatch && byMatch[1]) {
+                                // Check if captured group is not a generic word like "The"
+                                if (byMatch[1].length > 3) {
+                                    brandName = byMatch[1];
+                                }
+                            }
                         }
                     }
                 }
