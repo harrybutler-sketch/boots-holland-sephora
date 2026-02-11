@@ -185,7 +185,7 @@ export default async function handler(request, response) {
 
                 // FIX: Ignore "Boots Logo" or just "Boots" if it's not an own-brand item (own-brand logic handles the rest)
                 // But specifically "Boots Logo" is an artifact of the scraper finding the site logo
-                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots') {
+                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet') {
                     brandName = '';
                 }
             }
@@ -225,7 +225,12 @@ export default async function handler(request, response) {
                         brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
                     } else if (words.length > 1 && /^[A-Z]/.test(firstOne)) {
                         // Heuristic: First word capitalized is often the brand
-                        brandName = firstOne;
+                        // FIX: "Diet" is not a brand, usually "Diet Coke" etc.
+                        if (firstOne === 'Diet') {
+                            brandName = firstTwo;
+                        } else {
+                            brandName = firstOne;
+                        }
                     }
                 }
             }
