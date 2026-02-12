@@ -97,7 +97,7 @@ export default async function handler(request, response) {
         console.log(`Starting Hybrid Discovery Phase for ${startUrls.length} start URLs...`);
 
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
-            searchUrls: startUrls.map(s => ({ url: s.url })),
+            startUrls: startUrls.map(s => ({ url: s.url })),
             maxItemsPerStartUrl: 1000,
             proxyConfiguration: { useApifyProxy: true }
         }, {
