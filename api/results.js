@@ -33,7 +33,10 @@ export default async function handler(request, response) {
 
         // 1. Retailer Filter
         if (retailer && retailer !== 'All') {
-            filteredRows = filteredRows.filter(row => row.get('retailer') === retailer);
+            filteredRows = filteredRows.filter(row => {
+                const rowRetailer = row.get('Retailer') || row.get('retailer');
+                return rowRetailer === retailer;
+            });
         }
 
         // 2. Days Filter (Last X Days)
@@ -41,8 +44,8 @@ export default async function handler(request, response) {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
             filteredRows = filteredRows.filter(row => {
-                const dateVal = row.get('date_found');
-                if (!dateVal) return true; // Keep rows with no date (legacy/missing header)
+                const dateVal = row.get('Date Found') || row.get('date_found');
+                if (!dateVal) return true;
                 const rowDate = new Date(dateVal);
                 return rowDate >= cutoffDate;
             });
@@ -52,22 +55,22 @@ export default async function handler(request, response) {
         if (q) {
             const searchLower = q.toLowerCase();
             filteredRows = filteredRows.filter(row => {
-                const name = (row.get('product') || row.get('product_name') || '').toLowerCase();
-                const brand = (row.get('brand') || '').toLowerCase();
+                const name = (row.get('Product') || row.get('product') || row.get('product_name') || '').toLowerCase();
+                const brand = (row.get('Brand') || row.get('brand') || '').toLowerCase();
                 return name.includes(searchLower) || brand.includes(searchLower);
             });
         }
 
         // 4. Require Product Name
         filteredRows = filteredRows.filter(row => {
-            const name = row.get('product') || row.get('product_name');
+            const name = row.get('Product') || row.get('product') || row.get('product_name');
             return name && name.trim().length > 0;
         });
 
-        // Sort by date_found descending (newest first)
+        // Sort by Date Found descending
         filteredRows.sort((a, b) => {
-            const dateA = a.get('date_found');
-            const dateB = b.get('date_found');
+            const dateA = a.get('Date Found') || a.get('date_found');
+            const dateB = b.get('Date Found') || b.get('date_found');
             if (dateA < dateB) return 1;
             if (dateA > dateB) return -1;
             return 0;
@@ -81,28 +84,23 @@ export default async function handler(request, response) {
         const results = slicedRows.map(row => {
             const data = row.toObject();
 
-            // Debug log for the first row to catch header issues
-            if (slicedRows.indexOf(row) === 0) {
-                console.log('Sample Row Keys:', Object.keys(data));
-            }
-
-            const productName = data.product || data.product_name || '';
-            const brand = data.brand || '';
-            const manufacturer = data.manufacturer || brand || '';
+            const productName = data.Product || data.product || data.product_name || '';
+            const brand = data.Brand || data.brand || '';
+            const manufacturer = data.Manufacturer || data.manufacturer || brand || '';
 
             return {
-                date_found: data.date_found,
-                retailer: data.retailer,
+                date_found: data['Date Found'] || data.date_found,
+                retailer: data.Retailer || data.retailer,
                 product_name: productName,
                 brand: brand,
                 manufacturer: manufacturer,
-                category: data.category,
-                product_url: data['product url'] || data.product_url || '',
-                price_display: data.price || data.price_display || '',
-                reviews: data.reviews || data.rating_count || 0,
-                rating: data.rating_value,
-                status: data.status || 'Pending',
-                image_url: data.image_url || ''
+                category: data.Category || data.category,
+                product_url: data['Product URL'] || data['product url'] || data.product_url || '',
+                price_display: data.Price || data.price || data.price_display || '',
+                reviews: data['Review Count'] || data.reviews || data.rating_count || 0,
+                rating: data.Rating || data.rating_value,
+                status: data.Status || data.status || 'Pending',
+                image_url: data['Image URL'] || data.image_url || ''
             };
         });
 

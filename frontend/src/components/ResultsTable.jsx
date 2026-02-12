@@ -14,6 +14,7 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
             <table>
                 <thead>
                     <tr>
+                        <th style={{ width: '60px' }}>Img</th>
                         <th style={{ width: '100px' }}>Date</th>
                         <th>Retailer</th>
                         <th>Manufacturer</th>
@@ -27,6 +28,20 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                 <tbody>
                     {data.map((item, index) => (
                         <tr key={`${item.product_url}-${index}`} className={item.status === 'Dealt With' ? 'row-dealt-with' : ''}>
+                            <td style={{ textAlign: 'center' }}>
+                                {item.image_url ? (
+                                    <img
+                                        src={item.image_url}
+                                        alt=""
+                                        style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                ) : (
+                                    <div style={{ width: '40px', height: '40px', background: '#f3f4f6', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px' }}>
+                                        N/A
+                                    </div>
+                                )}
+                            </td>
                             <td style={{ fontSize: '0.85rem' }}>{item.date_found}</td>
                             <td>
                                 <span className="badge badge-retailer">{item.retailer}</span>
