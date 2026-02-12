@@ -3,11 +3,26 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { getGoogleAuth } from '../lib/google-auth.js';
 
 export default async function handler(request, response) {
-    if (request.method !== 'GET') {
+    // Allow GET (for dashboard polling) and POST (for Apify webhooks)
+    if (request.method !== 'GET' && request.method !== 'POST') {
         return response.status(405).send('Method Not Allowed');
     }
 
-    const { runId, workspace = 'beauty' } = request.query;
+    let { runId, workspace = 'beauty' } = request.query;
+
+    // Handle Apify Webhook (POST)
+    if (request.method === 'POST') {
+        try {
+            const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body;
+            // Apify sends runId in eventData.actorRunId
+            if (body && body.eventData && body.eventData.actorRunId) {
+                runId = body.eventData.actorRunId;
+            }
+        } catch (e) {
+            console.error('Failed to parse webhook body:', e);
+        }
+    }
+
     if (!runId) {
         return response.status(400).json({ error: 'runId is required' });
     }
