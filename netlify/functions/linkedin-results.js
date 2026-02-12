@@ -64,7 +64,7 @@ export default async (req, context) => {
             return true;
         }).map(item => {
             // 2. Assign Type
-            const isLaunch = isProductLaunch(item.postSnippet);
+            const isLaunch = isProductLaunch(item.postSnippet, item.retailer);
             return {
                 ...item,
                 type: isLaunch ? 'launch' : 'other'
@@ -150,8 +150,14 @@ function extractProduct(text) {
     return 'New Launch'; // Generic fallback is better than "Unknown"
 }
 
-function isProductLaunch(text) {
+function isProductLaunch(text, retailer) {
     if (!text) return false;
+
+    // Constraint 1: Must be a specific retailer (No "Unknown")
+    if (!retailer || retailer === 'Unknown') {
+        return false;
+    }
+
     const lower = text.toLowerCase();
 
     // STRICT Negative Keywords (Job posts, etc.)
@@ -163,19 +169,21 @@ function isProductLaunch(text) {
 
     if (negativeKeywords.some(kw => lower.includes(kw))) {
         // Double check: if it says "launching a NEW RANGE" it might still be valid even if it says "great job team"
-        // But "job" is tricky. Let's be stick with stricter negatives for "hiring" context.
+        // But "job" is tricky. Let's start with strict negatives.
         if (lower.includes('hiring') || lower.includes('vacancy') || lower.includes('recruit')) {
             return false;
         }
     }
 
-    // Positive Keywords (Strong Intent)
+    // Positive Keywords (Strong Intent - MUST be present)
     const positiveKeywords = [
         'launch', 'listing', 'shelf', 'shelves', 'store', 'stockist', 'range', 'flavour', 'flavor',
-        'sku', 'available now', 'buy now', 'grab yours', 'find us', 'waitrose', 'tesco', 'sainsbury',
-        'asda', 'morrisons', 'ocado', 'boots', 'superdrug', 'sephora', 'holland & barrett', 'retailer',
-        'roll out', 'rolling out', 'landed', 'hitting'
+        'sku', 'available now', 'buy now', 'grab yours', 'find us',
+        'roll out', 'rolling out', 'landed', 'hitting', 'arrived', 'introducing'
     ];
+
+    // Note: We don't check for retailer names in positiveKeywords here, because we already checked the 'retailer' variable above.
+    // We want to ensure there is ACTION language ("launched", "available") + RETAILER context.
 
     const hasPositive = positiveKeywords.some(kw => lower.includes(kw));
 
