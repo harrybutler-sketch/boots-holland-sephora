@@ -183,11 +183,35 @@ exports.handler = async (event, context) => {
                         
                         // 2. DOM Fallbacks
                         if (results.reviews === 0) {
+                            // Bazaarvoice (Sephora, Boots, Sainsbury's)
                             const bvCount = document.querySelector('.bv_numReviews_text, #bvRContainer-Link, [data-bv-show="rating_summary"]');
                             if (bvCount) {
                                 results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;
                                 const bvRating = document.querySelector('.bv_avgRating_text, .bv_avgRating_component_container');
                                 if (bvRating) results.rating = parseFloat(bvRating.innerText) || 0;
+                            }
+                            
+                            // PowerReviews (Superdrug)
+                            if (results.reviews === 0) {
+                                const prCount = document.querySelector('.pr-snippet-review-count');
+                                if (prCount) {
+                                    results.reviews = parseInt(prCount.innerText.replace(/[^0-9]/g, '')) || 0;
+                                    const prRating = document.querySelector('.pr-snippet-rating-decimal');
+                                    if (prRating) results.rating = parseFloat(prRating.innerText) || 0;
+                                }
+                            }
+                            
+                            // Tesco Fallback (ARIA labels)
+                            if (results.reviews === 0) {
+                                const tescoRating = document.querySelector('[data-testid="stars-rating"], .star-rating');
+                                if (tescoRating) {
+                                    const aria = tescoRating.getAttribute('aria-label') || '';
+                                    const match = aria.match(/([0-9.]+)/);
+                                    if (match) results.rating = parseFloat(match[1]);
+                                    
+                                    const tescoCount = Array.from(document.querySelectorAll('a, span')).find(el => el.innerText.includes('Reviews'));
+                                    if (tescoCount) results.reviews = parseInt(tescoCount.innerText.replace(/[^0-9]/g, '')) || 0;
+                                }
                             }
                         }
                         
