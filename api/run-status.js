@@ -317,7 +317,6 @@ export default async function handler(request, response) {
                 containsKeyword(lowercaseManufacturer) ||
                 containsKeyword(lowercaseBrand) ||
                 (lowercaseBrand === retailer.toLowerCase()) ||
-                (lowercaseBrand === 'asda logo') || // Specific catch
                 (logo => logo.includes(retailer.toLowerCase()))(lowercaseName) && (lowercaseManufacturer === '' || lowercaseManufacturer === retailer.toLowerCase());
 
 

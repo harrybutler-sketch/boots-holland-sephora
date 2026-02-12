@@ -201,16 +201,16 @@ exports.handler = async (event, context) => {
                                 }
                             }
                             
-                            // Tesco Fallback (ARIA labels)
+                            // Tesco/Generic Fallback (ARIA labels)
                             if (results.reviews === 0) {
-                                const tescoRating = document.querySelector('[data-testid="stars-rating"], .star-rating');
-                                if (tescoRating) {
-                                    const aria = tescoRating.getAttribute('aria-label') || '';
+                                const ariaRating = document.querySelector('[aria-label*="rating"], [aria-label*="stars"], .star-rating, [data-testid="stars-rating"]');
+                                if (ariaRating) {
+                                    const aria = ariaRating.getAttribute('aria-label') || '';
                                     const match = aria.match(/([0-9.]+)/);
                                     if (match) results.rating = parseFloat(match[1]);
                                     
-                                    const tescoCount = Array.from(document.querySelectorAll('a, span')).find(el => el.innerText.includes('Reviews'));
-                                    if (tescoCount) results.reviews = parseInt(tescoCount.innerText.replace(/[^0-9]/g, '')) || 0;
+                                    const reviewText = Array.from(document.querySelectorAll('a, span')).find(el => el.innerText.includes('Reviews') || el.innerText.includes('ratings'));
+                                    if (reviewText) results.reviews = parseInt(reviewText.innerText.replace(/[^0-9]/g, '')) || 0;
                                 }
                             }
                         }

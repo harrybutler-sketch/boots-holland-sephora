@@ -49,7 +49,6 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                         <button
                             className="btn"
                             onClick={onReset}
-                            disabled={isRunning}
                             style={{
                                 backgroundColor: 'transparent',
                                 color: 'var(--color-text-secondary)',

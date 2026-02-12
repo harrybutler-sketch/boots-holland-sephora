@@ -82,7 +82,8 @@ function App() {
           const response = await fetch(`/api/run-status?runId=${runId}&workspace=${workspace}`);
           const result = await response.json();
 
-          if (result.status === 'SUCCEEDED' || result.status === 'FAILED') {
+          const terminalStatuses = ['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'];
+          if (terminalStatuses.includes(result.status)) {
             setRunStatus(result.status);
             setLastRunTime(new Date().toISOString());
             clearInterval(intervalId);
