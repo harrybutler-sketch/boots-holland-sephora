@@ -327,7 +327,7 @@ export default async (req, context) => {
                 containsKeyword(lowercaseManufacturer) ||
                 containsKeyword(lowercaseBrand) ||
                 (lowercaseBrand === retailer.toLowerCase()) ||
-                (lowercaseBrand === 'asda logo') || // Specific catch
+                // (lowercaseBrand === 'asda logo') || // Specific catch (Removed)
                 (logo => logo.includes(retailer.toLowerCase()))(lowercaseName) && (lowercaseManufacturer === '' || lowercaseManufacturer === retailer.toLowerCase());
 
 
