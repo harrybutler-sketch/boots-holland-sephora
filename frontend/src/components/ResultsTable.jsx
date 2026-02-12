@@ -19,7 +19,8 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                         <th>Manufacturer</th>
                         <th>Product</th>
                         <th style={{ width: '100px' }}>Price</th>
-                        <th style={{ width: '100px' }}>Rating</th>
+                        <th style={{ width: '80px' }}>Rating</th>
+                        <th style={{ width: '100px' }}>Reviews</th>
                         <th style={{ width: '120px' }}>Action</th>
                     </tr>
                 </thead>
@@ -61,12 +62,13 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                                 navigator.clipboard.writeText(item.product_url);
                                                 const btn = document.activeElement;
                                                 const originalText = btn.innerHTML;
-                                                btn.innerHTML = '📋 Copied!';
-                                                setTimeout(() => { btn.innerHTML = '🔗 Copy'; }, 2000);
+                                                btn.innerHTML = '📋';
+                                                setTimeout(() => { btn.innerHTML = '🔗'; }, 2000);
                                             }}
                                             title="Copy product URL"
+                                            style={{ padding: '2px 4px', fontSize: '10px' }}
                                         >
-                                            🔗 Copy
+                                            🔗
                                         </button>
                                     )}
                                 </div>
@@ -74,10 +76,12 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                             <td className="price">{item.price_display}</td>
                             <td>
                                 <div className="rating">
-                                    <span>★</span>
+                                    <span style={{ color: '#fbbf24' }}>★</span>
                                     <span>{item.rating || '-'}</span>
-                                    <span style={{ color: '#9ca3af', fontSize: '0.8em' }}>({item.reviews || 0})</span>
                                 </div>
+                            </td>
+                            <td style={{ textAlign: 'center', fontWeight: '600', color: '#4b5563' }}>
+                                {item.reviews || 0}
                             </td>
                             <td>
                                 <button

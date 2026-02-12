@@ -178,7 +178,7 @@ function App() {
       return;
     }
 
-    const headers = ['Date', 'Retailer', 'Manufacturer', 'Product Name', 'Price', 'Rating', 'Reviews', 'Product URL', 'Image URL'];
+    const headers = ['Date Found', 'Retailer', 'Manufacturer', 'Product', 'Price', 'Rating', 'Review Count', 'Product URL', 'Image URL'];
     const csvContent = [
       headers.join(','),
       ...data.map(item => [
@@ -189,8 +189,8 @@ function App() {
         `"${item.price_display}"`,
         item.rating,
         item.reviews,
-        item.product_url,
-        item.image_url
+        `"${item.product_url}"`,
+        `"${item.image_url}"`
       ].join(','))
     ].join('\n');
 

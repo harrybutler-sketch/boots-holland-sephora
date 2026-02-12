@@ -66,29 +66,29 @@ export default async function handler(request, response) {
             console.log(`Creating new sheet tab: ${sheetTitle}`);
             sheet = await doc.addSheet({
                 title: sheetTitle,
-                headerValues: ['date_found', 'retailer', 'manufacturer', 'product', 'brand', 'price', 'reviews', 'rating_value', 'product url', 'status', 'run_id', 'scrape_timestamp', 'category']
+                headerValues: ['Date Found', 'Retailer', 'Manufacturer', 'Product', 'Brand', 'Price', 'Review Count', 'Rating', 'Product URL', 'Status', 'Run ID', 'Timestamp', 'Category']
             });
         }
 
         // Fetch existing rows for deduplication
         const rows = await sheet.getRows();
-        // FIXED: Use 'product url' (space) not 'product_url'
-        const existingUrls = new Set(rows.map((row) => row.get('product url')));
+        // FIXED: Try multiple possible header names for robustness
+        const existingUrls = new Set(rows.map((row) => row.get('Product URL') || row.get('product url') || row.get('url')));
 
         let appendedCount = 0;
         let duplicateCount = 0;
         const newRows = [];
 
         // Ensure Manufacturer column exists
-        if (!sheet.headerValues.includes('manufacturer')) {
-            console.log('Adding manufacturer column to sheet...');
-            await sheet.setHeaderRow([...sheet.headerValues, 'manufacturer']);
+        if (!sheet.headerValues.includes('Manufacturer') && !sheet.headerValues.includes('manufacturer')) {
+            console.log('Adding Manufacturer column to sheet...');
+            await sheet.setHeaderRow([...sheet.headerValues, 'Manufacturer']);
         }
 
-        // Ensure image_url column exists
-        if (!sheet.headerValues.includes('image_url')) {
-            console.log('Adding image_url column to sheet...');
-            await sheet.setHeaderRow([...sheet.headerValues, 'image_url']);
+        // Ensure Image URL column exists
+        if (!sheet.headerValues.includes('Image URL') && !sheet.headerValues.includes('image_url')) {
+            console.log('Adding Image URL column to sheet...');
+            await sheet.setHeaderRow([...sheet.headerValues, 'Image URL']);
         }
 
         for (const item of items) {
@@ -355,20 +355,20 @@ export default async function handler(request, response) {
             const imageUrl = item.image || item.imageUrl || item.productImage || '';
 
             newRows.push({
-                'product': name,
-                'retailer': retailer,
-                'product url': url,
-                'price': item.price_display || `${currency} ${price}`,
-                'reviews': reviewCount,
-                'date_found': new Date().toISOString().split('T')[0],
-                'brand': brandName,
-                'manufacturer': manufacturer,
-                'category': categoryName,
-                'rating_value': ratingValue,
-                'status': 'Pending',
-                'run_id': runId,
-                'scrape_timestamp': new Date().toISOString(),
-                'image_url': imageUrl
+                'Product': name,
+                'Retailer': retailer,
+                'Product URL': url,
+                'Price': item.price_display || `${currency} ${price}`,
+                'Review Count': reviewCount,
+                'Date Found': new Date().toISOString().split('T')[0],
+                'Brand': brandName,
+                'Manufacturer': manufacturer,
+                'Category': categoryName,
+                'Rating': ratingValue,
+                'Status': 'Pending',
+                'Run ID': runId,
+                'Timestamp': new Date().toISOString(),
+                'Image URL': imageUrl
             });
 
             existingUrls.add(url);
