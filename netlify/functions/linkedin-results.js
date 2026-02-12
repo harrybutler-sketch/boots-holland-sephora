@@ -160,11 +160,18 @@ function isProductLaunch(text, retailer) {
 
     const lower = text.toLowerCase();
 
-    // STRICT Negative Keywords (Job posts, etc.)
+    // STRICT Negative Keywords (Job posts, Reports, Webinars, Store Openings)
     const negativeKeywords = [
+        // Jobs / Hiring
         'hiring', 'vacancy', 'job', 'recruit', 'career', 'opportunity', 'looking for a',
         'join our team', 'join the team', 'apply now', 'roles available', 'work with us',
-        'report', 'whitepaper', 'webinar', 'seminar', 'conference', 'panel discussion'
+
+        // Content / Events
+        'report', 'whitepaper', 'webinar', 'seminar', 'conference', 'panel discussion',
+
+        // Store Openings / Corporate News (NOT Product Launches)
+        'new store', 'new shop', 'new branch', 'managed store', 'convenience store', 'store opening',
+        'opened', 'opening', 'expansion', 'refurbishment', 'refit', 'franchise'
     ];
 
     if (negativeKeywords.some(kw => lower.includes(kw))) {
@@ -173,13 +180,18 @@ function isProductLaunch(text, retailer) {
         if (lower.includes('hiring') || lower.includes('vacancy') || lower.includes('recruit')) {
             return false;
         }
+        // If it explicitly says "new store", it's likely not a product launch
+        if (lower.includes('new store') || lower.includes('new shop') || lower.includes('opened')) {
+            return false;
+        }
     }
 
     // Positive Keywords (Strong Intent - MUST be present)
     const positiveKeywords = [
-        'launch', 'listing', 'shelf', 'shelves', 'store', 'stockist', 'range', 'flavour', 'flavor',
+        'launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'flavour', 'flavor',
         'sku', 'available now', 'buy now', 'grab yours', 'find us',
         'roll out', 'rolling out', 'landed', 'hitting', 'arrived', 'introducing'
+        // Removed 'store' as it captures "Asda Express has launched *stores*"
     ];
 
     // Note: We don't check for retailer names in positiveKeywords here, because we already checked the 'retailer' variable above.
