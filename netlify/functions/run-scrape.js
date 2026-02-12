@@ -30,40 +30,37 @@ exports.handler = async (event, context) => {
 
     // Construct Start URLs for all retailers
     const startUrls = [];
-    // Hardcoded logic from previous version to ensure no regression
+
     // Beauty Workspace URLs:
     if (retailers.includes('Sephora')) {
       startUrls.push({
         url: 'https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120',
-        userData: { retailer: 'Sephora' },
+        userData: { retailer: 'Sephora', label: 'LISTING' },
       });
     }
     if (retailers.includes('Holland & Barrett')) {
       startUrls.push({
         url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue',
-        userData: { retailer: 'Holland & Barrett' },
+        userData: { retailer: 'Holland & Barrett', label: 'LISTING' },
       });
       startUrls.push({
         url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue',
-        userData: { retailer: 'Holland & Barrett' },
-      });
-      startUrls.push({
-        url: 'https://www.hollandandbarrett.com/shop/highlights/new-in/?page=5',
-        userData: { retailer: 'Holland & Barrett' },
+        userData: { retailer: 'Holland & Barrett', label: 'LISTING' },
       });
     }
     if (retailers.includes('Boots')) {
       startUrls.push({
-        url: 'https://www.boots.com/new-to-boots',
-        userData: { retailer: 'Boots' },
+        url: 'https://www.boots.com/new-to-boots/new-in-beauty',
+        userData: { retailer: 'Boots', label: 'LISTING' },
       });
     }
     if (retailers.includes('Superdrug')) {
       startUrls.push({
         url: 'https://www.superdrug.com/new-in/c/new',
-        userData: { retailer: 'Superdrug' },
+        userData: { retailer: 'Superdrug', label: 'LISTING' },
       });
     }
+
     // Grocery workspace map
     const groceryMap = {
       'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in',
@@ -76,54 +73,29 @@ exports.handler = async (event, context) => {
 
     retailers.forEach(retailer => {
       if (groceryMap[retailer]) {
-        startUrls.push({ url: groceryMap[retailer], userData: { retailer } });
+        startUrls.push({ url: groceryMap[retailer], userData: { retailer, label: 'LISTING' } });
       }
     });
 
-    // Split logic: H&B vs Others
-    const hbUrls = startUrls.filter(u => u.userData.retailer === 'Holland & Barrett');
-    const otherUrls = startUrls.filter(u => u.userData.retailer !== 'Holland & Barrett');
-
-    let runId = null;
-    let runStatusUrl = null;
-    let startedAt = null;
-
-    // 1. Run Standard Scraper for non-H&B
-    if (otherUrls.length > 0) {
-      console.log(`Starting standard scrape for ${otherUrls.length} URLs`);
-      const run = await client.actor(process.env.APIFY_ACTOR_ID).start({
-        listingUrls: otherUrls,
-        scrapeMode: 'BROWSER',
-        maxProductResults: otherUrls.length * 150, // Approximate limit
-        proxyConfiguration: { useApifyProxy: true },
-        countryCode: 'US'
-      });
-      runId = run.id;
-      runStatusUrl = run.statusUrl;
-      startedAt = run.startedAt;
+    if (startUrls.length === 0) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'No valid retailers found' }) };
     }
 
-    // 2. Run Custom Puppeteer Scraper for H&B (if requested)
-    if (hbUrls.length > 0) {
-      console.log(`Starting custom H&B scrape for ${hbUrls.length} URLs`);
+    console.log(`Starting universal custom scrape for ${startUrls.length} start URLs`);
 
-      // Add LISTING label
-      const hbStartUrls = hbUrls.map(u => ({ ...u, userData: { ...u.userData, label: 'LISTING' } }));
+    // Callback URL for sync
+    const webhookUrl = `https://${event.headers.host}/.netlify/functions/run-status`;
 
-      // Callback URL for sync
-      const webhookUrl = `https://${event.headers.host}/.netlify/functions/run-status`;
-
-      const run = await client.actor('apify/puppeteer-scraper').start({
-        startUrls: hbStartUrls,
-        proxyConfiguration: { useApifyProxy: true },
-        maxPagesPerCrawl: 150, // Limit for H&B
-        // Page Function (Combined Listing + Detail logic)
-        pageFunction: `async function pageFunction(context) {
+    const run = await client.actor('apify/puppeteer-scraper').start({
+      startUrls,
+      proxyConfiguration: { useApifyProxy: true },
+      maxPagesPerCrawl: 300,
+      pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
+                const { label, retailer } = request.userData;
                 
-                if (request.userData.label === 'LISTING') {
-                    // Browsing "New In" listing
-                    log.info('Listing page: ' + request.url);
+                if (label === 'LISTING') {
+                    log.info(\`Listing page (\${retailer}): \` + request.url);
                     
                     // Lazy load scroll
                     await page.evaluate(async () => {
@@ -140,72 +112,105 @@ exports.handler = async (event, context) => {
                         });
                     });
                     
-                    // Enqueue Product Links
+                    // Selector Map for Product Links
+                    const selectors = {
+                        'Holland & Barrett': 'a[href*="/shop/product/"]',
+                        'Sephora': 'a.Product-link',
+                        'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
+                        'Superdrug': 'a.product-card__title, a.product-card__image-link',
+                        'Tesco': 'a[data-testid="product-image-link"]',
+                        'Sainsburys': 'a.pt__link-wrapper, a.pt__link',
+                        'Asda': 'a.co-item__title-link',
+                        'Morrisons': 'a[href*="/products/"]',
+                        'Ocado': 'a[href*="/products/"]',
+                        'Waitrose': 'a[href*="/ecom/shop/products/"]'
+                    };
+                    
+                    const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
+                    
                     await enqueueLinks({
-                        selector: 'a[href*="/shop/product/"]',
-                        label: 'DETAIL'
+                        selector,
+                        label: 'DETAIL',
+                        userData: { retailer }
                     });
-                     return { type: 'LISTING', url: request.url };
+                     return { type: 'LISTING', url: request.url, retailer };
                 } else {
-                    // Extract Product Data (LD-JSON)
-                    log.info('Product page: ' + request.url);
+                    // Extract Product Data
+                    log.info(\`Product page (\${retailer}): \` + request.url);
                     
-                    // Wait for LD-JSON
-                    try {
-                        await page.waitForSelector('script[type="application/ld+json"]', { timeout: 10000 });
-                    } catch(e) { log.warning('No LD-JSON found'); }
+                    // Wait for dynamic content
+                    await new Promise(r => setTimeout(r, 5000));
                     
-                    const jsonLd = await page.evaluate(() => {
+                    const item = await page.evaluate((retailer) => {
+                        const results = { 
+                            url: window.location.href,
+                            retailer: retailer,
+                            name: document.title,
+                            reviews: 0,
+                            rating: 0
+                        };
+                        
+                        // 1. JSON-LD Extraction
                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-                        return scripts.map(s => { try { return JSON.parse(s.innerText); } catch(e) { return null; } }).filter(Boolean);
-                    });
-
-                    // Flatten for run-status.js
-                    let item = { url: request.url };
-                    if (jsonLd && jsonLd.length > 0) {
-                        const product = jsonLd.find(i => i['@type'] === 'Product');
-                        if (product) {
-                            item.name = product.name;
-                            item.brand = typeof product.brand === 'object' ? product.brand.name : product.brand;
-                            item.image = Array.isArray(product.image) ? product.image[0] : product.image;
-                            item.description = product.description;
-                            item.sku = product.sku || product.mpn;
-                            if (product.offers) {
-                                const offer = Array.isArray(product.offers) ? product.offers[0] : product.offers;
-                                item.price = offer.price;
-                                item.currency = offer.priceCurrency;
-                            }
-                            if (product.aggregateRating) {
-                                item.rating = product.aggregateRating.ratingValue;
-                                item.reviews = product.aggregateRating.reviewCount;
+                        for (const s of scripts) {
+                            try {
+                                const json = JSON.parse(s.innerText);
+                                const products = Array.isArray(json) ? json : [json];
+                                const product = products.find(i => i['@type'] === 'Product' || (i['@graph'] && i['@graph'].find(g => g['@type'] === 'Product')));
+                                const p = product && product['@graph'] ? product['@graph'].find(g => g['@type'] === 'Product') : product;
+                                
+                                if (p) {
+                                    results.name = p.name || results.name;
+                                    results.brand = typeof p.brand === 'object' ? p.brand.name : p.brand;
+                                    results.image = Array.isArray(p.image) ? p.image[0] : p.image;
+                                    results.description = p.description;
+                                    results.sku = p.sku || p.mpn;
+                                    
+                                    if (p.offers) {
+                                        const offer = Array.isArray(p.offers) ? p.offers[0] : p.offers;
+                                        results.price = offer.price;
+                                        results.currency = offer.priceCurrency;
+                                    }
+                                    
+                                    const ratingObj = p.aggregateRating;
+                                    if (ratingObj) {
+                                        results.rating = parseFloat(ratingObj.ratingValue) || 0;
+                                        results.reviews = parseInt(ratingObj.reviewCount || ratingObj.reviewsCount || ratingObj.numberOfReviews) || 0;
+                                    }
+                                }
+                            } catch(e) {}
+                        }
+                        
+                        // 2. DOM Fallbacks
+                        if (results.reviews === 0) {
+                            const bvCount = document.querySelector('.bv_numReviews_text, #bvRContainer-Link, [data-bv-show="rating_summary"]');
+                            if (bvCount) {
+                                results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;
+                                const bvRating = document.querySelector('.bv_avgRating_text, .bv_avgRating_component_container');
+                                if (bvRating) results.rating = parseFloat(bvRating.innerText) || 0;
                             }
                         }
-                    } else { item.name = await page.title(); }
+                        
+                        return results;
+                    }, retailer);
                     
                     return item;
                 }
             }`,
-        // Webhook for sync
-        webhooks: [
-          {
-            eventTypes: ['ACTOR.RUN.SUCCEEDED'],
-            requestUrl: webhookUrl
-          }
-        ]
-      });
-
-      // Prioritize returning the H&B run ID if it runs, as user is likely debugging H&B
-      runId = run.id;
-      runStatusUrl = run.statusUrl;
-      startedAt = run.startedAt;
-    }
+      webhooks: [
+        {
+          eventTypes: ['ACTOR.RUN.SUCCEEDED'],
+          requestUrl: webhookUrl
+        }
+      ]
+    });
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        runId,
-        statusUrl: runStatusUrl,
-        startedAt,
+        runId: run.id,
+        statusUrl: run.statusUrl,
+        startedAt: run.startedAt,
       }),
     };
   } catch (error) {

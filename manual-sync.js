@@ -114,7 +114,7 @@ async function manualSync(runId, workspace = 'beauty') {
                     .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
                     .replace(/\.$/, '')
                     .trim();
-                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet' || brandName.toLowerCase().includes('marketplace')) {
+                if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet' || brandName.toLowerCase().includes('marketplace') || brandName.toLowerCase() === 'asda logo') {
                     brandName = '';
                 }
             }
@@ -213,7 +213,7 @@ async function manualSync(runId, workspace = 'beauty') {
                 'Holland & Barrett': ['holland', 'barrett', 'h&b', 'holland & barrett', 'holland and barrett'],
                 'Sainsburys': ['sainsbury', 'hubbard', 'by sainsbury', 'sainsbury\'s', 'stamford street'],
                 'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\'s harvest', 'hearty food co', 'romano', 'willow farm', 'redmere', 'nightingale', 'boswell'],
-                'Asda': ['asda', 'extra special', 'just essentials', 'asda logo', 'george home'],
+                'Asda': ['asda', 'extra special', 'just essentials', 'george home'],
                 'Morrisons': ['morrison', 'the best', 'savers', 'morrisons', 'nutmeg'],
                 'Ocado': ['ocado', 'ocado own range', 'm&s', 'marks & spencer'],
                 'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners']
@@ -230,7 +230,6 @@ async function manualSync(runId, workspace = 'beauty') {
                 containsKeyword(lowercaseManufacturer) ||
                 containsKeyword(lowercaseBrand) ||
                 (lowercaseBrand === retailer.toLowerCase()) ||
-                (lowercaseBrand === 'asda logo') ||
                 (containsKeyword(lowercaseName) && (lowercaseManufacturer === '' || lowercaseManufacturer === retailer.toLowerCase())); // Heuristic: Name contains retailer and no distinct manufacturer
 
             if (isOwnBrand) {
