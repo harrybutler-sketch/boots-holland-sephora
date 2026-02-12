@@ -171,7 +171,12 @@ function isProductLaunch(text, retailer) {
 
         // Store Openings / Corporate News (NOT Product Launches)
         'new store', 'new shop', 'new branch', 'managed store', 'convenience store', 'store opening',
-        'opened', 'opening', 'expansion', 'refurbishment', 'refit', 'franchise'
+        'opened', 'opening', 'expansion', 'refurbishment', 'refit', 'franchise',
+
+        // Tech / AI / Software (NOT Retail Products)
+        'ai agent', 'artificial intelligence', 'llm', 'gpt', 'claude', 'anthropic', 'open ai', 'openai',
+        'software', 'platform', 'app', 'feature', 'update', 'integration', 'automating', 'automation',
+        'no-code', 'saas', 'tech', 'technology', 'digital', 'transformation'
     ];
 
     if (negativeKeywords.some(kw => lower.includes(kw))) {
