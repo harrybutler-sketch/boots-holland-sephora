@@ -97,14 +97,15 @@ export default async function handler(request, response) {
         console.log(`Starting Hybrid Discovery Phase for ${startUrls.length} start URLs...`);
 
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
-            startUrls: startUrls.map(s => ({ url: s.url })),
-            maxItemsPerStartUrl: 1000,
+            listingUrls: startUrls.map(s => ({ url: s.url })),
+            maxItemsPerStartUrl: 100, // Reduced from 1000 to prevent timeouts
             proxyConfiguration: { useApifyProxy: true },
-            maxReviews: 5 // User requested filter: Only find items with 5 or less reviews
+            maxReviews: 5,
         }, {
+            timeoutSecs: 240, // 4 minutes timeout
             webhooks: [
                 {
-                    eventTypes: ['ACTOR.RUN.SUCCEEDED'],
+                    eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.TIMED_OUT'], // Trigger even if timed out
                     requestUrl: `${protocol}://${host}/api/run-enrichment?workspace=${workspace}`
                 }
             ]
