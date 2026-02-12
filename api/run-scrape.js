@@ -1,4 +1,6 @@
 import { ApifyClient } from 'apify-client';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export default async function handler(request, response) {
     // Only allow POST
@@ -84,8 +86,12 @@ export default async function handler(request, response) {
 
         console.log(`Starting universal custom scrape for ${startUrls.length} start URLs`);
 
-        // Callback URL for sync (if needed, though dashboard polls run-status)
-        // We use the same host logic if we want webhooks, but dashboard polling is preferred for simple UI
+        // Construct Webhook URL for background sync
+        const host = request.headers.host;
+        const protocol = request.headers['x-forwarded-proto'] || 'https';
+        const webhookUrl = `${protocol}://${host}/api/run-status?workspace=${workspace}`;
+
+        console.log(`Using webhook URL: ${webhookUrl}`);
 
         const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls,
@@ -119,8 +125,8 @@ export default async function handler(request, response) {
                         'Sephora': 'a.Product-link',
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
                         'Superdrug': 'a.product-card__title, a.product-card__image-link',
-                        'Tesco': 'a[data-testid="product-image-link"]',
-                        'Sainsburys': 'a.pt__link-wrapper, a.pt__link',
+                        'Tesco': 'a[data-testid="product-image-link"], a[href*="/product/"], a[href*="/p/"]',
+                        'Sainsburys': 'a.pt__link-wrapper, a.pt__link, a[href*="/product/"]',
                         'Asda': 'a.co-item__title-link',
                         'Morrisons': 'a[href*="/products/"]',
                         'Ocado': 'a[href*="/products/"]',
@@ -221,7 +227,13 @@ export default async function handler(request, response) {
                     
                     return item;
                 }
-            }`
+            }`,
+            webhooks: [
+                {
+                    eventTypes: ['ACTOR.RUN.SUCCEEDED'],
+                    requestUrl: webhookUrl
+                }
+            ]
         });
 
         return response.status(200).json({
