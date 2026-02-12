@@ -340,32 +340,24 @@ export default async function handler(request, response) {
                 continue;
             }
 
-            // ROBUST CATEGORY MAPPING
-            const rawCategory = item.category || (item.categories && item.categories[0]) || (item.breadcrumbs && item.breadcrumbs.join(' > ')) || (item.breadcrumbs && item.breadcrumbs[0]) || item.section || '';
-            const categoryName = (typeof rawCategory === 'string' ? rawCategory : (rawCategory && (rawCategory.name || rawCategory.title || rawCategory.label))) || '';
+            // Ensure Manufacturer column exists
+            if (!manufacturer && brandName) manufacturer = brandName;
 
-            // ROBUST REVIEWS/RATING MAPPING
-            const reviewCount = item.reviewCount || item.reviewsCount || item.reviews_count || item.rating_count ||
-                (item.reviews && (typeof item.reviews === 'number' ? item.reviews : (item.reviews.count || item.reviews.total || item.reviews.total_reviews))) ||
-                (item.aggregateRating && item.aggregateRating.reviewCount) || 0;
-
-            const ratingValue = item.rating || item.rating_value || item.ratingValue || item.stars || item.score ||
-                (item.aggregateRating && item.aggregateRating.ratingValue) || '';
-
-            const imageUrl = item.image || item.imageUrl || item.productImage || '';
+            // Image URL mapping
+            const imageUrl = item.image || item.imageUrl || item.productImage || item.image_url || '';
 
             newRows.push({
                 'Product': name,
                 'Retailer': retailer,
                 'Product URL': url,
-                'Price': item.price_display || `${currency} ${price}`,
-                'Review Count': reviewCount,
+                'Price': item.price_display || (price ? `${currency} ${price}` : 'N/A'),
+                'Review Count': item.reviews || item.rating_count || 0,
                 'Date Found': new Date().toISOString().split('T')[0],
                 'Brand': brandName,
                 'Manufacturer': manufacturer,
-                'Category': categoryName,
-                'Rating': ratingValue,
-                'Status': 'Pending',
+                'Category': item.category || 'New In',
+                'Rating': item.rating || item.rating_value || 0,
+                'Status': item.status || 'Enriched',
                 'Run ID': runId,
                 'Timestamp': new Date().toISOString(),
                 'Image URL': imageUrl
