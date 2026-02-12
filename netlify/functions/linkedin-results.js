@@ -57,13 +57,18 @@ export default async (req, context) => {
         fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
         const filteredItems = mappedItems.filter(item => {
-            // 1. Date Filter
+            // 1. Date Filter (Keep this to ensure relevance)
             if (item.date && item.date !== 'Unknown' && new Date(item.date) < fourWeeksAgo) {
                 return false;
             }
-
-            // 2. Content Filter (Product Launches ONLY)
-            return isProductLaunch(item.postSnippet);
+            return true;
+        }).map(item => {
+            // 2. Assign Type
+            const isLaunch = isProductLaunch(item.postSnippet);
+            return {
+                ...item,
+                type: isLaunch ? 'launch' : 'other'
+            };
         });
 
         return new Response(JSON.stringify(filteredItems), {

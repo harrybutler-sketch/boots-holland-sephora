@@ -6,6 +6,9 @@ const LinkedinFeed = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const [showLaunches, setShowLaunches] = useState(true);
+    const [showOther, setShowOther] = useState(false);
+
     // Fetch Logic
     const fetchLinkedinResults = async () => {
         setLoading(true);
@@ -48,11 +51,40 @@ const LinkedinFeed = () => {
         }
     };
 
+    // Filter Items based on Toggles
+    const visibleItems = items.filter(item => {
+        if (item.type === 'launch' && showLaunches) return true;
+        if (item.type === 'other' && showOther) return true;
+
+        // Backwards compatibility for old items without 'type' (Show if showLaunches is true, assuming old items are launches)
+        if (!item.type && showLaunches) return true;
+
+        return false;
+    });
+
     if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading LinkedIn Feed...</div>;
 
     return (
         <div className="linkedin-feed">
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                            type="checkbox"
+                            checked={showLaunches}
+                            onChange={(e) => setShowLaunches(e.target.checked)}
+                        />
+                        <strong>Product Launches</strong>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                            type="checkbox"
+                            checked={showOther}
+                            onChange={(e) => setShowOther(e.target.checked)}
+                        />
+                        <strong>Other News</strong>
+                    </label>
+                </div>
                 <button className="btn" onClick={runScrape}>
                     🔄 Run LinkedIn Scraper
                 </button>
@@ -67,20 +99,21 @@ const LinkedinFeed = () => {
                 </div>
             )}
 
-            {!error && items.length === 0 && (
+            {!error && visibleItems.length === 0 && (
                 <div className="empty-state">
-                    No recent LinkedIn results found. Try running a scrape.
+                    No items found matching your filters. Try adjusting the toggles or running a scrape.
                 </div>
             )}
 
             {!error && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '2rem' }}>
-                    {items.map(item => (
+                    {visibleItems.map(item => (
                         <div key={item.id} className="card" style={{ opacity: item.dealtWith ? 0.6 : 1, transition: 'opacity 0.2s' }}>
                             {/* Header */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                     <span className="badge badge-retailer" style={{ textTransform: 'uppercase' }}>{item.retailer}</span>
+                                    {item.type === 'other' && <span className="badge" style={{ background: '#cbd5e1', color: '#475569' }}>Other</span>}
                                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         📅 {item.date}
                                     </span>
