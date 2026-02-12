@@ -110,11 +110,13 @@ export default async function handler(request, response) {
                             let totalHeight = 0;
                             const distance = 100;
                             let scrolls = 0;
+                            // Increased scrolls for grocery sites with infinite scroll
+                            const maxScrolls = 80; 
                             const timer = setInterval(() => {
                                 window.scrollBy(0, distance);
                                 totalHeight += distance;
                                 scrolls++;
-                                if (scrolls > 50) { clearInterval(timer); resolve(); }
+                                if (scrolls > maxScrolls) { clearInterval(timer); resolve(); }
                             }, 100);
                         });
                     });
@@ -126,7 +128,7 @@ export default async function handler(request, response) {
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
                         'Superdrug': 'a.product-card__title, a.product-card__image-link',
                         'Tesco': 'a[data-testid="product-image-link"], a[href*="/product/"], a[href*="/p/"]',
-                        'Sainsburys': 'a.pt__link-wrapper, a.pt__link, a[href*="/product/"]',
+                        'Sainsburys': 'a[data-testid="product-pt-link"], a.pt__link-wrapper, a.pt__link, a[href*="/product/"]',
                         'Asda': 'a.co-item__title-link',
                         'Morrisons': 'a[href*="/products/"]',
                         'Ocado': 'a[href*="/products/"]',
