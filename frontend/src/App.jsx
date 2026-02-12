@@ -15,7 +15,8 @@ function App() {
   const [filters, setFilters] = useState({
     retailer: 'All',
     days: '28',
-    q: ''
+    q: '',
+    max_reviews: ''
   });
 
   // Persist State Changes
@@ -45,6 +46,7 @@ function App() {
         retailer: filters.retailer,
         days: filters.days,
         q: filters.q,
+        max_reviews: filters.max_reviews,
         workspace: workspace
       });
 
@@ -164,7 +166,8 @@ function App() {
     setFilters({
       retailer: 'All',
       days: '28',
-      q: ''
+      q: '',
+      max_reviews: ''
     });
   };
 

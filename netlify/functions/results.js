@@ -7,7 +7,7 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        const { limit = 200, retailer, days, q } = event.queryStringParameters;
+        const { limit = 200, retailer, days, q, max_reviews } = event.queryStringParameters;
 
         // Google Sheets Auth
         const serviceAccountAuth = new JWT({
@@ -50,6 +50,17 @@ exports.handler = async (event, context) => {
                 const name = (row.get('product') || row.get('product_name') || '').toLowerCase();
                 const brand = (row.get('brand') || '').toLowerCase();
                 return name.includes(searchLower) || brand.includes(searchLower);
+            });
+        }
+
+        // 4. Max Reviews Filter
+        if (max_reviews !== undefined && max_reviews !== '') {
+            const max = parseInt(max_reviews, 10);
+            filteredRows = filteredRows.filter(row => {
+                const reviews = parseInt(row.get('reviews') || row.get('rating_count') || '0', 10);
+                // Treat NaN as 0
+                const count = isNaN(reviews) ? 0 : reviews;
+                return count <= max;
             });
         }
 

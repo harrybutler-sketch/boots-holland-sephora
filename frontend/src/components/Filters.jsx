@@ -45,6 +45,21 @@ const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
                 </select>
             </div>
 
+            <div className="form-group">
+                <label htmlFor="max_reviews">Max Reviews</label>
+                <input
+                    type="number"
+                    id="max_reviews"
+                    name="max_reviews"
+                    className="input"
+                    placeholder="e.g. 5"
+                    min="0"
+                    value={filters.max_reviews || ''}
+                    onChange={handleChange}
+                    style={{ width: '120px' }}
+                />
+            </div>
+
             <div className="form-group" style={{ flexGrow: 1 }}>
                 <label htmlFor="q">Search</label>
                 <input
