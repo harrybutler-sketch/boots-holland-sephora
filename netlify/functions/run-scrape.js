@@ -91,6 +91,7 @@ exports.handler = async (event, context) => {
       proxyConfiguration: {
         useApifyProxy: true
       },
+      includeReviews: true,
       countryCode: 'US'
     });
 
