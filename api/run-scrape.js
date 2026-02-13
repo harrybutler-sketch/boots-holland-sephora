@@ -231,7 +231,29 @@ export default async function handler(request, response) {
                         };
                         
                         const keywords = ownBrandMap[retailer] || [];
-                        const isOwnBrand = keywords.some(kw => lowerName.includes(kw) || lowerBrand.includes(kw));
+                        
+                        // Smart own-brand detection:
+                        // 1. Check brand field first (most reliable)
+                        // 2. If brand empty, check if name STARTS with keyword
+                        // 3. Ignore "Boots" suffix artifacts in product names
+                        
+                        let isOwnBrand = false;
+                        
+                        // Primary check: brand field
+                        if (lowerBrand) {
+                            isOwnBrand = keywords.some(kw => lowerBrand.includes(kw));
+                        }
+                        
+                        // Fallback: check if name STARTS with own-brand keyword (not just contains)
+                        if (!isOwnBrand && !lowerBrand) {
+                            const nameWords = lowerName.split(' ');
+                            const firstWord = nameWords[0] || '';
+                            const firstTwoWords = nameWords.slice(0, 2).join(' ');
+                            
+                            isOwnBrand = keywords.some(kw => {
+                                return firstWord === kw || firstTwoWords.startsWith(kw) || lowerName.startsWith(kw);
+                            });
+                        }
                         
                         if (isOwnBrand) {
                             // Mark as skipped so we don't save it to dataset (and thus don't enrich it)
