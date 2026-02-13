@@ -6,9 +6,17 @@ exports.handler = async (event, context) => {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
+    // Prevent Caching
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+    };
+
     try {
         const { limit = 200, retailer, days, q, review_range, max_reviews } = event.queryStringParameters;
-        console.log(`API Request: retailer=${retailer}, review_range=${review_range}, max_reviews=${max_reviews}, q=${q}`);
+        console.log(`FILTER DEBUG: review_range="${review_range}", retailer="${retailer}"`);
 
         // Google Sheets Auth
         const serviceAccountAuth = new JWT({
@@ -117,6 +125,7 @@ exports.handler = async (event, context) => {
 
         return {
             statusCode: 200,
+            headers,
             body: JSON.stringify(results),
         };
 
