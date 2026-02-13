@@ -57,6 +57,16 @@ exports.handler = async (event, context) => {
         if (max_reviews !== undefined && max_reviews !== '') {
             const max = parseInt(max_reviews, 10);
             filteredRows = filteredRows.filter(row => {
+                const reviews = parseInt(row.get('reviews') || row.get('rating_count') || row.get('Review Count') || '0', 10);
+                const count = isNaN(reviews) ? 0 : reviews;
+                return count <= max;
+            });
+        }
+
+        // 4. Max Reviews Filter
+        if (max_reviews !== undefined && max_reviews !== '') {
+            const max = parseInt(max_reviews, 10);
+            filteredRows = filteredRows.filter(row => {
                 const reviews = parseInt(row.get('reviews') || row.get('rating_count') || '0', 10);
                 // Treat NaN as 0
                 const count = isNaN(reviews) ? 0 : reviews;
