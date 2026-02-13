@@ -226,12 +226,18 @@ exports.handler = async (event, context) => {
                         const lowerRetailer = retailer.toLowerCase();
                         
                         const ownBrandMap = {
+                            // Grocery Retailers
                             'Morrisons': ['morrisons', 'the best', 'savers', 'nutmeg', 'market street'],
                             'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\'s harvest'],
                             'Asda': ['asda', 'extra special', 'just essentials', 'george home'],
                             'Sainsburys': ['sainsbury', 'hubbard', 'stamford street'],
                             'Waitrose': ['waitrose', 'essential', 'duchy'],
-                            'Ocado': ['ocado', 'm&s', 'marks & spencer']
+                            'Ocado': ['ocado', 'm&s', 'marks & spencer'],
+                            // Beauty Retailers
+                            'Sephora': ['sephora collection', 'sephora'],
+                            'Boots': ['boots', 'no7', 'no 7', 'botanics', 'soap & glory', 'soap and glory'],
+                            'Holland & Barrett': ['holland & barrett', 'holland and barrett', 'h&b'],
+                            'Superdrug': ['superdrug', 'b.', 'b. by superdrug']
                         };
                         
                         const keywords = ownBrandMap[retailer] || [];
