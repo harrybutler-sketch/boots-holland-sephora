@@ -99,7 +99,10 @@ export default async function handler(request, response) {
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
             listingUrls: startUrls.map(s => ({ url: s.url })),
             maxItemsPerStartUrl: 100, // Reduced from 1000 to prevent timeouts
-            proxyConfiguration: { useApifyProxy: true },
+            proxyConfiguration: {
+                useApifyProxy: true,
+                apifyProxyCountry: 'GB'
+            },
         }, {
             webhooks: [
                 {
