@@ -100,7 +100,6 @@ export default async function handler(request, response) {
             listingUrls: startUrls.map(s => ({ url: s.url })),
             maxItemsPerStartUrl: 100, // Reduced from 1000 to prevent timeouts
             proxyConfiguration: { useApifyProxy: true },
-            maxReviews: 5,
         }, {
             timeoutSecs: 240, // 4 minutes timeout
             webhooks: [
