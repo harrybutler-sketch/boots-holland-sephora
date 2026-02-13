@@ -34,7 +34,7 @@ exports.handler = async (event, context) => {
     // Beauty Workspace URLs:
     if (retailers.includes('Sephora')) {
       startUrls.push({
-        url: 'https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120',
+        url: 'https://www.sephora.co.uk/new-at-sephora',
         userData: { retailer: 'Sephora', label: 'LISTING' },
       });
     }
