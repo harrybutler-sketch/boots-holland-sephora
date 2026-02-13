@@ -90,6 +90,8 @@ exports.handler = async (event, context) => {
     const run = await client.actor('apify/puppeteer-scraper').start({
       startUrls,
       proxyConfiguration: { useApifyProxy: true },
+      useChrome: true,
+      stealth: true,
       maxPagesPerCrawl: 55, // Strict limit: ~50 products + listing pages
       navigationTimeoutSecs: 180,
       pageLoadTimeoutSecs: 180,
