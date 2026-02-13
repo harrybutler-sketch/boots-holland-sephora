@@ -7,7 +7,8 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        const { limit = 200, retailer, days, q, review_range } = event.queryStringParameters;
+        const { limit = 200, retailer, days, q, review_range, max_reviews } = event.queryStringParameters;
+        console.log(`API Request: retailer=${retailer}, review_range=${review_range}, max_reviews=${max_reviews}, q=${q}`);
 
         // Google Sheets Auth
         const serviceAccountAuth = new JWT({
@@ -74,6 +75,15 @@ exports.handler = async (event, context) => {
                     case '20+': return count >= 20;
                     default: return true;
                 }
+            });
+        }
+        // FALLBACK: Legacy Max Reviews Filter (for cached frontends)
+        else if (max_reviews !== undefined && max_reviews !== '') {
+            const max = parseInt(max_reviews, 10);
+            filteredRows = filteredRows.filter(row => {
+                const reviews = parseInt(row.get(reviewsHeader) || '0', 10);
+                const count = isNaN(reviews) ? 0 : reviews;
+                return count <= max;
             });
         }
 
