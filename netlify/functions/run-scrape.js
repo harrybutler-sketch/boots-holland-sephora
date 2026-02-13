@@ -91,6 +91,8 @@ exports.handler = async (event, context) => {
       startUrls,
       proxyConfiguration: { useApifyProxy: true },
       maxPagesPerCrawl: 55, // Strict limit: ~50 products + listing pages
+      navigationTimeoutSecs: 180,
+      pageLoadTimeoutSecs: 180,
       pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
                 const { label, retailer } = request.userData;
