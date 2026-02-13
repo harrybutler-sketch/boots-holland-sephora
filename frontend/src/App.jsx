@@ -142,7 +142,8 @@ function App() {
         body: JSON.stringify({
           retailers: activeRetailers,
           mode: 'new-in',
-          workspace: workspace
+          workspace: workspace,
+          maxReviews: filters.max_reviews
         })
       });
       const result = await response.json();
