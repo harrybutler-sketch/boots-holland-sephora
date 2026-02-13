@@ -1,7 +1,7 @@
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { JWT } from 'google-auth-library';
 
-exports.handler = async (event, context) => {
+export const handler = async (event, context) => {
     if (event.httpMethod !== 'GET') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
@@ -30,13 +30,13 @@ exports.handler = async (event, context) => {
         // Prefer 'New In' sheet, fallback to index 0
         const sheet = doc.sheetsByTitle['New In'] || doc.sheetsByIndex[0];
         await sheet.loadHeaderRow();
-        const headers = sheet.headerValues;
+        const headersList = sheet.headerValues;
 
         // Dynamic Header Detection
-        const reviewsHeader = headers.find(h => ['reviews', 'review_count', 'Review Count', 'Reviews', 'rating_count'].includes(h)) || 'reviews';
-        const ratingHeader = headers.find(h => ['rating_value', 'rating', 'Rating', 'stars'].includes(h)) || 'rating_value';
-        const productUrlHeader = headers.find(h => ['product url', 'Product URL', 'url', 'URL'].includes(h)) || 'product url';
-        const priceHeader = headers.find(h => ['price', 'Price', 'price_display'].includes(h)) || 'price';
+        const reviewsHeader = headersList.find(h => ['reviews', 'review_count', 'Review Count', 'Reviews', 'rating_count'].includes(h)) || 'reviews';
+        const ratingHeader = headersList.find(h => ['rating_value', 'rating', 'Rating', 'stars'].includes(h)) || 'rating_value';
+        const productUrlHeader = headersList.find(h => ['product url', 'Product URL', 'url', 'URL'].includes(h)) || 'product url';
+        const priceHeader = headersList.find(h => ['price', 'Price', 'price_display'].includes(h)) || 'price';
 
         // Fetch rows (might need optimizations for very large sheets, but okay for start)
         const rows = await sheet.getRows();
@@ -114,10 +114,12 @@ exports.handler = async (event, context) => {
         const results = slicedRows.map(row => ({
             date_found: row.get('date_found'),
             retailer: row.get('retailer'),
+            manufacturer: row.get('manufacturer'), // Added manufacturer
             product_name: row.get('product') || row.get('product_name'), // Fallback for old rows
             brand: row.get('brand'),
             category: row.get('category'),
             product_url: row.get(productUrlHeader),
+            image_url: row.get('image_url') || '', // Added image_url
             price_display: row.get(priceHeader),
             reviews: row.get(reviewsHeader),
             rating: row.get(ratingHeader),
