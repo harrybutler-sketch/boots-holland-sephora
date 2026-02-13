@@ -101,7 +101,6 @@ export default async function handler(request, response) {
             maxItemsPerStartUrl: 100, // Reduced from 1000 to prevent timeouts
             proxyConfiguration: { useApifyProxy: true },
         }, {
-            timeoutSecs: 240, // 4 minutes timeout
             webhooks: [
                 {
                     eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.TIMED_OUT'], // Trigger even if timed out
