@@ -102,7 +102,7 @@ export default async function handler(request, response) {
         let actorId = 'apify/e-commerce-scraping-tool';
         let input = {
             listingUrls: startUrls.map(s => ({ url: s.url })),
-            maxItemsPerStartUrl: 100,
+            maxItemsPerStartUrl: retailers.includes('Sephora') ? 450 : 100,
             proxyConfiguration: {
                 useApifyProxy: true,
                 apifyProxyCountry: 'GB'
