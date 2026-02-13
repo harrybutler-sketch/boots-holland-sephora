@@ -130,7 +130,7 @@ exports.handler = async (event, context) => {
                         'Asda': 'a.co-item__title-link',
                         'Morrisons': 'a[href*="/products/"]',
                         'Ocado': 'a[href*="/products/"]',
-                        'Waitrose': 'a[href*="/ecom/shop/products/"]'
+                        'Waitrose': 'a[href*="/ecom/products/"]'
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
