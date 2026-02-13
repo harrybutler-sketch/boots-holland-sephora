@@ -271,6 +271,7 @@ export default async function handler(request, response) {
                     return item;
                 }
             }`,
+    }, {
       webhooks: [
         {
           eventTypes: ['ACTOR.RUN.SUCCEEDED'],

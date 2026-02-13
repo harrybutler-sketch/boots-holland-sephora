@@ -281,13 +281,14 @@ exports.handler = async (event, context) => {
                     return item;
                 }
             }`,
-      webhooks: [
+    }, {
+    webhooks: [
       {
         eventTypes: ['ACTOR.RUN.SUCCEEDED'],
         requestUrl: webhookUrl
       }
     ]
-    });
+  });
 
   return {
     statusCode: 200,
