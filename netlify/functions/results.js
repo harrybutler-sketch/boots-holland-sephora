@@ -19,6 +19,14 @@ exports.handler = async (event, context) => {
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
         const sheet = doc.sheetsByIndex[0];
+        await sheet.loadHeaderRow();
+        const headers = sheet.headerValues;
+
+        // Dynamic Header Detection
+        const reviewsHeader = headers.find(h => ['reviews', 'review_count', 'Review Count', 'Reviews', 'rating_count'].includes(h)) || 'reviews';
+        const ratingHeader = headers.find(h => ['rating_value', 'rating', 'Rating', 'stars'].includes(h)) || 'rating_value';
+        const productUrlHeader = headers.find(h => ['product url', 'Product URL', 'url', 'URL'].includes(h)) || 'product url';
+        const priceHeader = headers.find(h => ['price', 'Price', 'price_display'].includes(h)) || 'price';
 
         // Fetch rows (might need optimizations for very large sheets, but okay for start)
         const rows = await sheet.getRows();
@@ -56,7 +64,7 @@ exports.handler = async (event, context) => {
         // 4. Review Range Filter
         if (review_range) {
             filteredRows = filteredRows.filter(row => {
-                const reviews = parseInt(row.get('reviews') || row.get('rating_count') || row.get('Review Count') || '0', 10);
+                const reviews = parseInt(row.get(reviewsHeader) || '0', 10);
                 const count = isNaN(reviews) ? 0 : reviews;
 
                 switch (review_range) {
@@ -90,10 +98,10 @@ exports.handler = async (event, context) => {
             product_name: row.get('product') || row.get('product_name'), // Fallback for old rows
             brand: row.get('brand'),
             category: row.get('category'),
-            product_url: row.get('product url') || row.get('product_url'), // Fallback for old rows
-            price_display: row.get('price') || row.get('price_display'), // Fallback
-            reviews: row.get('reviews') || row.get('rating_count'), // Fallback
-            rating: row.get('rating_value'),
+            product_url: row.get(productUrlHeader),
+            price_display: row.get(priceHeader),
+            reviews: row.get(reviewsHeader),
+            rating: row.get(ratingHeader),
             status: 'Active' // Placeholder or derived
         }));
 
