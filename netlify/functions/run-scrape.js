@@ -220,33 +220,60 @@ exports.handler = async (event, context) => {
                             }
                         }
                         
+                        // 3. Own Brand Filtering (Save Credits)
+                        const lowerName = results.name.toLowerCase();
+                        const lowerBrand = (results.brand || '').toLowerCase();
+                        const lowerRetailer = retailer.toLowerCase();
+                        
+                        const ownBrandMap = {
+                            'Morrisons': ['morrisons', 'the best', 'savers', 'nutmeg', 'market street'],
+                            'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\'s harvest'],
+                            'Asda': ['asda', 'extra special', 'just essentials', 'george home'],
+                            'Sainsburys': ['sainsbury', 'hubbard', 'stamford street'],
+                            'Waitrose': ['waitrose', 'essential', 'duchy'],
+                            'Ocado': ['ocado', 'm&s', 'marks & spencer']
+                        };
+                        
+                        const keywords = ownBrandMap[retailer] || [];
+                        const isOwnBrand = keywords.some(kw => lowerName.includes(kw) || lowerBrand.includes(kw));
+                        
+                        if (isOwnBrand) {
+                            // Mark as skipped so we don't save it to dataset (and thus don't enrich it)
+                            return { ...results, skipped: true, reason: 'OWN_BRAND' };
+                        }
+
                         return results;
                     }, retailer);
+                    
+                    if (item.skipped) {
+                        log.info(`Skipping own- brand item(${ item.reason }): ${ item.name }`);
+                        return null; // Do not save to dataset which saves credits on enrichment
+                    }
                     
                     return item;
                 }
             }`,
       webhooks: [
-        {
-          eventTypes: ['ACTOR.RUN.SUCCEEDED'],
-          requestUrl: webhookUrl
-        }
-      ]
+      {
+        eventTypes: ['ACTOR.RUN.SUCCEEDED'],
+        requestUrl: webhookUrl
+      }
+    ]
     });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        runId: run.id,
-        statusUrl: run.statusUrl,
-        startedAt: run.startedAt,
-      }),
-    };
-  } catch (error) {
-    console.error('Error triggering scrape:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: `Failed to trigger scrape: ${error.message}` }),
-    };
-  }
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      runId: run.id,
+      statusUrl: run.statusUrl,
+      startedAt: run.startedAt,
+    }),
+  };
+} catch (error) {
+  console.error('Error triggering scrape:', error);
+  return {
+    statusCode: 500,
+    body: JSON.stringify({ error: `Failed to trigger scrape: ${error.message}` }),
+  };
+}
 };
