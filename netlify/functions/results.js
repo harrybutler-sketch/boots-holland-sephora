@@ -27,7 +27,8 @@ exports.handler = async (event, context) => {
 
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
-        const sheet = doc.sheetsByIndex[0];
+        // Prefer 'New In' sheet, fallback to index 0
+        const sheet = doc.sheetsByTitle['New In'] || doc.sheetsByIndex[0];
         await sheet.loadHeaderRow();
         const headers = sheet.headerValues;
 
