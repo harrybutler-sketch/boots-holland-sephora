@@ -93,6 +93,8 @@ exports.handler = async (event, context) => {
       useChrome: true,
       stealth: true,
       maxPagesPerCrawl: 55, // Strict limit: ~50 products + listing pages
+      maxConcurrency: 1, // Crawl one page at a time to avoid detection
+      maxRequestRetries: 3,
       navigationTimeoutSecs: 180,
       pageLoadTimeoutSecs: 180,
       pageFunction: `async function pageFunction(context) {
