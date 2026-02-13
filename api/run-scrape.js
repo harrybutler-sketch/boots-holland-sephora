@@ -96,17 +96,50 @@ export default async function handler(request, response) {
         // Stage 1: Discovery (Cheap & Fast)
         console.log(`Starting Hybrid Discovery Phase for ${startUrls.length} start URLs...`);
 
-        const run = await client.actor('apify/e-commerce-scraping-tool').start({
+        // Stage 1: Discovery (Cheap & Fast)
+        console.log(`Starting Hybrid Discovery Phase for ${startUrls.length} start URLs...`);
+
+        let actorId = 'apify/e-commerce-scraping-tool';
+        let input = {
             listingUrls: startUrls.map(s => ({ url: s.url })),
-            maxItemsPerStartUrl: 100, // Reduced from 1000 to prevent timeouts
+            maxItemsPerStartUrl: 100,
             proxyConfiguration: {
                 useApifyProxy: true,
                 apifyProxyCountry: 'GB'
             },
-        }, {
+        };
+
+        // SPECIAL HANDLING FOR SUPERDRUG: Use Puppeteer Scraper (more robust)
+        if (retailers.includes('Superdrug') && retailers.length === 1) {
+            console.log('Using Puppeteer Scraper for Superdrug...');
+            actorId = 'apify/puppeteer-scraper';
+            input = {
+                startUrls: startUrls.map(s => ({ url: s.url, userData: s.userData })),
+                linkSelector: 'a[href*="/p/"]',
+                pageFunction: async function pageFunction(context) {
+                    const { request, log, jQuery: $ } = context;
+                    if (request.userData.label === 'LISTING') {
+                        const productLinks = [];
+                        $('a[href*="/p/"]').each((i, el) => {
+                            const href = $(el).attr('href');
+                            if (href) productLinks.push({ url: new URL(href, request.url).href });
+                        });
+                        return productLinks;
+                    }
+                },
+                proxyConfiguration: {
+                    useApifyProxy: true,
+                    apifyProxyGroups: ['RESIDENTIAL'],
+                    apifyProxyCountry: 'GB'
+                },
+                maxPagesPerCrawl: 100,
+            };
+        }
+
+        const run = await client.actor(actorId).start(input, {
             webhooks: [
                 {
-                    eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.TIMED_OUT'], // Trigger even if timed out
+                    eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.TIMED_OUT'],
                     requestUrl: `${protocol}://${host}/api/run-enrichment?workspace=${workspace}`
                 }
             ]
