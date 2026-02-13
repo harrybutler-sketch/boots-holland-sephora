@@ -21,24 +21,29 @@ async function checkSheet() {
 
             if (rows.length === 0) continue;
 
+            const reviewsHeader = ['Review Count', 'review_count', 'reviews'].find(h => rows[0] && (rows[0].get(h) !== undefined)) || 'Review Count';
+            const ratingHeader = ['Rating', 'rating', 'stars', 'rating_value'].find(h => rows[0] && (rows[0].get(h) !== undefined)) || 'Rating';
+            const productHeader = ['Product', 'product', 'name', 'title'].find(h => rows[0] && (rows[0].get(h) !== undefined)) || 'Product';
+
             // Log a few samples with reviews
-            const withReviews = rows.filter(r => parseInt(r.get('reviews') || '0') > 0);
+            const withReviews = rows.filter(r => parseInt(r.get(reviewsHeader) || '0') > 0);
             console.log(`Rows with reviews > 0: ${withReviews.length}`);
 
             if (withReviews.length > 0) {
                 console.log('Samples with reviews:');
-                withReviews.slice(0, 3).forEach(r => {
-                    console.log(`- ${r.get('product')}: ${r.get('reviews')} reviews (Retailer: ${r.get('retailer')})`);
+                withReviews.slice(0, 10).forEach(r => {
+                    const rowIndex = r.rowNumber || (r._rowNumber) || '?';
+                    console.log(`- Row ${rowIndex}: ${r.get(productHeader)}: ${r.get(reviewsHeader)} reviews, ${r.get(ratingHeader)} stars (Retailer: ${r.get('Retailer') || r.get('retailer')})`);
                 });
             }
 
             // Log a few samples without reviews (potential new launches)
-            const withoutReviews = rows.filter(r => !r.get('reviews') || r.get('reviews') === '0');
+            const withoutReviews = rows.filter(r => !r.get(reviewsHeader) || r.get(reviewsHeader) === '0');
             console.log(`Rows with reviews = 0: ${withoutReviews.length}`);
             if (withoutReviews.length > 0) {
                 console.log('Samples with 0 reviews (Launch candidates):');
                 withoutReviews.slice(0, 3).forEach(r => {
-                    console.log(`- ${r.get('product')} (Retailer: ${r.get('retailer')})`);
+                    console.log(`- ${r.get(productHeader)} (Retailer: ${r.get('Retailer')})`);
                 });
             }
         }

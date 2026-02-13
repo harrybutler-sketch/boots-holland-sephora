@@ -73,9 +73,15 @@ export default async function handler(request, response) {
         // Fetch existing rows for deduplication
         const rows = await sheet.getRows();
         // FIXED: Try multiple possible header names for robustness
-        const existingUrls = new Set(rows.map((row) => row.get('Product URL') || row.get('product url') || row.get('url')));
+        // FIXED: Use Map for updates
+        const existingRowsMap = new Map();
+        rows.forEach(row => {
+            const u = row.get('Product URL') || row.get('product url') || row.get('url');
+            if (u) existingRowsMap.set(u, row);
+        });
 
         let appendedCount = 0;
+        let updatedCount = 0;
         let duplicateCount = 0;
         const newRows = [];
 
@@ -91,6 +97,8 @@ export default async function handler(request, response) {
             await sheet.setHeaderRow([...sheet.headerValues, 'Image URL']);
         }
 
+        const processedUrls = new Set();
+
         for (const item of items) {
             const url = item.url || item.productUrl || item.product_url || item.canonicalUrl;
 
@@ -99,8 +107,53 @@ export default async function handler(request, response) {
                 continue;
             }
 
-            if (existingUrls.has(url)) {
+            // Deduplicate within the current batch
+            if (processedUrls.has(url)) {
                 duplicateCount++;
+                continue;
+            }
+            processedUrls.add(url);
+
+            if (existingRowsMap.has(url)) {
+                // UPDATE EXISTING ROW
+                const row = existingRowsMap.get(url);
+                let updated = false;
+
+                const newReviews = item.reviews || item.rating_count || item.reviewCount || 0;
+                const newRating = item.rating || item.rating_value || item.ratingValue || 0;
+
+                // Dynamic Header Lookup
+                const reviewsHeader = ['Review Count', 'review_count', 'reviews', 'Reviews'].find(h => row.get(h) !== undefined) || 'Review Count';
+                const ratingHeader = ['Rating', 'rating', 'stars', 'rating_value'].find(h => row.get(h) !== undefined) || 'Rating';
+                const statusHeader = ['Status', 'status'].find(h => row.get(h) !== undefined) || 'Status';
+                const lastUpdatedHeader = ['Last Updated', 'last_updated', 'Timestamp', 'timestamp'].find(h => row.get(h) !== undefined) || 'Last Updated';
+
+                // Only update if we have meaningful data
+                if (newReviews > 0 || newRating > 0) {
+                    // Check if value actually changed to avoid API calls
+                    // coerce to string for comparison as sheet values are strings
+                    const currentReviews = parseInt(row.get(reviewsHeader) || '0');
+                    const currentRating = parseFloat(row.get(ratingHeader) || '0');
+
+                    if (currentReviews != newReviews || currentRating != newRating) {
+                        console.log(`DEBUG: Updating ${url}`);
+                        console.log(`   - Reviews: ${currentReviews} -> ${newReviews} (Header: ${reviewsHeader})`);
+                        console.log(`   - Rating: ${currentRating} -> ${newRating} (Header: ${ratingHeader})`);
+
+                        row.set(reviewsHeader, newReviews);
+                        row.set(ratingHeader, newRating);
+                        row.set(statusHeader, 'Enriched');
+                        if (row.get(lastUpdatedHeader) !== undefined) {
+                            row.set(lastUpdatedHeader, new Date().toISOString());
+                        }
+                        await row.save(); // Save per row
+                        updated = true;
+                        updatedCount++;
+                        console.log(`Updated row for ${url} with ${newReviews} reviews (Header: ${reviewsHeader})`);
+                    }
+                }
+
+                if (!updated) duplicateCount++;
                 continue;
             }
 
@@ -347,23 +400,22 @@ export default async function handler(request, response) {
             const imageUrl = item.image || item.imageUrl || item.productImage || item.image_url || '';
 
             newRows.push({
-                'Product': name,
-                'Retailer': retailer,
-                'Product URL': url,
-                'Price': item.price_display || (price ? `${currency} ${price}` : 'N/A'),
-                'Review Count': item.reviews || item.rating_count || 0,
-                'Date Found': new Date().toISOString().split('T')[0],
-                'Brand': brandName,
-                'Manufacturer': manufacturer,
-                'Category': item.category || 'New In',
-                'Rating': item.rating || item.rating_value || 0,
-                'Status': item.status || 'Enriched',
-                'Run ID': runId,
-                'Timestamp': new Date().toISOString(),
-                'Image URL': imageUrl
+                'product': name,
+                'retailer': retailer,
+                'product url': url,
+                'price': item.price_display || (price ? `${currency} ${price}` : 'N/A'),
+                'reviews': item.reviews || item.rating_count || item.reviewCount || 0,
+                'date_found': new Date().toISOString().split('T')[0],
+                'brand': brandName,
+                'manufacturer': manufacturer,
+                'category': item.category || 'New In',
+                'rating_value': item.rating || item.rating_value || 0,
+                'status': item.status || 'Enriched',
+                'run_id': runId,
+                'scrape_timestamp': new Date().toISOString(),
+                'image_url': imageUrl
             });
 
-            existingUrls.add(url);
         }
 
         // Batch write to avoid timeouts/limits
