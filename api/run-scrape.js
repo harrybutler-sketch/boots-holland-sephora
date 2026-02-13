@@ -59,7 +59,7 @@ export default async function handler(request, response) {
             }
             if (retailers.includes('Superdrug')) {
                 startUrls.push({
-                    url: 'https://www.superdrug.com/new-in/c/new',
+                    url: 'https://www.superdrug.com/new-in',
                     userData: { retailer: 'Superdrug', label: 'LISTING' },
                 });
             }
