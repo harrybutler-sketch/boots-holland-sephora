@@ -268,6 +268,12 @@ export default async function handler(request, response) {
                         return null; // Do not save to dataset which saves credits on enrichment
                     }
                     
+                    // Filter by review count (0-5 reviews only - focus on emerging products)
+                    if (item.reviews > 5) {
+                        log.info(\`Skipping high-review product (\${item.reviews} reviews): \${item.name}\`);
+                        return null;
+                    }
+                    
                     return item;
                 }
             }`,
