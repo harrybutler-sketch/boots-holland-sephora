@@ -16,7 +16,7 @@ function App() {
     retailer: 'All',
     days: '28',
     q: '',
-    max_reviews: ''
+    review_range: ''
   });
 
   // Persist State Changes
@@ -46,7 +46,7 @@ function App() {
         retailer: filters.retailer,
         days: filters.days,
         q: filters.q,
-        max_reviews: filters.max_reviews,
+        review_range: filters.review_range,
         workspace: workspace
       });
 
@@ -141,9 +141,9 @@ function App() {
         },
         body: JSON.stringify({
           retailers: activeRetailers,
+          retailers: activeRetailers,
           mode: 'new-in',
-          workspace: workspace,
-          maxReviews: filters.max_reviews
+          workspace: workspace
         })
       });
       const result = await response.json();

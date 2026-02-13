@@ -7,7 +7,7 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        const { limit = 200, retailer, days, q, max_reviews } = event.queryStringParameters;
+        const { limit = 200, retailer, days, q, review_range } = event.queryStringParameters;
 
         // Google Sheets Auth
         const serviceAccountAuth = new JWT({
@@ -53,24 +53,19 @@ exports.handler = async (event, context) => {
             });
         }
 
-        // 4. Max Reviews Filter
-        if (max_reviews !== undefined && max_reviews !== '') {
-            const max = parseInt(max_reviews, 10);
+        // 4. Review Range Filter
+        if (review_range) {
             filteredRows = filteredRows.filter(row => {
                 const reviews = parseInt(row.get('reviews') || row.get('rating_count') || row.get('Review Count') || '0', 10);
                 const count = isNaN(reviews) ? 0 : reviews;
-                return count <= max;
-            });
-        }
 
-        // 4. Max Reviews Filter
-        if (max_reviews !== undefined && max_reviews !== '') {
-            const max = parseInt(max_reviews, 10);
-            filteredRows = filteredRows.filter(row => {
-                const reviews = parseInt(row.get('reviews') || row.get('rating_count') || '0', 10);
-                // Treat NaN as 0
-                const count = isNaN(reviews) ? 0 : reviews;
-                return count <= max;
+                switch (review_range) {
+                    case '0-5': return count >= 0 && count <= 5;
+                    case '5-10': return count >= 5 && count <= 10;
+                    case '10-20': return count >= 10 && count <= 20;
+                    case '20+': return count >= 20;
+                    default: return true;
+                }
             });
         }
 
