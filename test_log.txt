@@ -1,0 +1,40 @@
+[dotenv@17.2.4] injecting env (5) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+Fetching log for run: EICVjoSy8iNjcuFyr
+2026-02-12T13:30:43.885Z ACTOR: Pulling container image of build g6G5r98rF5fM6ecm3 from registry.
+2026-02-12T13:30:43.887Z ACTOR: Creating container.
+2026-02-12T13:30:44.098Z ACTOR: Starting container.
+2026-02-12T13:30:44.288Z Will run command: xvfb-run -a -s "-ac -screen 0 1920x1080x24+32 -nolisten tcp" /bin/sh -c ./start_xvfb_and_run_cmd.sh && npm run start:prod --silent
+2026-02-12T13:30:45.737Z INFO  System info {"apifyVersion":"3.4.4","apifyClientVersion":"2.16.0","crawleeVersion":"3.14.1","osType":"Linux","nodeVersion":"v22.19.0"}
+2026-02-12T13:30:45.851Z INFO  Configuring Puppeteer Scraper.
+2026-02-12T13:30:46.653Z INFO  Configuration completed. Starting the scrape.
+2026-02-12T13:30:46.731Z INFO  PuppeteerCrawler: Starting the crawler.
+2026-02-12T13:30:48.773Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Request blocked - received 403 status code.
+2026-02-12T13:30:48.776Z  {"id":"8yWLaWw6mbnsj2Y","url":"https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120","retryCount":1}
+2026-02-12T13:30:50.821Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Request blocked - received 403 status code.
+2026-02-12T13:30:50.823Z  {"id":"8yWLaWw6mbnsj2Y","url":"https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120","retryCount":2}
+2026-02-12T13:30:50.855Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Request blocked - received 403 status code.
+2026-02-12T13:30:50.857Z  {"id":"myi17JLMMQ6w2TR","url":"https://www.boots.com/new-to-boots","retryCount":1}
+2026-02-12T13:30:52.687Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Request blocked - received 403 status code.
+2026-02-12T13:30:52.689Z  {"id":"8yWLaWw6mbnsj2Y","url":"https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120","retryCount":3}
+2026-02-12T13:30:53.875Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Execution context was destroyed, most likely because of a navigation.
+2026-02-12T13:30:53.877Z     at async CrawlerSetup._requestHandler (file:///home/myuser/dist/internals/crawler_setup.js:412:13) {"id":"myi17JLMMQ6w2TR","url":"https://www.boots.com/new-to-boots","retryCount":2}
+2026-02-12T13:30:53.978Z ERROR PuppeteerCrawler: Request failed and reached maximum retries. Error: Request blocked - received 403 status code.
+2026-02-12T13:30:53.980Z     at PuppeteerCrawler._throwOnBlockedRequest (/home/myuser/node_modules/@crawlee/basic/internals/basic-crawler.js:855:19)
+2026-02-12T13:30:53.982Z     at PuppeteerCrawler._responseHandler (/home/myuser/node_modules/@crawlee/browser/internals/browser-crawler.js:383:22)
+2026-02-12T13:30:53.983Z     at PuppeteerCrawler._runRequestHandler (/home/myuser/node_modules/@crawlee/browser/internals/browser-crawler.js:262:24)
+2026-02-12T13:30:53.985Z     at async PuppeteerCrawler._runRequestHandler (/home/myuser/node_modules/@crawlee/puppeteer/internals/puppeteer-crawler.js:114:9)
+2026-02-12T13:30:53.986Z     at async wrap (/home/myuser/node_modules/@apify/timeout/cjs/index.cjs:54:21) {"id":"8yWLaWw6mbnsj2Y","url":"https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120","method":"GET","uniqueKey":"GET():https://www.sephora.co.uk/new-at-sephora?filter=fh_location%3D%2F%2Fc1%2Fen_GB%2Fin_stock%3E%7Bin%7D%2Fnew_in%3D1%2F%21exclude_countries%3E%7Bgb%7D%2F%21site_exclude%3E%7B79%7D%2F%21brand%3Da70%2F%26device%3Ddesktop%26site_area%3Dcms%26date_time%3D20260207T101506%26fh_view_size%3D40%26fh_start_index%3D0%26fh_view_size%3D120&srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv"}
+2026-02-12T13:30:53.988Z ERROR Request https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120 failed and will not be retried anymore. Marking as failed.
+2026-02-12T13:30:53.989Z Last Error Message: Error: Request blocked - received 403 status code.
+2026-02-12T13:30:56.764Z INFO  PuppeteerCrawler: Processing Boots: https://www.boots.com/new-to-boots [LISTING]
+2026-02-12T13:30:59.222Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Protocol error (Runtime.callFunctionOn): Execution context was destroyed.
+2026-02-12T13:30:59.224Z  {"id":"myi17JLMMQ6w2TR","url":"https://www.boots.com/new-to-boots","retryCount":3}
+2026-02-12T13:31:20.914Z INFO  PuppeteerCrawler: Processing Boots: https://www.boots.com/new-to-boots [LISTING]
+2026-02-12T13:31:24.158Z INFO  PuppeteerCrawler: The number of requests enqueued by the crawler reached the maxRequestsPerCrawl limit of 10 requests and no further requests will be added.
+2026-02-12T13:31:24.186Z INFO  PuppeteerCrawler: Enqueued 3 products for Boots
+2026-02-12T13:31:46.727Z INFO  PuppeteerCrawler:Statistics: PuppeteerCrawler request statistics: {"requestAvgFailedDurationMillis":1138,"requestAvgFinishedDurationMillis":24880,"requestsFinishedPerMinute":1,"requestsFailedPerMinute":0,"requestTotalDurationMillis":26018,"requestsTotal":2,"crawlerRuntimeMillis":60152,"retryHistogram":[null,null,null,2]}
+2026-02-12T13:31:46.821Z INFO  PuppeteerCrawler:AutoscaledPool: state {"currentConcurrency":3,"desiredConcurrency":2,"systemStatus":{"isSystemIdle":false,"memInfo":{"isOverloaded":false,"limitRatio":0.2,"actualRatio":0},"eventLoopInfo":{"isOverloaded":false,"limitRatio":0.6,"actualRatio":0.059},"cpuInfo":{"isOverloaded":true,"limitRatio":0.4,"actualRatio":0.74},"clientInfo":{"isOverloaded":false,"limitRatio":0.3,"actualRatio":0}}}
+2026-02-12T13:31:52.237Z INFO  PuppeteerCrawler: Processing Boots: https://www.boots.com/gem-fragrance-body-mist-coconut-vanilla-90ml-10378680 [DETAIL]
+2026-02-12T13:32:02.240Z WARN  PuppeteerCrawler: No LD-JSON found
+2026-02-12T13:32:02.881Z INFO  PuppeteerCrawler: Processing Boots: https://www.boots.com/dove-women-antiperspirant-vanilla-200ml-10369993 [DETAIL]
+

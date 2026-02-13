@@ -15,8 +15,8 @@ export const handler = async (event, context) => {
     };
 
     try {
-        const { limit = 200, retailer, days, q, review_range, max_reviews } = event.queryStringParameters;
-        console.log(`FILTER DEBUG: review_range="${review_range}", retailer="${retailer}"`);
+        const { limit = 200, retailer, days, q, review_range, max_reviews, workspace } = event.queryStringParameters;
+        console.log(`FILTER DEBUG: review_range="${review_range}", retailer="${retailer}", workspace="${workspace}"`);
 
         // Google Sheets Auth
         const serviceAccountAuth = new JWT({
@@ -27,8 +27,14 @@ export const handler = async (event, context) => {
 
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
-        // Prefer 'New In' sheet, fallback to index 0
-        const sheet = doc.sheetsByTitle['New In'] || doc.sheetsByIndex[0];
+
+        // Dynamic Sheet Selection
+        let sheetName = 'New In'; // Default (Beauty)
+        if (workspace === 'grocery') {
+            sheetName = 'Grocery';
+        }
+
+        const sheet = doc.sheetsByTitle[sheetName] || doc.sheetsByIndex[0];
         await sheet.loadHeaderRow();
         const headersList = sheet.headerValues;
 

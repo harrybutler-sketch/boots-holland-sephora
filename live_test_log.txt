@@ -1,0 +1,23 @@
+[dotenv@17.2.4] injecting env (5) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+Fetching log for run: EIsovlqEyTgZxKiHt
+2026-02-12T13:39:48.231Z ACTOR: Pulling container image of build g6G5r98rF5fM6ecm3 from registry.
+2026-02-12T13:39:48.233Z ACTOR: Creating container.
+2026-02-12T13:39:48.276Z ACTOR: Starting container.
+2026-02-12T13:39:48.589Z Will run command: xvfb-run -a -s "-ac -screen 0 1920x1080x24+32 -nolisten tcp" /bin/sh -c ./start_xvfb_and_run_cmd.sh && npm run start:prod --silent
+2026-02-12T13:39:49.260Z INFO  System info {"apifyVersion":"3.4.4","apifyClientVersion":"2.16.0","crawleeVersion":"3.14.1","osType":"Linux","nodeVersion":"v22.19.0"}
+2026-02-12T13:39:49.360Z INFO  Configuring Puppeteer Scraper.
+2026-02-12T13:39:49.899Z INFO  Configuration completed. Starting the scrape.
+2026-02-12T13:39:49.982Z INFO  PuppeteerCrawler: Starting the crawler.
+2026-02-12T13:39:52.252Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Request blocked - received 403 status code.
+2026-02-12T13:39:52.253Z  {"id":"8yWLaWw6mbnsj2Y","url":"https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120","retryCount":1}
+2026-02-12T13:39:52.650Z INFO  PuppeteerCrawler: Processing Boots: https://www.boots.com/new-to-boots [LISTING]
+2026-02-12T13:39:53.552Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Request blocked - received 403 status code.
+2026-02-12T13:39:53.552Z  {"id":"8yWLaWw6mbnsj2Y","url":"https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120","retryCount":2}
+2026-02-12T13:39:54.914Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Protocol error (Runtime.callFunctionOn): Execution context was destroyed.
+2026-02-12T13:39:54.915Z  {"id":"myi17JLMMQ6w2TR","url":"https://www.boots.com/new-to-boots","retryCount":1}
+2026-02-12T13:40:05.029Z INFO  PuppeteerCrawler: Processing Boots: https://www.boots.com/new-to-boots [LISTING]
+2026-02-12T13:40:08.144Z INFO  PuppeteerCrawler: Enqueued 0 products for Boots
+2026-02-12T13:40:49.983Z INFO  PuppeteerCrawler:Statistics: PuppeteerCrawler request statistics: {"requestAvgFailedDurationMillis":null,"requestAvgFinishedDurationMillis":13125,"requestsFinishedPerMinute":1,"requestsFailedPerMinute":0,"requestTotalDurationMillis":13125,"requestsTotal":1,"crawlerRuntimeMillis":60152,"retryHistogram":[null,1]}
+2026-02-12T13:40:50.000Z INFO  PuppeteerCrawler:AutoscaledPool: state {"currentConcurrency":1,"desiredConcurrency":3,"systemStatus":{"isSystemIdle":true,"memInfo":{"isOverloaded":false,"limitRatio":0.2,"actualRatio":0},"eventLoopInfo":{"isOverloaded":false,"limitRatio":0.6,"actualRatio":0},"cpuInfo":{"isOverloaded":false,"limitRatio":0.4,"actualRatio":0},"clientInfo":{"isOverloaded":false,"limitRatio":0.3,"actualRatio":0}}}
+2026-02-12T13:40:54.008Z WARN  PuppeteerCrawler: Reclaiming failed request back to the list or queue. Navigation timed out after 60 seconds. {"id":"8yWLaWw6mbnsj2Y","url":"https://www.sephora.co.uk/new-at-sephora?srsltid=AfmBOookMPw5VCcz6Fai1EHtuFe6ajRPCD-ySREKZS6gnvu2ECZBITWv&filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26device=desktop%26site_area=cms%26date_time=20260207T101506%26fh_view_size=40%26fh_start_index=0%26fh_view_size=120","retryCount":3}
+

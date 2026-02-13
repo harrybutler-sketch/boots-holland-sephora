@@ -1,0 +1,60 @@
+[dotenv@17.2.4] injecting env (5) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+{
+  url: 'https://www.sephora.co.uk/p/glow-recipe-pdrn-repair-soothe-korean-toner-pads-for-skin-barrier-repair',
+  name: 'PDRN+ Repair + Soothe Korean Toner Pads for Skin Barrier Repair 60 pads',
+  offers: { price: '27.0', priceCurrency: 'GBP' },
+  brand: { slogan: 'Glow Recipe' },
+  image: 'https://cdn1.feelunique.com/img/prod/pid/P1000211830/115460_media_principal_extendedaten_gb_0_extended_06-02-26-08-52-17_main.jpg',
+  description: 'Highlights\n' +
+    '\n' +
+    'Korean toner pads powered by vegan PDRN+ for skin barrier repair, soothing irritation and reducing redness for stronger, calmer, more resilient skin.\n' +
+    '\n' +
+    'A 5-minute Korean facial in a pad! These ultra-thin toner pads pair vegan PDRN+ with 5 calming actives (Adenosine, Glycerin, Beta Glucan, Centella, & Panthenol) to visibly reduce redness, support collagen regeneration, deeply hydrate, and repair the skin barrier for smoother, more resilient skin.\n' +
+    '\n' +
+    'Directions\n' +
+    '\n' +
+    '-After cleansing, lift a single pad at a time with enclosed tweezers and place on areas of concern (ex. Dry undereyes, cheeks with redness and dry patches).\n' +
+    '-Leave on for 5 minutes. For an extra boost, leave on for up to 15 minutes and discard.\n' +
+    '-Discard and follow with your usual serum & moisturizer. Can be used daily, AM and PM.\n' +
+    'Glow Tip: Had a late night? Lack of sleep can result in dry, tired-looking skin. Place PDRN+ Toner Pads on forehead and chin to deeply hydrate and soothe while placing Vitamin C Toner Pads on undereyes and cheeks to depuff and brighten. Remove after 15 minutes for radiant, refreshed skin.\n' +
+    '\n' +
+    'Test results\n' +
+    '\n' +
+    'In a clinical study of 32 subjects:\n' +
+    'After immediate use:\n' +
+    '100% showed improved barrier strength with an average improvement of 49%\n' +
+    'After 3 weeks:\n' +
+    '91% showed reduction in redness\n' +
+    '\n' +
+    'In a consumer use study of 32 subjects after immediate use:\n' +
+    '90% experienced less dryness or discomfort\n' +
+    '90% agreed skin was soothed and more comfortable\n' +
+    '\n' +
+    'Composition\n' +
+    '\n' +
+    '-2 Types of Vegan PDRNs (White Rice + Prickly Pear) : Support collagen repair and regeneration for smoother, more resilient skin.\n' +
+    '-5% Centella + Panthenol : Soothe irritation and support barrier recovery.\n' +
+    '-Adenosine + Beta Glucan : Firm and smooth skin, while providing lasting hydration.\n' +
+    '\n' +
+    'Ingredients\n' +
+    '\n' +
+    'Aqua/Water/Eau, Glycerin, Butylene Glycol, Dipropylene Glycol, Methylpropanediol, Centella Asiatica Extract, Sodium DNA*, Beta-Glucan, Adenosine, Palmitoyl Tripeptide-5, Allantoin, Caffeine, Hydroxyacetophenone, Panthenol, Betaine, Propanediol, 1,2-Hexanediol, Polyglyceryl-10 Laurate, Caprylyl Glycol, Dipotassium Glycyrrhizate, Ethylhexylglycerin, Sodium Citrate, Xanthan Gum, Sodium Phytate, Pentylene Glycol, Citric Acid, Octanediol, Arginine, Tocopherol.\n' +
+    '*Prickly Pear and White Rice Derived PDRN\n' +
+    '\n' +
+    'This list of ingredients may be subject to change, please consult the packaging of the product purchased.',
+  label: 'DETAIL',
+  '__scraper-metadata__': { depth: 0, parentRequestId: null },
+  reviews: 192,
+  rating: 4.88,
+  status: 'Enriched',
+  '#error': false,
+  '#debug': {
+    requestId: 'pptrpjSCM4JBf4s',
+    url: 'https://www.sephora.co.uk/p/glow-recipe-pdrn-repair-soothe-korean-toner-pads-for-skin-barrier-repair',
+    loadedUrl: 'https://www.sephora.co.uk/p/glow-recipe-pdrn-repair-soothe-korean-toner-pads-for-skin-barrier-repair',
+    method: 'GET',
+    retryCount: 0,
+    errorMessages: [],
+    statusCode: 200
+  }
+}

@@ -7,7 +7,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { retailers, mode } = JSON.parse(event.body);
+    const { retailers, mode, workspace } = JSON.parse(event.body);
 
     if (!retailers || !Array.isArray(retailers) || retailers.length === 0) {
       return {
@@ -84,12 +84,13 @@ exports.handler = async (event, context) => {
     console.log(`Starting universal custom scrape for ${startUrls.length} start URLs`);
 
     // Callback URL for sync
-    const webhookUrl = `https://${event.headers.host}/.netlify/functions/run-status`;
+    // Callback URL for sync (pass workspace context)
+    const webhookUrl = `https://${event.headers.host}/.netlify/functions/run-status?workspace=${workspace || 'beauty'}`;
 
     const run = await client.actor('apify/puppeteer-scraper').start({
       startUrls,
       proxyConfiguration: { useApifyProxy: true },
-      maxPagesPerCrawl: 300,
+      maxPagesPerCrawl: 55, // Strict limit: ~50 products + listing pages
       pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
                 const { label, retailer } = request.userData;
