@@ -50,7 +50,7 @@ exports.handler = async (event, context) => {
     }
     if (retailers.includes('Boots')) {
       startUrls.push({
-        url: 'https://www.boots.com/new-to-boots/new-in-beauty',
+        url: 'https://www.boots.com/new-to-boots',
         userData: { retailer: 'Boots', label: 'LISTING' },
       });
     }
@@ -83,39 +83,151 @@ exports.handler = async (event, context) => {
 
     console.log(`Starting universal custom scrape for ${startUrls.length} start URLs`);
 
+    // Determine if we need residential proxies based on retailers
+    // These retailers have stricter anti-bot protection and need residential proxies
+    const strictRetailers = ['Sephora', 'Boots', 'Tesco', 'Sainsburys', 'Asda'];
+    const needsResidentialProxy = retailers.some(r => strictRetailers.includes(r));
+
     // Callback URL for sync
     // Callback URL for sync (pass workspace context)
     const webhookUrl = `https://${event.headers.host}/.netlify/functions/run-status?workspace=${workspace || 'beauty'}`;
 
     const run = await client.actor('apify/puppeteer-scraper').start({
       startUrls,
-      proxyConfiguration: { useApifyProxy: true },
+      proxyConfiguration: {
+        useApifyProxy: true,
+        ...(needsResidentialProxy && { apifyProxyGroups: ['RESIDENTIAL'] }) // Use residential proxies only for strict retailers
+      },
       useChrome: true,
       stealth: true,
       maxPagesPerCrawl: 55, // Strict limit: ~50 products + listing pages
       maxConcurrency: 1, // Crawl one page at a time to avoid detection
-      maxRequestRetries: 3,
+      maxRequestRetries: 5, // Increase retries
       navigationTimeoutSecs: 180,
       pageLoadTimeoutSecs: 180,
+      // Add delay between requests to appear more human-like
+      minConcurrency: 1,
+      maxRequestsPerCrawl: 55,
+      // Custom browser launch options for better stealth
+      launchOptions: {
+        args: [
+          '--disable-blink-features=AutomationControlled',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-web-security'
+        ]
+      },
+      // Pre-navigation hook to mask automation signals
+      preNavigationHooks: `[
+        async ({ page, request }) => {
+          const retailer = request.userData.retailer;
+          
+          // Set realistic viewport
+          await page.setViewport({ width: 1920, height: 1080 });
+          
+          // Set realistic user agent
+          await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+          
+          // Set realistic headers
+          await page.setExtraHTTPHeaders({
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0'
+          });
+          
+          // Override navigator properties to hide automation
+          await page.evaluateOnNewDocument(() => {
+            // Hide webdriver
+            Object.defineProperty(navigator, 'webdriver', { get: () => false });
+            
+            // Mock plugins
+            Object.defineProperty(navigator, 'plugins', { 
+              get: () => [
+                { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+                { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+                { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+              ] 
+            });
+            
+            // Set realistic languages
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-GB', 'en-US', 'en'] });
+            
+            // Mock chrome object
+            window.chrome = { 
+              runtime: {},
+              loadTimes: function() {},
+              csi: function() {},
+              app: {}
+            };
+            
+            // Override permissions
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+              parameters.name === 'notifications' ?
+                Promise.resolve({ state: Notification.permission }) :
+                originalQuery(parameters)
+            );
+            
+            // Add realistic hardware concurrency
+            Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+            
+            // Add realistic device memory
+            Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+            
+            // Mock battery API
+            Object.defineProperty(navigator, 'getBattery', { 
+              get: () => () => Promise.resolve({
+                charging: true,
+                chargingTime: 0,
+                dischargingTime: Infinity,
+                level: 1
+              })
+            });
+          });
+          
+          // Retailer-specific delays (longer for strict retailers)
+          const strictRetailers = ['Tesco', 'Sainsburys', 'Asda', 'Sephora', 'Boots'];
+          const delay = strictRetailers.includes(retailer) 
+            ? 3000 + Math.random() * 4000  // 3-7 seconds for strict retailers
+            : 1000 + Math.random() * 2000; // 1-3 seconds for others
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      ]`,
       pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
                 const { label, retailer } = request.userData;
                 
+                // Retailer-specific delays (longer for strict retailers)
+                const strictRetailers = ['Tesco', 'Sainsburys', 'Asda', 'Sephora', 'Boots'];
+                const pageDelay = strictRetailers.includes(retailer)
+                    ? 4000 + Math.random() * 4000  // 4-8 seconds for strict retailers
+                    : 2000 + Math.random() * 2000; // 2-4 seconds for others
+                
+                await new Promise(r => setTimeout(r, pageDelay));
+                
                 if (label === 'LISTING') {
                     log.info(\`Listing page (\${retailer}): \` + request.url);
                     
-                    // Lazy load scroll
+                    // Lazy load scroll - slower and more human-like
                     await page.evaluate(async () => {
                         await new Promise((resolve) => {
                             let totalHeight = 0;
-                            const distance = 100;
+                            const distance = 150; // Larger scroll distance
                             let scrolls = 0;
                             const timer = setInterval(() => {
                                 window.scrollBy(0, distance);
                                 totalHeight += distance;
                                 scrolls++;
-                                if (scrolls > 50) { clearInterval(timer); resolve(); }
-                            }, 100);
+                                if (scrolls > 30) { clearInterval(timer); resolve(); } // Fewer scrolls
+                            }, 200); // Slower scroll speed (200ms instead of 100ms)
                         });
                     });
                     
@@ -124,7 +236,7 @@ exports.handler = async (event, context) => {
                         'Holland & Barrett': 'a[href*="/shop/product/"]',
                         'Sephora': 'a.Product-link',
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
-                        'Superdrug': 'a.product-card__title, a.product-card__image-link',
+                        'Superdrug': 'a.cx-product-name, a.product-image-container',
                         'Tesco': 'a[data-testid="product-image-link"]',
                         'Sainsburys': 'a.pt__link-wrapper, a.pt__link',
                         'Asda': 'a.co-item__title-link',
@@ -191,11 +303,19 @@ exports.handler = async (event, context) => {
                         // 2. DOM Fallbacks
                         if (results.reviews === 0) {
                             // Bazaarvoice (Sephora, Boots, Sainsbury's)
-                            const bvCount = document.querySelector('.bv_numReviews_text, #bvRContainer-Link, [data-bv-show="rating_summary"]');
+                            // Use specific selectors to avoid grabbing screen reader text
+                            const bvRating = document.querySelector('.bv_avgRating, .bv_avgRating_component_container .bv_avgRating_text');
+                            if (bvRating) {
+                                results.rating = parseFloat(bvRating.innerText.trim()) || 0;
+                            }
+                            
+                            // Get review count from specific element, not the entire button
+                            const bvCount = document.querySelector('.bv_numReviews_text, .bv_numReviews');
                             if (bvCount) {
-                                results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;
-                                const bvRating = document.querySelector('.bv_avgRating_text, .bv_avgRating_component_container');
-                                if (bvRating) results.rating = parseFloat(bvRating.innerText) || 0;
+                                // Extract only the number inside parentheses if present, e.g., "(1)" -> "1"
+                                const text = bvCount.innerText.trim();
+                                const match = text.match(/\((\d+)\)/);
+                                results.reviews = match ? parseInt(match[1]) : parseInt(text.replace(/[^0-9]/g, '')) || 0;
                             }
                             
                             // PowerReviews (Superdrug)
