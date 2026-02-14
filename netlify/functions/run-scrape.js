@@ -100,14 +100,14 @@ exports.handler = async (event, context) => {
       },
       useChrome: true,
       stealth: true,
-      maxPagesPerCrawl: 55, // Strict limit: ~50 products + listing pages
+      maxPagesPerCrawl: 200, // Increased limit to find more products
       maxConcurrency: 1, // Crawl one page at a time to avoid detection
       maxRequestRetries: 5, // Increase retries
       navigationTimeoutSecs: 180,
       pageLoadTimeoutSecs: 180,
       // Add delay between requests to appear more human-like
       minConcurrency: 1,
-      maxRequestsPerCrawl: 55,
+      maxRequestsPerCrawl: 200, // Increased to match maxPagesPerCrawl
       // Custom browser launch options for better stealth
       launchOptions: {
         args: [
@@ -226,7 +226,7 @@ exports.handler = async (event, context) => {
                                 window.scrollBy(0, distance);
                                 totalHeight += distance;
                                 scrolls++;
-                                if (scrolls > 30) { clearInterval(timer); resolve(); } // Fewer scrolls
+                                if (scrolls > 50) { clearInterval(timer); resolve(); } // Increased scrolls to load more products
                             }, 200); // Slower scroll speed (200ms instead of 100ms)
                         });
                     });
@@ -247,9 +247,17 @@ exports.handler = async (event, context) => {
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
                     
+                    // Enqueue product links
                     await enqueueLinks({
                         selector,
                         label: 'DETAIL',
+                        userData: { retailer }
+                    });
+                    
+                    // Also enqueue pagination links to get more products from additional pages
+                    await enqueueLinks({
+                        selector: 'a[rel="next"], a.pagination__next, a[aria-label*="Next"], button[aria-label*="Next"], a.next',
+                        label: 'LISTING',
                         userData: { retailer }
                     });
                      return { type: 'LISTING', url: request.url, retailer };
