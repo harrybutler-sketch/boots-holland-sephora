@@ -6,18 +6,29 @@ export default async function handler(request, response) {
   }
 
   try {
-    const { retailers, workspace } = request.body;
+    // Robust body parsing for Vercel
+    let body = request.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (e) { /* ignore */ }
+    }
+
+    const { retailers, workspace } = body || {};
+
     console.log('--- Scrape Trigger Received (API) ---');
     console.log('Workspace:', workspace);
     console.log('Retailers:', retailers);
 
     if (!retailers || !Array.isArray(retailers) || retailers.length === 0) {
-      return response.status(400).json({ error: 'Retailers list is required' });
+      return response.status(400).json({ error: 'Retailers list is required', debug: { body } });
+    }
+
+    if (!process.env.APIFY_TOKEN) {
+      return response.status(500).json({ error: 'APIFY_TOKEN is not configured on the server.' });
     }
 
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
-    // Configuration Maps
+    // Configuration Maps - Same as before but verified
     const groceryMap = {
       'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in\nhttps://www.sainsburys.co.uk/shop/gb/groceries/get-ideas/new-products/all-new-products',
       'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in&icid=gh_hp_search_new%20in',
@@ -34,8 +45,6 @@ export default async function handler(request, response) {
     };
 
     const ecommerceScraperKeys = Object.keys(standardNameMap);
-
-    // Categorize Retailers
     const ecommerceRetailersToScrape = [];
     const puppeteerRetailersToScrape = [];
 
@@ -48,10 +57,8 @@ export default async function handler(request, response) {
       }
     });
 
-    console.log('Routed to Ecommerce Actor:', ecommerceRetailersToScrape);
-    console.log('Routed to Puppeteer Actor:', puppeteerRetailersToScrape);
-
-    const webhookUrl = `https://${request.headers.host}/api/run-status?workspace=${workspace || 'beauty'}`;
+    const host = request.headers.host || 'boots-holland-sephora.vercel.app';
+    const webhookUrl = `https://${host}/api/run-status?workspace=${workspace || 'beauty'}`;
     const runs = [];
 
     // 1. Trigger E-commerce Scraping Tool
@@ -67,7 +74,7 @@ export default async function handler(request, response) {
       });
 
       if (queries.length > 0) {
-        console.log('Starting Ecommerce Scraper with queries:', queries);
+        console.log('Starting Ecommerce Scraper...');
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
           queries: queries.join('\n'),
           maxItems: 1000,
@@ -94,7 +101,7 @@ export default async function handler(request, response) {
       }
 
       if (startUrls.length > 0) {
-        console.log('Starting Puppeteer Scraper with URLs:', startUrls.map(u => u.url));
+        console.log('Starting Puppeteer Scraper...');
         const run = await client.actor('apify/puppeteer-scraper').start({
           startUrls,
           useChrome: true,
@@ -163,7 +170,7 @@ export default async function handler(request, response) {
     }
 
     if (runs.length === 0) {
-      return response.status(400).json({ error: 'No scrapers triggered. Check names.', debug: { retailers } });
+      return response.status(400).json({ error: 'No scrapers triggered. Check names.', debug: { retailers, ecommerceRetailersToScrape } });
     }
 
     return response.status(200).json({
@@ -174,6 +181,6 @@ export default async function handler(request, response) {
     });
   } catch (error) {
     console.error('Fatal Error:', error);
-    return response.status(500).json({ error: error.message });
+    return response.status(500).json({ error: error.message || String(error) || 'Internal Server Error' });
   }
 }

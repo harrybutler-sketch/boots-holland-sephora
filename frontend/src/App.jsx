@@ -141,7 +141,6 @@ function App() {
         },
         body: JSON.stringify({
           retailers: activeRetailers,
-          retailers: activeRetailers,
           mode: 'new-in',
           workspace: workspace
         })
