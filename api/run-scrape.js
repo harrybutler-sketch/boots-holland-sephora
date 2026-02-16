@@ -1,100 +1,112 @@
 import { ApifyClient } from 'apify-client';
 
 export default async function handler(request, response) {
-  // Only allow POST
   if (request.method !== 'POST') {
     return response.status(405).send('Method Not Allowed');
   }
 
   try {
-    const { retailers, mode, workspace } = request.body;
+    const { retailers, workspace } = request.body;
+    console.log('--- Scrape Trigger Received (API) ---');
+    console.log('Workspace:', workspace);
+    console.log('Retailers:', retailers);
 
     if (!retailers || !Array.isArray(retailers) || retailers.length === 0) {
       return response.status(400).json({ error: 'Retailers list is required' });
     }
 
-    const client = new ApifyClient({
-      token: process.env.APIFY_TOKEN,
-    });
+    const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
-    // Construct Start URLs for all retailers
-    const startUrls = [];
-
-    // Beauty Workspace URLs:
-    if (retailers.includes('Sephora')) {
-      startUrls.push({
-        url: 'https://www.sephora.co.uk/new-at-sephora',
-        userData: { retailer: 'Sephora', label: 'LISTING' },
-      });
-    }
-    if (retailers.includes('Holland & Barrett')) {
-      startUrls.push({
-        url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue',
-        userData: { retailer: 'Holland & Barrett', label: 'LISTING' },
-      });
-      startUrls.push({
-        url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue',
-        userData: { retailer: 'Holland & Barrett', label: 'LISTING' },
-      });
-    }
-    if (retailers.includes('Boots')) {
-      startUrls.push({
-        url: 'https://www.boots.com/new-to-boots/new-in-beauty',
-        userData: { retailer: 'Boots', label: 'LISTING' },
-      });
-    }
-    if (retailers.includes('Superdrug')) {
-      startUrls.push({
-        url: 'https://www.superdrug.com/new-in/c/new',
-        userData: { retailer: 'Superdrug', label: 'LISTING' },
-      });
-    }
-
-    // Grocery workspace map
+    // Configuration Maps
     const groceryMap = {
-      'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in',
-      'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in',
-      'Asda': 'https://groceries.asda.com/search/new%20in',
-      'Morrisons': 'https://groceries.morrisons.com/categories/new/192077',
-      'Ocado': 'https://www.ocado.com/search?entry=new%20in',
-      'Waitrose': 'https://www.waitrose.com/ecom/shop/browse/groceries/new'
+      'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in\nhttps://www.sainsburys.co.uk/shop/gb/groceries/get-ideas/new-products/all-new-products',
+      'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in&icid=gh_hp_search_new%20in',
+      'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554',
+      'Morrisons': 'https://groceries.morrisons.com/categories/new/192077\nhttps://groceries.morrisons.com/search?entry=new+in',
+      'Ocado': 'https://www.ocado.com/search?entry=new%20in\nhttps://www.ocado.com/browse/new-in-119934',
+      'Waitrose': 'https://www.waitrose.com/ecom/shop/browse/groceries/new\nhttps://www.waitrose.com/ecom/shop/search?&searchTerm=new%20in'
     };
 
-    retailers.forEach(retailer => {
-      if (groceryMap[retailer]) {
-        startUrls.push({ url: groceryMap[retailer], userData: { retailer, label: 'LISTING' } });
+    const standardNameMap = {
+      'sainsburys': 'Sainsburys', 'sainsbury': 'Sainsburys', 'sainsbury\'s': 'Sainsburys',
+      'tesco': 'Tesco', 'asda': 'Asda', 'superdrug': 'Superdrug',
+      'morrisons': 'Morrisons', 'ocado': 'Ocado', 'waitrose': 'Waitrose'
+    };
+
+    const ecommerceScraperKeys = Object.keys(standardNameMap);
+
+    // Categorize Retailers
+    const ecommerceRetailersToScrape = [];
+    const puppeteerRetailersToScrape = [];
+
+    retailers.forEach(r => {
+      const cleanName = r.trim().toLowerCase();
+      if (ecommerceScraperKeys.includes(cleanName)) {
+        ecommerceRetailersToScrape.push(r);
+      } else {
+        puppeteerRetailersToScrape.push(r);
       }
     });
 
-    if (startUrls.length === 0) {
-      return response.status(400).json({ error: 'No valid retailers found' });
+    console.log('Routed to Ecommerce Actor:', ecommerceRetailersToScrape);
+    console.log('Routed to Puppeteer Actor:', puppeteerRetailersToScrape);
+
+    const webhookUrl = `https://${request.headers.host}/api/run-status?workspace=${workspace || 'beauty'}`;
+    const runs = [];
+
+    // 1. Trigger E-commerce Scraping Tool
+    if (ecommerceRetailersToScrape.length > 0) {
+      const queries = [];
+      ecommerceRetailersToScrape.forEach(r => {
+        const stdName = standardNameMap[r.trim().toLowerCase()];
+        if (stdName === 'Superdrug') {
+          queries.push('https://www.superdrug.com/new-in/c/new');
+        } else if (groceryMap[stdName]) {
+          queries.push(groceryMap[stdName]);
+        }
+      });
+
+      if (queries.length > 0) {
+        console.log('Starting Ecommerce Scraper with queries:', queries);
+        const run = await client.actor('apify/e-commerce-scraping-tool').start({
+          queries: queries.join('\n'),
+          maxItems: 1000,
+          proxyConfiguration: { useApifyProxy: true }
+        }, {
+          webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=ecommerce' }]
+        });
+        runs.push({ id: run.id, actor: 'e-commerce-scraping-tool', retailers: ecommerceRetailersToScrape });
+      }
     }
 
-    console.log(`Starting universal custom scrape for ${startUrls.length} start URLs`);
+    // 2. Trigger Puppeteer Scraper
+    if (puppeteerRetailersToScrape.length > 0) {
+      const startUrls = [];
+      if (puppeteerRetailersToScrape.some(r => r.toLowerCase().includes('sephora'))) {
+        startUrls.push({ url: 'https://www.sephora.co.uk/new-at-sephora', userData: { retailer: 'Sephora', label: 'LISTING' } });
+      }
+      if (puppeteerRetailersToScrape.some(r => r.toLowerCase().includes('boots'))) {
+        startUrls.push({ url: 'https://www.boots.com/new-to-boots', userData: { retailer: 'Boots', label: 'LISTING' } });
+      }
+      if (puppeteerRetailersToScrape.some(r => r.toLowerCase().includes('holland'))) {
+        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
+      }
 
-    // Callback URL for sync (pass workspace context)
-    const host = request.headers.host;
-    const protocol = request.headers['x-forwarded-proto'] || 'https';
-    const webhookUrl = `${protocol}://${host}/api/run-status?workspace=${workspace || 'beauty'}`;
-
-    const run = await client.actor('apify/puppeteer-scraper').start({
-      startUrls,
-      proxyConfiguration: { useApifyProxy: true },
-      useChrome: true,
-      stealth: true,
-      maxPagesPerCrawl: 55, // Strict limit: ~50 products + listing pages
-      maxConcurrency: 1, // Crawl one page at a time to avoid detection
-      maxRequestRetries: 3,
-      navigationTimeoutSecs: 180,
-      pageLoadTimeoutSecs: 180,
-      pageFunction: `async function pageFunction(context) {
+      if (startUrls.length > 0) {
+        console.log('Starting Puppeteer Scraper with URLs:', startUrls.map(u => u.url));
+        const run = await client.actor('apify/puppeteer-scraper').start({
+          startUrls,
+          useChrome: true,
+          stealth: true,
+          maxPagesPerCrawl: 400,
+          proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
+          pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
                 const { label, retailer } = request.userData;
                 
                 if (label === 'LISTING') {
                     log.info(\`Listing page (\${retailer}): \` + request.url);
-                    
-                    // Lazy load scroll
                     await page.evaluate(async () => {
                         await new Promise((resolve) => {
                             let totalHeight = 0;
@@ -109,45 +121,20 @@ export default async function handler(request, response) {
                         });
                     });
                     
-                    // Selector Map for Product Links
                     const selectors = {
                         'Holland & Barrett': 'a[href*="/shop/product/"]',
                         'Sephora': 'a.Product-link',
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
-                        'Superdrug': 'a.product-card__title, a.product-card__image-link',
-                        'Tesco': 'a[data-testid="product-image-link"]',
-                        'Sainsburys': 'a.pt__link-wrapper, a.pt__link',
-                        'Asda': 'a.co-item__title-link',
-                        'Morrisons': 'a[href*="/products/"]',
-                        'Ocado': 'a[href*="/products/"]',
-                        'Waitrose': 'a[href*="/ecom/products/"]'
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
-                    
-                    await enqueueLinks({
-                        selector,
-                        label: 'DETAIL',
-                        userData: { retailer }
-                    });
-                     return { type: 'LISTING', url: request.url, retailer };
+                    await enqueueLinks({ selector, label: 'DETAIL', userData: { retailer } });
                 } else {
-                    // Extract Product Data
                     log.info(\`Product page (\${retailer}): \` + request.url);
-                    
-                    // Wait for dynamic content
                     await new Promise(r => setTimeout(r, 5000));
                     
-                    const item = await page.evaluate((retailer) => {
-                        const results = { 
-                            url: window.location.href,
-                            retailer: retailer,
-                            name: document.title,
-                            reviews: 0,
-                            rating: 0
-                        };
-                        
-                        // 1. JSON-LD Extraction
+                    return await page.evaluate((retailer) => {
+                        const results = { url: window.location.href, retailer: retailer, name: document.title, reviews: 0 };
                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
                         for (const s of scripts) {
                             try {
@@ -155,146 +142,37 @@ export default async function handler(request, response) {
                                 const products = Array.isArray(json) ? json : [json];
                                 const product = products.find(i => i['@type'] === 'Product' || (i['@graph'] && i['@graph'].find(g => g['@type'] === 'Product')));
                                 const p = product && product['@graph'] ? product['@graph'].find(g => g['@type'] === 'Product') : product;
-                                
-                                if (p) {
-                                    results.name = p.name || results.name;
-                                    results.brand = typeof p.brand === 'object' ? p.brand.name : p.brand;
-                                    results.image = Array.isArray(p.image) ? p.image[0] : p.image;
-                                    results.description = p.description;
-                                    results.sku = p.sku || p.mpn;
-                                    
-                                    if (p.offers) {
-                                        const offer = Array.isArray(p.offers) ? p.offers[0] : p.offers;
-                                        results.price = offer.price;
-                                        results.currency = offer.priceCurrency;
-                                    }
-                                    
-                                    const ratingObj = p.aggregateRating;
-                                    if (ratingObj) {
-                                        results.rating = parseFloat(ratingObj.ratingValue) || 0;
-                                        results.reviews = parseInt(ratingObj.reviewCount || ratingObj.reviewsCount || ratingObj.numberOfReviews) || 0;
-                                    }
+                                if (p && p.aggregateRating) {
+                                    results.reviews = parseInt(p.aggregateRating.reviewCount || p.aggregateRating.numberOfReviews) || 0;
                                 }
                             } catch(e) {}
                         }
-                        
-                        // 2. DOM Fallbacks
                         if (results.reviews === 0) {
-                            // Bazaarvoice (Sephora, Boots, Sainsbury's)
                             const bvCount = document.querySelector('.bv_numReviews_text, #bvRContainer-Link, [data-bv-show="rating_summary"]');
-                            if (bvCount) {
-                                results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;
-                                const bvRating = document.querySelector('.bv_avgRating_text, .bv_avgRating_component_container');
-                                if (bvRating) results.rating = parseFloat(bvRating.innerText) || 0;
-                            }
-                            
-                            // PowerReviews (Superdrug)
-                            if (results.reviews === 0) {
-                                const prCount = document.querySelector('.pr-snippet-review-count');
-                                if (prCount) {
-                                    results.reviews = parseInt(prCount.innerText.replace(/[^0-9]/g, '')) || 0;
-                                    const prRating = document.querySelector('.pr-snippet-rating-decimal');
-                                    if (prRating) results.rating = parseFloat(prRating.innerText) || 0;
-                                }
-                            }
-                            
-                            // Tesco/Generic Fallback (ARIA labels)
-                            if (results.reviews === 0) {
-                                const ariaRating = document.querySelector('[aria-label*="rating"], [aria-label*="stars"], .star-rating, [data-testid="stars-rating"]');
-                                if (ariaRating) {
-                                    const aria = ariaRating.getAttribute('aria-label') || '';
-                                    const match = aria.match(/([0-9.]+)/);
-                                    if (match) results.rating = parseFloat(match[1]);
-                                    
-                                    const reviewText = Array.from(document.querySelectorAll('a, span')).find(el => el.innerText.includes('Reviews') || el.innerText.includes('ratings'));
-                                    if (reviewText) results.reviews = parseInt(reviewText.innerText.replace(/[^0-9]/g, '')) || 0;
-                                }
-                            }
+                            if (bvCount) results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;
                         }
-                        
-                        // 3. Own Brand Filtering (Save Credits)
-                        const lowerName = results.name.toLowerCase();
-                        const lowerBrand = (results.brand || '').toLowerCase();
-                        const lowerRetailer = retailer.toLowerCase();
-                        
-                        const ownBrandMap = {
-                            // Grocery Retailers
-                            'Morrisons': ['morrisons', 'the best', 'savers', 'nutmeg', 'market street'],
-                            'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\\'s harvest'],
-                            'Asda': ['asda', 'extra special', 'just essentials', 'george home'],
-                            'Sainsburys': ['sainsbury', 'hubbard', 'stamford street'],
-                            'Waitrose': ['waitrose', 'essential', 'duchy'],
-                            'Ocado': ['ocado', 'm&s', 'marks & spencer'],
-                            // Beauty Retailers
-                            'Sephora': ['sephora collection', 'sephora'],
-                            'Boots': ['boots', 'no7', 'no 7', 'botanics', 'soap & glory', 'soap and glory'],
-                            'Holland & Barrett': ['holland & barrett', 'holland and barrett', 'h&b'],
-                            'Superdrug': ['superdrug', 'b.', 'b. by superdrug']
-                        };
-                        
-                        const keywords = ownBrandMap[retailer] || [];
-                        
-                        // Smart own-brand detection:
-                        // 1. Check brand field first (most reliable)
-                        // 2. If brand empty, check if name STARTS with keyword
-                        // 3. Ignore "Boots" suffix artifacts in product names
-                        
-                        let isOwnBrand = false;
-                        
-                        // Primary check: brand field
-                        if (lowerBrand) {
-                            isOwnBrand = keywords.some(kw => lowerBrand.includes(kw));
-                        }
-                        
-                        // Fallback: check if name STARTS with own-brand keyword (not just contains)
-                        if (!isOwnBrand && !lowerBrand) {
-                            const nameWords = lowerName.split(' ');
-                            const firstWord = nameWords[0] || '';
-                            const firstTwoWords = nameWords.slice(0, 2).join(' ');
-                            
-                            isOwnBrand = keywords.some(kw => {
-                                return firstWord === kw || firstTwoWords.startsWith(kw) || lowerName.startsWith(kw);
-                            });
-                        }
-                        
-                        if (isOwnBrand) {
-                            // Mark as skipped so we don't save it to dataset (and thus don't enrich it)
-                            return { ...results, skipped: true, reason: 'OWN_BRAND' };
-                        }
-
                         return results;
                     }, retailer);
-                    
-                    if (item.skipped) {
-                        log.info(\`Skipping own-brand item (\${item.reason}): \${item.name}\`);
-                        return null; // Do not save to dataset which saves credits on enrichment
-                    }
-                    
-                    // Filter by review count (0-5 reviews only - focus on emerging products)
-                    if (item.reviews > 5) {
-                        log.info(\`Skipping high-review product (\${item.reviews} reviews): \${item.name}\`);
-                        return null;
-                    }
-                    
-                    return item;
                 }
             }`,
-    }, {
-      webhooks: [
-        {
-          eventTypes: ['ACTOR.RUN.SUCCEEDED'],
-          requestUrl: webhookUrl
-        }
-      ]
-    });
+        }, {
+          webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
+        });
+        runs.push({ id: run.id, actor: 'puppeteer-scraper', retailers: puppeteerRetailersToScrape });
+      }
+    }
+
+    if (runs.length === 0) {
+      return response.status(400).json({ error: 'No scrapers triggered. Check names.', debug: { retailers } });
+    }
 
     return response.status(200).json({
-      runId: run.id,
-      statusUrl: run.statusUrl,
-      startedAt: run.startedAt,
+      message: `Triggered ${runs.length} runs`,
+      runs,
+      debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }
     });
   } catch (error) {
-    console.error('Error triggering scrape:', error);
-    return response.status(500).json({ error: `Failed to trigger scrape: ${error.message}` });
+    console.error('Fatal Error:', error);
+    return response.status(500).json({ error: error.message });
   }
 }

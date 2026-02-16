@@ -189,47 +189,31 @@ export default async function handler(request, response) {
                 continue;
             }
 
+            // FILTER: Review Count (0-5 focus)
+            const reviewCount = parseInt(item.reviews || item.ratingCount || item.rating_count || item.reviewCount || item.reviewsCount || 0);
+            if (reviewCount > 5) {
+                console.log(`Skipping high-review product (${reviewCount} reviews): ${name}`);
+                continue;
+            }
+
             // FILTER: exclude non-food items in Grocery workspace
             // Specifically targeting the "Kettle" (appliance) vs "Kettle Chips" issue
             const lowerName = name.toLowerCase();
-            const lowerCategory = (item.category || '').toLowerCase(); // Fallback if category extraction above isn't eager enough, but we should use the one we define later or just check raw item
+            const lowerCategory = (item.category || '').toLowerCase();
 
-            // Should properly extract category first if we want to use it, but `item.category` might exist from Apify
-            // Let's rely on name mainly as it's most reliable
+            const bannedKeywords = ['toaster', 'blender', 'microwave', 'electrical', 'appliance', 'menswear', 'womenswear', 'clothing', 'television', 'laptop', 'vacuum', 'iron', 'kettle', 'fryer'];
 
-            const bannedKeywords = ['toaster', 'blender', 'microwave', 'electrical', 'appliance', 'menswear', 'womenswear', 'clothing'];
+            // Allow kettle chips/crisps
+            const isFoodKettle = lowerName.includes('kettle') && (
+                lowerName.includes('chips') ||
+                lowerName.includes('crisps') ||
+                lowerName.includes('popcorn') ||
+                lowerName.includes('salt') ||
+                lowerName.includes('seasoning') ||
+                lowerName.includes('foods')
+            );
 
-            // Smart "Kettle" check
-            if (lowerName.includes('kettle') &&
-                !lowerName.includes('chips') &&
-                !lowerName.includes('crisps') &&
-                !lowerName.includes('popcorn') &&
-                !lowerName.includes('salt') &&
-                !lowerName.includes('seasoning') &&
-                !lowerName.includes('soup') && // Sometimes soups
-                !lowerName.includes('vegetable') &&
-                !lowerName.includes('foods')) {
-
-                // If it's just "Kettle" or "Electric Kettle" or in a non-food category
-                if (lowerName.includes('electric') || lowerName.includes('cordless') || lowerName.includes('jug') || lowerCategory.includes('appliance')) {
-                    console.log(`Skipping non-food item (Kettle appliance): ${name}`);
-                    continue;
-                }
-
-                // If the name is VERY short and just "Kettles" or similar, skip
-                if (lowerName === 'kettle' || lowerName === 'kettles') {
-                    console.log(`Skipping non-food item (Generic Kettle): ${name}`);
-                    continue;
-                }
-
-                // If it's likely an appliance brand
-                if (item.brand === 'Swan' || item.brand === 'Breville' || item.brand === 'Russell Hobbs') {
-                    console.log(`Skipping non-food item (Appliance Brand): ${name}`);
-                    continue;
-                }
-            }
-
-            if (bannedKeywords.some(kw => lowerName.includes(kw))) {
+            if (bannedKeywords.some(kw => lowerName.includes(kw)) && !isFoodKettle) {
                 console.log(`Skipping non-food item (Banned Keyword): ${name}`);
                 continue;
             }
@@ -251,15 +235,13 @@ export default async function handler(request, response) {
                     brandName = '';
                 }
 
-                // FIX: Ignore "Boots Logo" or just "Boots" if it's not an own-brand item (own-brand logic handles the rest)
-                // But specifically "Boots Logo" is an artifact of the scraper finding the site logo
                 if (brandName.toLowerCase() === 'boots logo' || brandName.toLowerCase() === 'boots' || brandName.toLowerCase() === 'diet' || brandName.toLowerCase().includes('marketplace')) {
                     brandName = '';
                 }
             }
 
             // 2. Filter out ONLY true promotional text
-            const promoPhrases = ['3 for 2', '2 for', '1/2 price', 'save ', 'buy one', 'get one', 'points'];
+            const promoPhrases = ['3 for 2', '2 for', '1/2 price', 'save ', 'buy one', 'get one', 'points', 'clubcard'];
             const isPromo = brandName && promoPhrases.some(p => brandName.toLowerCase().includes(p));
 
             if (isPromo) {
@@ -278,61 +260,23 @@ export default async function handler(request, response) {
             }
 
             // 4. Final Fallback: Take first 1-2 words of name if they look like a brand
-            // Enabled for ALL workspaces now (was just Grocery)
             if (!brandName && name) {
                 const words = name.split(' ');
                 if (words.length > 0) {
-                    const { firstOne, firstTwo } = { firstOne: words[0], firstTwo: words.slice(0, 2).join(' ') };
+                    const firstOne = words[0];
+                    const firstTwo = words.slice(0, 2).join(' ');
 
-                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks'];
+                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks', 'Superdrug', 'Boots', 'Sephora'];
                     const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
 
-                    // FIX: Ignore common adjectives/sizes at start of name
-                    const ignoreAdjectives = ['Giant', 'Mini', 'Large', 'Small', 'Medium', 'Multipack', 'Family', 'Love', 'Happy', 'New', 'The', 'A', 'An', 'My', 'Our', 'Your'];
-
-                    let brandStartWords = words;
-                    if (ignoreAdjectives.includes(firstOne) && words.length > 1) {
-                        // Skip the first word if it's a generic adjective
-                        brandStartWords = words.slice(1);
-                        // Re-evaluate firstOne/firstTwo based on new start
-                    }
-
-                    const effectiveFirstOne = brandStartWords[0];
-                    const effectiveFirstTwo = brandStartWords.slice(0, 2).join(' ');
-
                     if (isRetailerName) {
-                        brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') ? firstTwo : firstOne;
-                    } else if (brandStartWords.length > 0 && /^[A-Z]/.test(effectiveFirstOne)) {
-
-                        // FIX: Wine/Spirits Multi-word Brands
-                        const winePrefixes = [
-                            'Greasy', 'Oyster', 'Yellow', 'Red', 'Blue', 'Black', 'White', 'Silver', 'Gold',
-                            'Wolf', 'Dark', 'Mud', 'Barefoot', 'Echo', 'Jam', 'Meat', 'Trivento', 'Casillero',
-                            'Campo', 'Villa', 'Santa', 'Saint', 'St', 'Le', 'La', 'Les', 'El', 'Los', 'The',
-                            'I' // "I Heart"
-                        ];
-
-                        // FIX: "19 Crimes" (starts with number)
-                        const isNumberStart = /^\d+$/.test(effectiveFirstOne);
-
-                        if (effectiveFirstOne === 'Diet') {
-                            brandName = effectiveFirstTwo;
-                        } else if (winePrefixes.includes(effectiveFirstOne) || isNumberStart) {
-                            brandName = effectiveFirstTwo;
+                        brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') || firstTwo.includes('Collection') ? firstTwo : firstOne;
+                    } else if (/^[A-Z]/.test(firstOne)) {
+                        const winePrefixes = ['Greasy', 'Oyster', 'Yellow', 'Red', 'Blue', 'Black', 'White', 'Silver', 'Gold', 'Wolf', 'Dark', 'Mud', 'Barefoot', 'Echo', 'Jam', 'Meat', 'Trivento', 'Casillero', 'Campo', 'Villa', 'Santa', 'Saint', 'St', 'Le', 'La', 'Les', 'El', 'Los', 'The', 'I'];
+                        if (winePrefixes.includes(firstOne) || /^\d+$/.test(firstOne) || firstOne === 'Diet') {
+                            brandName = firstTwo;
                         } else {
-                            brandName = effectiveFirstOne;
-                        }
-
-                        // FIX: "Ink by Grant Burge" -> Extract "Grant Burge"
-                        // This overrides the above if a 'by' pattern is found
-                        if (name.includes(' by ')) {
-                            const byMatch = name.match(/ by ([A-Z][a-z]+(?: [A-Z][a-z]+)*)/);
-                            if (byMatch && byMatch[1]) {
-                                // Check if captured group is not a generic word like "The"
-                                if (byMatch[1].length > 3) {
-                                    brandName = byMatch[1];
-                                }
-                            }
+                            brandName = firstOne;
                         }
                     }
                 }
@@ -344,28 +288,24 @@ export default async function handler(request, response) {
                 item.merchant ||
                 '';
 
-            // Clean manufacturer too
             if (manufacturer) {
                 manufacturer = manufacturer
                     .replace(/\s+(Ltd|Limited|Corp|Corporation|Inc|PLC)$/i, '')
                     .replace(/\.$/, '')
                     .trim();
-
-                if (manufacturer.toLowerCase() === name.toLowerCase()) {
-                    manufacturer = '';
-                }
             }
 
             // FILTER: Skip own brands
             const ownBrandMap = {
                 'Sephora': ['sephora', 'sephora collection'],
                 'Holland & Barrett': ['holland', 'barrett', 'h&b', 'holland & barrett', 'holland and barrett'],
-                'Sainsburys': ['sainsbury', 'hubbard', 'by sainsbury', 'sainsbury\'s', 'stamford street'],
-                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\'s harvest', 'hearty food co', 'romano', 'willow farm', 'redmere', 'nightingale', 'boswell'],
-                'Asda': ['asda', 'extra special', 'just essentials', 'asda logo', 'george home'],
-                'Morrisons': ['morrison', 'the best', 'savers', 'morrisons', 'nutmeg'],
-                'Ocado': ['ocado', 'ocado own range', 'm&s', 'marks & spencer'], // Ocado sells M&S, which is arguably "own brand" in this context if they want brand allies
-                'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners']
+                'Sainsburys': ['sainsbury', 'hubbard', 'by sainsbury', 'sainsbury\'s', 'stamford street', 'be good to yourself', 'so organic', 'taste the difference'],
+                'Tesco': ['tesco', 'stockwell', 'ms molly', 'eastman', 'finest', 'creamfields', 'grower\'s harvest', 'hearty food co', 'romano', 'willow farm', 'redmere', 'nightingale', 'boswell', 'bay fishmongers', 'woodside farms'],
+                'Asda': ['asda', 'extra special', 'just essentials', 'asda logo', 'george home', 'smart price', 'farm stores'],
+                'Morrisons': ['morrison', 'the best', 'savers', 'morrisons', 'nutmeg', 'market street', 'v taste'],
+                'Ocado': ['ocado', 'ocado own range', 'm&s', 'marks & spencer'],
+                'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners', 'lovifeel'],
+                'Superdrug': ['superdrug', 'b.', 'b. by superdrug', 'studio', 'solait', 'me+', 'optimum', 'artisan']
             };
 
             const lowercaseManufacturer = (manufacturer || '').toLowerCase();
@@ -373,43 +313,32 @@ export default async function handler(request, response) {
             const lowercaseName = name.toLowerCase();
             const ownBrandKeywords = ownBrandMap[retailer] || [];
 
-            // Helper to check if a string contains any keyword
-            const containsKeyword = (str) => ownBrandKeywords.some(kw => str.includes(kw));
-
-            // Logic: 
-            // 1. If Manufacturer/Brand contains retailer keyword -> Skip
-            // 2. If Product Name STARTS with retailer keyword -> Skip
-            // 3. If Brand is the same as Retailer Name -> Skip
-
-            const isOwnBrand =
-                containsKeyword(lowercaseManufacturer) ||
-                containsKeyword(lowercaseBrand) ||
-                (lowercaseBrand === retailer.toLowerCase()) ||
-                (logo => logo.includes(retailer.toLowerCase()))(lowercaseName) && (lowercaseManufacturer === '' || lowercaseManufacturer === retailer.toLowerCase());
+            const isOwnBrand = ownBrandKeywords.some(kw =>
+                lowercaseManufacturer.includes(kw) ||
+                lowercaseBrand.includes(kw) ||
+                (lowercaseName.startsWith(kw) && !isFoodKettle) ||
+                (lowercaseBrand === retailer.toLowerCase())
+            );
 
 
             if (isOwnBrand) {
-                console.log(`Skipping own-brand: ${name} (Result: ${manufacturer || brandName})`);
+                console.log(`Skipping own-brand: ${name} (Matched: ${manufacturer || brandName})`);
                 continue;
             }
 
-            // Ensure Manufacturer column exists
-            if (!manufacturer && brandName) manufacturer = brandName;
-
-            // Image URL mapping
             const imageUrl = item.image || item.imageUrl || item.productImage || item.image_url || '';
 
             newRows.push({
                 'product': name,
                 'retailer': retailer,
                 'product url': url,
-                'price': item.price_display || (price ? `${currency} ${price}` : 'N/A'),
-                'reviews': item.reviews || item.rating_count || item.reviewCount || 0,
+                'price': item.price_display || (item.price ? `${item.currency || 'GBP'} ${item.price}` : 'N/A'),
+                'reviews': reviewCount,
                 'date_found': new Date().toISOString().split('T')[0],
                 'brand': brandName,
                 'manufacturer': manufacturer,
                 'category': item.category || 'New In',
-                'rating_value': item.rating || item.rating_value || 0,
+                'rating_value': item.rating || item.rating_value || item.ratingValue || 0,
                 'status': item.status || 'Enriched',
                 'run_id': runId,
                 'scrape_timestamp': new Date().toISOString(),
