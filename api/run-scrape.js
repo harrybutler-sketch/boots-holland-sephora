@@ -168,6 +168,7 @@ export default async function handler(request, response) {
 
     return response.status(200).json({
       message: `Triggered ${runs.length} runs`,
+      runId: runs[0].id,
       runs,
       debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }
     });

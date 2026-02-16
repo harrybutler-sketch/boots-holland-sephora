@@ -169,7 +169,12 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: `Triggered ${runs.length} runs`, runs, debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape } })
+      body: JSON.stringify({
+        message: `Triggered ${runs.length} runs`,
+        runId: runs[0].id,
+        runs,
+        debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }
+      }),
     };
   } catch (error) {
     console.error('Fatal Error:', error);
