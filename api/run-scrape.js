@@ -6,14 +6,12 @@ export default async function handler(request, response) {
   }
 
   try {
-    // Robust body parsing for Vercel
     let body = request.body;
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch (e) { /* ignore */ }
     }
 
     const { retailers, workspace } = body || {};
-
     console.log('--- Scrape Trigger Received (API) ---');
     console.log('Workspace:', workspace);
     console.log('Retailers:', retailers);
@@ -23,58 +21,57 @@ export default async function handler(request, response) {
     }
 
     if (!process.env.APIFY_TOKEN) {
-      return response.status(500).json({ error: 'APIFY_TOKEN is not configured on the server.' });
+      return response.status(500).json({ error: 'APIFY_TOKEN is missing' });
     }
 
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
-    // Configuration Maps - Same as before but verified
-    const groceryMap = {
+    // 1. Defined eCommerce Scraper Retailers ("The Big 4")
+    const ecommerceMap = {
+      'sainsburys': 'Sainsburys', 'sainsbury': 'Sainsburys', 'sainsbury\'s': 'Sainsburys',
+      'tesco': 'Tesco', 'asda': 'Asda', 'superdrug': 'Superdrug'
+    };
+
+    const groceryUrls = {
       'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in\nhttps://www.sainsburys.co.uk/shop/gb/groceries/get-ideas/new-products/all-new-products',
       'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in&icid=gh_hp_search_new%20in',
-      'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554',
-      'Morrisons': 'https://groceries.morrisons.com/categories/new/192077\nhttps://groceries.morrisons.com/search?entry=new+in',
-      'Ocado': 'https://www.ocado.com/search?entry=new%20in\nhttps://www.ocado.com/browse/new-in-119934',
-      'Waitrose': 'https://www.waitrose.com/ecom/shop/browse/groceries/new\nhttps://www.waitrose.com/ecom/shop/search?&searchTerm=new%20in'
+      'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554'
     };
 
-    const standardNameMap = {
-      'sainsburys': 'Sainsburys', 'sainsbury': 'Sainsburys', 'sainsbury\'s': 'Sainsburys',
-      'tesco': 'Tesco', 'asda': 'Asda', 'superdrug': 'Superdrug',
-      'morrisons': 'Morrisons', 'ocado': 'Ocado', 'waitrose': 'Waitrose'
-    };
-
-    const ecommerceScraperKeys = Object.keys(standardNameMap);
+    // 2. Categorize
     const ecommerceRetailersToScrape = [];
     const puppeteerRetailersToScrape = [];
 
     retailers.forEach(r => {
       const cleanName = r.trim().toLowerCase();
-      if (ecommerceScraperKeys.includes(cleanName)) {
+      if (ecommerceMap[cleanName]) {
         ecommerceRetailersToScrape.push(r);
       } else {
         puppeteerRetailersToScrape.push(r);
       }
     });
 
+    console.log('Routed to eCommerce Tool:', ecommerceRetailersToScrape);
+    console.log('Routed to Puppeteer Scraper:', puppeteerRetailersToScrape);
+
     const host = request.headers.host || 'boots-holland-sephora.vercel.app';
     const webhookUrl = `https://${host}/api/run-status?workspace=${workspace || 'beauty'}`;
     const runs = [];
 
-    // 1. Trigger E-commerce Scraping Tool
+    // 3. Trigger eCommerce Scraper
     if (ecommerceRetailersToScrape.length > 0) {
       const queries = [];
       ecommerceRetailersToScrape.forEach(r => {
-        const stdName = standardNameMap[r.trim().toLowerCase()];
+        const stdName = ecommerceMap[r.trim().toLowerCase()];
         if (stdName === 'Superdrug') {
           queries.push('https://www.superdrug.com/new-in/c/new');
-        } else if (groceryMap[stdName]) {
-          queries.push(groceryMap[stdName]);
+        } else if (groceryUrls[stdName]) {
+          queries.push(groceryUrls[stdName]);
         }
       });
 
       if (queries.length > 0) {
-        console.log('Starting Ecommerce Scraper...');
+        console.log('Starting eCommerce Scraper...');
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
           queries: queries.join('\n'),
           maxItems: 1000,
@@ -86,18 +83,29 @@ export default async function handler(request, response) {
       }
     }
 
-    // 2. Trigger Puppeteer Scraper
+    // 4. Trigger Puppeteer Scraper
     if (puppeteerRetailersToScrape.length > 0) {
       const startUrls = [];
-      if (puppeteerRetailersToScrape.some(r => r.toLowerCase().includes('sephora'))) {
+      const pRetailers = puppeteerRetailersToScrape.map(r => r.toLowerCase().trim());
+
+      if (pRetailers.some(r => r.includes('sephora'))) {
         startUrls.push({ url: 'https://www.sephora.co.uk/new-at-sephora', userData: { retailer: 'Sephora', label: 'LISTING' } });
       }
-      if (puppeteerRetailersToScrape.some(r => r.toLowerCase().includes('boots'))) {
+      if (pRetailers.some(r => r.includes('boots'))) {
         startUrls.push({ url: 'https://www.boots.com/new-to-boots', userData: { retailer: 'Boots', label: 'LISTING' } });
       }
-      if (puppeteerRetailersToScrape.some(r => r.toLowerCase().includes('holland'))) {
+      if (pRetailers.some(r => r.includes('holland'))) {
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
+      }
+      if (pRetailers.some(r => r.includes('waitrose'))) {
+        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new', userData: { retailer: 'Waitrose', label: 'LISTING' } });
+      }
+      if (pRetailers.some(r => r.includes('morrisons'))) {
+        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/192077', userData: { retailer: 'Morrisons', label: 'LISTING' } });
+      }
+      if (pRetailers.some(r => r.includes('ocado'))) {
+        startUrls.push({ url: 'https://www.ocado.com/browse/new-in-119934', userData: { retailer: 'Ocado', label: 'LISTING' } });
       }
 
       if (startUrls.length > 0) {
@@ -132,6 +140,9 @@ export default async function handler(request, response) {
                         'Holland & Barrett': 'a[href*="/shop/product/"]',
                         'Sephora': 'a.Product-link',
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
+                        'Waitrose': 'a[href*="/ecom/products/"]',
+                        'Ocado': 'a[href*="/products/"]',
+                        'Morrisons': 'a[href*="/products/"]'
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
@@ -170,7 +181,7 @@ export default async function handler(request, response) {
     }
 
     if (runs.length === 0) {
-      return response.status(400).json({ error: 'No scrapers triggered. Check names.', debug: { retailers, ecommerceRetailersToScrape } });
+      return response.status(400).json({ error: 'No scrapers triggered.', debug: { retailers } });
     }
 
     return response.status(200).json({
@@ -181,6 +192,6 @@ export default async function handler(request, response) {
     });
   } catch (error) {
     console.error('Fatal Error:', error);
-    return response.status(500).json({ error: error.message || String(error) || 'Internal Server Error' });
+    return response.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 }
