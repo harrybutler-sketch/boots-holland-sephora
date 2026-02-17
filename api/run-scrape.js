@@ -33,7 +33,7 @@ export default async function handler(request, response) {
     };
 
     const groceryUrls = {
-      'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/features/new-in\nhttps://www.sainsburys.co.uk/shop/gb/groceries/get-ideas/new-products/all-new-products',
+      'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/SearchResults/New-products\nhttps://www.sainsburys.co.uk/gol-ui/SearchResults/new',
       'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in&icid=gh_hp_search_new%20in',
       'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554'
     };
