@@ -206,7 +206,28 @@ export default async function handler(request, response) {
                     await new Promise(r => setTimeout(r, 5000));
                     
                     return await page.evaluate((retailer) => {
-                        const results = { url: window.location.href, retailer: retailer, name: document.title, reviews: 0, image: '' };
+                        let name = document.title;
+                        const h1 = document.querySelector('h1');
+                        if (h1 && h1.innerText && h1.innerText.length > 5 && h1.innerText.toLowerCase() !== 'error') {
+                            name = h1.innerText.trim();
+                        } else {
+                            const ogTitle = document.querySelector('meta[property="og:title"]');
+                            if (ogTitle && ogTitle.content) name = ogTitle.content;
+                        }
+                        
+                        // Clean up name (remove retailer suffixes)
+                        name = name.replace(/ - Tesco Groceries$/i, '')
+                                   .replace(/ | Boots$/i, '')
+                                   .replace(/ | Sephora/i, '')
+                                   .trim();
+
+                        const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
+                        
+                        // Detect Error Pages
+                        if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found')) {
+                            results.status = 'Blocked/Error';
+                        }
+
                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
                         for (const s of scripts) {
                             try {
