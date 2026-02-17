@@ -156,11 +156,26 @@ export const handler = async (event, context) => {
                     try {
                         await page.waitForSelector(selector, { timeout: 15000 });
                     } catch (e) {
-                        log.warning(`Timeout waiting for selector: ${ selector }`);
+                        log.warning('Timeout waiting for selector: ' + selector);
                     }
 
                     await page.evaluate(async () => {
-                    log.info(\`Product page (\${retailer}): \` + request.url);
+                        await new Promise((resolve) => {
+                            let totalHeight = 0;
+                            const distance = 100;
+                            let scrolls = 0;
+                            const timer = setInterval(() => {
+                                window.scrollBy(0, distance);
+                                totalHeight += distance;
+                                scrolls++;
+                                if (scrolls > 50) { clearInterval(timer); resolve(); }
+                            }, 100);
+                        });
+                    });
+                    
+                    await enqueueLinks({ selector, label: 'DETAIL', userData: { retailer } });
+                } else {
+                    log.info(`Product page(${ retailer }): ` + request.url);
                     await new Promise(r => setTimeout(r, 5000));
                     
                     return await page.evaluate((retailer) => {
@@ -193,27 +208,27 @@ export const handler = async (event, context) => {
                 }
             }`,
         }, {
-        webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
-      });
-      runs.push({ id: run.id, actor: 'puppeteer-scraper', retailers: puppeteerRetailersToScrape });
+          webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
+        });
+        runs.push({ id: run.id, actor: 'puppeteer-scraper', retailers: puppeteerRetailersToScrape });
+      }
     }
-  }
 
     if (runs.length === 0) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'No scrapers triggered.', debug: { retailers } }) };
-  }
+      return { statusCode: 400, body: JSON.stringify({ error: 'No scrapers triggered.', debug: { retailers } }) };
+    }
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: `Triggered ${runs.length} runs`,
-      runId: runs[0].id,
-      runs,
-      debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }
-    }),
-  };
-} catch (error) {
-  console.error('Fatal Error:', error);
-  return { statusCode: 500, body: JSON.stringify({ error: error.message || 'Internal Server Error' }) };
-}
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: `Triggered ${runs.length} runs`,
+        runId: runs[0].id,
+        runs,
+        debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }
+      }),
+    };
+  } catch (error) {
+    console.error('Fatal Error:', error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message || 'Internal Server Error' }) };
+  }
 };
