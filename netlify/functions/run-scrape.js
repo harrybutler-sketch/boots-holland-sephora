@@ -123,10 +123,10 @@ export const handler = async (event, context) => {
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('waitrose'))) {
-        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new', userData: { retailer: 'Waitrose', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new?srsltid=AfmBOorjNX_GLyjbbfrykWC7OqgShf3o0CYOM7VKzp9aU3DHE97vcGOn', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
-        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/192077', userData: { retailer: 'Morrisons', label: 'LISTING' } });
+        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/192077?srsltid=AfmBOorhOdt9OWlrNkD5Rl9czvTv6Mqsn584Mj5sWMiaJbfacF3w56JD', userData: { retailer: 'Morrisons', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
