@@ -202,7 +202,7 @@ export const handler = async (event, context) => {
                     await new Promise(r => setTimeout(r, 5000));
                     
                     return await page.evaluate((retailer) => {
-                        const results = { url: window.location.href, retailer: retailer, name: document.title, reviews: 0 };
+                        const results = { url: window.location.href, retailer: retailer, name: document.title, reviews: 0, image: '' };
                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
                         for (const s of scripts) {
                             try {
@@ -210,11 +210,40 @@ export const handler = async (event, context) => {
                                 const products = Array.isArray(json) ? json : [json];
                                 const product = products.find(i => i['@type'] === 'Product' || (i['@graph'] && i['@graph'].find(g => g['@type'] === 'Product')));
                                 const p = product && product['@graph'] ? product['@graph'].find(g => g['@type'] === 'Product') : product;
-                                if (p && p.aggregateRating) {
-                                    results.reviews = parseInt(p.aggregateRating.reviewCount || p.aggregateRating.numberOfReviews) || 0;
+                                if (p) {
+                                    if (p.aggregateRating) {
+                                        results.reviews = parseInt(p.aggregateRating.reviewCount || p.aggregateRating.numberOfReviews) || 0;
+                                    }
+                                    if (p.image) {
+                                        results.image = typeof p.image === 'string' ? p.image : (p.image.url || (Array.isArray(p.image) ? p.image[0] : ''));
+                                    }
                                 }
                             } catch(e) {}
                         }
+
+                        // Fallback Image Extraction
+                        if (!results.image) {
+                            const ogImage = document.querySelector('meta[property="og:image"]');
+                            if (ogImage) results.image = ogImage.getAttribute('content');
+                        }
+
+                        if (!results.image) {
+                            const imgSelectors = [
+                                '.pt-image__image', // Sainsbury's
+                                'img[itemprop="image"]',
+                                '.product-image img',
+                                '.oct-teaser__image',
+                                '#main-product-image'
+                            ];
+                            for (const sel of imgSelectors) {
+                                const img = document.querySelector(sel);
+                                if (img && img.src) {
+                                    results.image = img.src;
+                                    break;
+                                }
+                            }
+                        }
+
                         if (results.reviews === 0) {
                             const bvCount = document.querySelector('.bv_numReviews_text, #bvRContainer-Link, [data-bv-show="rating_summary"]');
                             if (bvCount) results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;

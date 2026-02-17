@@ -285,7 +285,7 @@ export default async (req, context) => {
                 continue;
             }
 
-            const imageUrl = item.image || item.imageUrl || item.productImage || item.image_url || '';
+            const imageUrl = item.image || item.imageUrl || item.productImage || item.image_url || item.thumbnailUrl || (item.images && item.images[0]) || '';
 
             newRows.push({
                 'product': name,
