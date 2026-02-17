@@ -186,36 +186,45 @@ export default async function handler(request, response) {
                         log.debug('No cookie banner or error clicking it');
                     }
 
-                    // 2. Pre-scroll to trigger lazy-loading
+                    // 2. DETECT BLOCKS on Listing Page
+                    const pageTitle = await page.title();
+                    if (pageTitle.toLowerCase().includes('access denied') || pageTitle.toLowerCase().includes('site load error')) {
+                        log.error('Access Denied on Listing Page! URL: ' + request.url);
+                        return;
+                    }
+
+                    // 3. Pre-scroll carefully to trigger JS hydration
+                    log.info('Scrolling to trigger lazy-loading...');
                     await page.evaluate(async () => {
-                        window.scrollBy(0, 500);
-                        await new Promise(r => setTimeout(r, 1000));
+                        for (let i = 0; i < 5; i++) {
+                            window.scrollBy(0, 800);
+                            await new Promise(r => setTimeout(r, 500));
+                        }
                     });
 
-                    // 3. Robust Wait for links to appear
+                    // 4. Robust Wait for links to appear
                     try {
                         const waitTimeout = retailer === 'Sainsburys' ? 40000 : 20000;
                         await page.waitForSelector(selector, { timeout: waitTimeout });
-                        if (retailer === 'Sainsburys') await new Promise(r => setTimeout(r, 2000));
+                        if (retailer === 'Sainsburys') {
+                            log.info('Sainsburys links found, waiting for hydration...');
+                            await new Promise(r => setTimeout(r, 5000)); // Extra wait for Sainsbury's JS
+                        }
                     } catch (e) {
-                        log.warning('Timeout waiting for selector: ' + selector);
+                        log.warning('Timeout waiting for selector: ' + selector + ' on ' + request.url);
                     }
 
-                    await page.evaluate(async () => {
-                        await new Promise((resolve) => {
-                            let totalHeight = 0;
-                            const distance = 100;
-                            let scrolls = 0;
-                            const timer = setInterval(() => {
-                                window.scrollBy(0, distance);
-                                totalHeight += distance;
-                                scrolls++;
-                                if (scrolls > 50) { clearInterval(timer); resolve(); }
-                            }, 100);
-                        });
-                    });
+                    // 5. Enqueue product links
+                    const links = await page.$$(selector);
+                    log.info('Found ' + (links ? links.length : 0) + ' potential links for ' + retailer);
                     
-                    await enqueueLinks({ selector, label: 'DETAIL', userData: { retailer } });
+                    await enqueueLinks({
+                        selector: selector,
+                        userData: { 
+                            retailer: retailer,
+                            label: 'DETAIL'
+                        }
+                    });
                 } else {
                     log.info('Product page (' + retailer + '): ' + request.url);
                     await new Promise(r => setTimeout(r, 5000));
