@@ -71,9 +71,12 @@ export default async function handler(request, response) {
 
       if (inputUrls.length > 0) {
         console.log('Starting eCommerce Scraper...');
+        // Limit Tesco to 300 products as requested
+        const maxItems = ecommerceRetailersToScrape.some(r => r.toLowerCase().includes('tesco')) ? 300 : 1000;
+
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
           listingUrls: inputUrls.map(url => ({ url })),
-          maxItems: 1000,
+          maxItems: maxItems,
           proxyConfiguration: { useApifyProxy: true },
           timeoutSecs: 1200
         }, {
