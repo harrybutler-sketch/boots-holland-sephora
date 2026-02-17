@@ -129,7 +129,7 @@ export const handler = async (event, context) => {
         startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/192077', userData: { retailer: 'Morrisons', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
-        startUrls.push({ url: 'https://www.ocado.com/browse/new-in-119934', userData: { retailer: 'Ocado', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
       }
 
       if (startUrls.length > 0) {
