@@ -28,7 +28,7 @@ export default async function handler(request, response) {
 
     // 1. Defined eCommerce Scraper Retailers ("The Big 4")
     const ecommerceMap = {
-      'asda': 'Asda', 'superdrug': 'Superdrug'
+      'tesco': 'Tesco'
     };
 
     const groceryUrls = {
@@ -129,6 +129,13 @@ export default async function handler(request, response) {
       if (pRetailers.some(r => r.includes('ocado'))) {
         startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
       }
+      if (pRetailers.some(r => r.includes('asda'))) {
+        startUrls.push({ url: 'https://groceries.asda.com/search/new%20in', userData: { retailer: 'Asda', label: 'LISTING' } });
+        startUrls.push({ url: 'https://groceries.asda.com/shelf/new-in/1215685911554', userData: { retailer: 'Asda', label: 'LISTING' } });
+      }
+      if (pRetailers.some(r => r.includes('superdrug'))) {
+        startUrls.push({ url: 'https://www.superdrug.com/new-in/c/new', userData: { retailer: 'Superdrug', label: 'LISTING' } });
+      }
 
       if (startUrls.length > 0) {
         console.log('Starting Puppeteer Scraper...');
@@ -167,20 +174,22 @@ export default async function handler(request, response) {
                         'Waitrose': 'a[href*="/ecom/products/"]',
                         'Ocado': 'a[href*="/products/"]',
                         'Morrisons': 'a[href*="/products/"]',
-                        'Sainsburys': 'a.pt__link, a[href*="/gol-ui/product/"]',
-                        'Tesco': 'a[href*="/products/"], a[class*="titleLink"]'
+                        'Sainsburys': '.pt__swiper a.pt__link, a[href*="/gol-ui/product/"]',
+                        'Tesco': 'a[href*="/products/"], a[class*="titleLink"]',
+                        'Asda': 'a[href*="/product/"], a.chakra-link',
+                        'Superdrug': 'a.cx-product-name, a.product-image-container'
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
                     
-                    // 1. Handle Overlays (Cookie Banners)
+                    // 1. Handle Overlays (Cookie Banners) FIRST
                     try {
-                        const cookieSelector = '#onetrust-accept-btn-handler';
+                        const cookieSelector = '#onetrust-accept-btn-handler, #onetrust-banner-sdk button';
                         const cookieBtn = await page.$(cookieSelector);
                         if (cookieBtn) {
                             log.info('Accepting cookie banner...');
                             await cookieBtn.click();
-                            await new Promise(r => setTimeout(r, 2000));
+                            await new Promise(r => setTimeout(r, 3000));
                         }
                     } catch (e) {
                         log.debug('No cookie banner or error clicking it');
@@ -188,30 +197,44 @@ export default async function handler(request, response) {
 
                     // 2. DETECT BLOCKS on Listing Page
                     const pageTitle = await page.title();
-                    if (pageTitle.toLowerCase().includes('access denied') || pageTitle.toLowerCase().includes('site load error')) {
-                        log.error('Access Denied on Listing Page! URL: ' + request.url);
+                    if (pageTitle.toLowerCase().includes('access denied') || 
+                        pageTitle.toLowerCase().includes('site load error') ||
+                        pageTitle.toLowerCase().includes('just a moment') ||
+                        pageTitle.toLowerCase().includes('attention required')) {
+                        log.error('Access Denied or Challenge on Listing Page! URL: ' + request.url + ' Title: ' + pageTitle);
                         return;
                     }
 
-                    // 3. Pre-scroll carefully to trigger JS hydration
+                    // 3. Humanized Scrolling to trigger JS hydration
                     log.info('Scrolling to trigger lazy-loading...');
-                    await page.evaluate(async () => {
-                        for (let i = 0; i < 5; i++) {
-                            window.scrollBy(0, 800);
-                            await new Promise(r => setTimeout(r, 500));
+                    await page.evaluate(async (retailer) => {
+                        const scrolls = retailer === 'Sainsburys' ? 3 : 5;
+                        const distance = retailer === 'Sainsburys' ? 600 : 800;
+                        for (let i = 0; i < scrolls; i++) {
+                            window.scrollBy(0, distance);
+                            // Randomized wait for Sainsbury's
+                            const waitTime = retailer === 'Sainsburys' ? (800 + Math.random() * 1000) : 500;
+                            await new Promise(r => setTimeout(r, waitTime));
                         }
-                    });
+                    }, retailer);
 
                     // 4. Robust Wait for links to appear
                     try {
-                        const waitTimeout = retailer === 'Sainsburys' ? 40000 : 20000;
+                        const waitTimeout = retailer === 'Sainsburys' ? 45000 : 20000;
                         await page.waitForSelector(selector, { timeout: waitTimeout });
                         if (retailer === 'Sainsburys') {
-                            log.info('Sainsburys links found, waiting for hydration...');
-                            await new Promise(r => setTimeout(r, 5000)); // Extra wait for Sainsbury's JS
+                            log.info('Sainsburys links found, waiting for final hydration...');
+                            await new Promise(r => setTimeout(r, 6000)); // Extra wait for Sainsbury's JS
                         }
                     } catch (e) {
                         log.warning('Timeout waiting for selector: ' + selector + ' on ' + request.url);
+                        
+                        // Fallback check if links exist but selector wait failed
+                        const linksExist = await page.evaluate((sel) => !!document.querySelector(sel), selector);
+                        if (!linksExist) {
+                             log.error('Links NOT found after waiting. Content may be blocked or not loading. URL: ' + request.url);
+                             return;
+                        }
                     }
 
                     // 5. Enqueue product links
@@ -227,7 +250,7 @@ export default async function handler(request, response) {
                     });
                 } else {
                     log.info('Product page (' + retailer + '): ' + request.url);
-                    await new Promise(r => setTimeout(r, 5000));
+                    await new Promise(r => setTimeout(r, 6000));
                     
                     return await page.evaluate((retailer) => {
                         let name = document.title;
