@@ -174,7 +174,7 @@ export default async function handler(request, response) {
                         'Waitrose': 'a[href*="/ecom/products/"]',
                         'Ocado': 'a[href*="/products/"]',
                         'Morrisons': 'a[href*="/products/"]',
-                        'Sainsburys': '.pt__swiper a.pt__link, a[href*="/gol-ui/product/"]',
+                        'Sainsburys': '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]',
                         'Tesco': 'a[href*="/products/"], a[class*="titleLink"]',
                         'Asda': 'a[href*="/product/"], a.chakra-link',
                         'Superdrug': 'a.cx-product-name, a.product-image-container'
@@ -208,12 +208,13 @@ export default async function handler(request, response) {
                     // 3. Humanized Scrolling to trigger JS hydration
                     log.info('Scrolling to trigger lazy-loading...');
                     await page.evaluate(async (retailer) => {
-                        const scrolls = retailer === 'Sainsburys' ? 3 : 5;
-                        const distance = retailer === 'Sainsburys' ? 600 : 800;
+                        const isSainsburys = retailer === 'Sainsburys';
+                        const scrolls = isSainsburys ? 6 : 5;
+                        const distance = isSainsburys ? 800 : 800;
                         for (let i = 0; i < scrolls; i++) {
                             window.scrollBy(0, distance);
                             // Randomized wait for Sainsbury's
-                            const waitTime = retailer === 'Sainsburys' ? (800 + Math.random() * 1000) : 500;
+                            const waitTime = isSainsburys ? (1000 + Math.random() * 1500) : 500;
                             await new Promise(r => setTimeout(r, waitTime));
                         }
                     }, retailer);
