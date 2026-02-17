@@ -123,7 +123,7 @@ export default async function handler(request, response) {
                 const { label, retailer } = request.userData;
                 
                 if (label === 'LISTING') {
-                    log.info(\`Listing page (\${retailer}): \` + request.url);
+                    log.info('Listing page (' + retailer + '): ' + request.url);
                     await page.evaluate(async () => {
                         await new Promise((resolve) => {
                             let totalHeight = 0;
@@ -173,7 +173,7 @@ export default async function handler(request, response) {
                     
                     await enqueueLinks({ selector, label: 'DETAIL', userData: { retailer } });
                 } else {
-                    log.info(`Product page(${ retailer }): ` + request.url);
+                    log.info('Product page (' + retailer + '): ' + request.url);
                     await new Promise(r => setTimeout(r, 5000));
                     
                     return await page.evaluate((retailer) => {
