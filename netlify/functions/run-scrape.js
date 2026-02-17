@@ -30,12 +30,10 @@ export const handler = async (event, context) => {
 
     // 1. Defined eCommerce Scraper Retailers ("The Big 4")
     const ecommerceMap = {
-      'sainsburys': 'Sainsburys', 'sainsbury': 'Sainsburys', 'sainsbury\'s': 'Sainsburys',
       'tesco': 'Tesco', 'asda': 'Asda', 'superdrug': 'Superdrug'
     };
 
     const groceryUrls = {
-      'Sainsburys': 'https://www.sainsburys.co.uk/gol-ui/SearchResults/New-products\nhttps://www.sainsburys.co.uk/gol-ui/SearchResults/new',
       'Tesco': 'https://www.tesco.com/groceries/en-GB/search?query=new%20in&icid=gh_hp_search_new%20in',
       'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554'
     };
@@ -101,6 +99,9 @@ export const handler = async (event, context) => {
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
+      if (pRetailers.some(r => r.includes('sainsbury'))) {
+        startUrls.push({ url: 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new', userData: { retailer: 'Sainsburys', label: 'LISTING' } });
+      }
       if (pRetailers.some(r => r.includes('waitrose'))) {
         startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
@@ -145,7 +146,8 @@ export const handler = async (event, context) => {
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
                         'Waitrose': 'a[href*="/ecom/products/"]',
                         'Ocado': 'a[href*="/products/"]',
-                        'Morrisons': 'a[href*="/products/"]'
+                        'Morrisons': 'a[href*="/products/"]',
+                        'Sainsburys': 'a.pt__link'
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
@@ -171,6 +173,13 @@ export const handler = async (event, context) => {
                         if (results.reviews === 0) {
                             const bvCount = document.querySelector('.bv_numReviews_text, #bvRContainer-Link, [data-bv-show="rating_summary"]');
                             if (bvCount) results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;
+                        }
+                        if (results.reviews === 0 && retailer === 'Sainsburys') {
+                            const ratingStars = document.querySelector('.ds-c-rating__stars, .star-rating-link');
+                            if (ratingStars && ratingStars.getAttribute('aria-label')) {
+                                const match = ratingStars.getAttribute('aria-label').match(/from\\s+(\\d+)\\s+reviews/i) || ratingStars.getAttribute('aria-label').match(/(\\d+)\\s+reviews/i);
+                                if (match) results.reviews = parseInt(match[1]) || 0;
+                            }
                         }
                         return results;
                     }, retailer);
