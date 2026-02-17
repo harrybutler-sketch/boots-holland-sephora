@@ -62,20 +62,21 @@ export const handler = async (event, context) => {
 
     // 3. Trigger eCommerce Scraper
     if (ecommerceRetailersToScrape.length > 0) {
-      const queries = [];
+      const inputUrls = [];
       ecommerceRetailersToScrape.forEach(r => {
         const stdName = ecommerceMap[r.trim().toLowerCase()];
         if (stdName === 'Superdrug') {
-          queries.push('https://www.superdrug.com/new-in/c/new');
+          inputUrls.push('https://www.superdrug.com/new-in/c/new');
         } else if (groceryUrls[stdName]) {
-          queries.push(groceryUrls[stdName]);
+          // Split by newline and add each URL
+          groceryUrls[stdName].split('\n').filter(u => u.trim()).forEach(u => inputUrls.push(u.trim()));
         }
       });
 
-      if (queries.length > 0) {
+      if (inputUrls.length > 0) {
         console.log('Starting eCommerce Scraper...');
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
-          queries: queries.join('\n'),
+          startUrls: inputUrls.map(url => ({ url })),
           maxItems: 1000,
           proxyConfiguration: { useApifyProxy: true }
         }, {
