@@ -146,7 +146,7 @@ export const handler = async (event, context) => {
           useChrome: true,
           stealth: true,
           maxPagesPerCrawl: pRetailers.some(r => r.includes('tesco')) ? 80 : 400, // ~50 items per category (4 categories = 200 items total)
-          proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
+          proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
           pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
                 const { label, retailer } = request.userData;

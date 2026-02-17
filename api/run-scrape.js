@@ -146,7 +146,7 @@ export default async function handler(request, response) {
           useChrome: true,
           stealth: true,
           maxPagesPerCrawl: maxPages,
-          proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
+          proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
           pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
                 const { label, retailer } = request.userData;
