@@ -205,33 +205,33 @@ export const handler = async (event, context) => {
                     log.info('Scrolling to trigger lazy-loading...');
                     await page.evaluate(async (retailer) => {
                         const isSainsburys = retailer === 'Sainsburys';
-                        const scrolls = isSainsburys ? 6 : 5;
-                        const distance = isSainsburys ? 800 : 800;
+                        const isAsda = retailer === 'Asda';
+                        const scrolls = isAsda ? 12 : (isSainsburys ? 8 : 6);
+                        const distance = 800;
+                        
                         for (let i = 0; i < scrolls; i++) {
                             window.scrollBy(0, distance);
-                            // Randomized wait for Sainsbury's
-                            const waitTime = isSainsburys ? (1000 + Math.random() * 1500) : 500;
+                            const waitTime = (isSainsburys || isAsda) ? (1200 + Math.random() * 1500) : 800;
                             await new Promise(r => setTimeout(r, waitTime));
                         }
                     }, retailer);
 
-                    // 4. Robust Wait for links to appear
+                    // 4. Robust Wait for links and hydration
                     try {
-                        const waitTimeout = retailer === 'Sainsburys' ? 45000 : 20000;
+                        const waitTimeout = (retailer === 'Sainsburys' || retailer === 'Asda') ? 60000 : 30000;
                         await page.waitForSelector(selector, { timeout: waitTimeout });
-                        if (retailer === 'Sainsburys') {
-                            log.info('Sainsburys links found, waiting for final hydration...');
-                            await new Promise(r => setTimeout(r, 6000)); // Extra wait for Sainsbury's JS
+                        
+                        // Extra Waiter for Asda/Sainsbury's to ensure more than one row/swiper item is loaded
+                        if (retailer === 'Asda' || retailer === 'Sainsburys') {
+                            log.info('Waiting for product count to increase...');
+                            await page.waitForFunction((sel, minCount) => {
+                                return document.querySelectorAll(sel).length > minCount;
+                            }, { timeout: 15000 }, selector, (retailer === 'Asda' ? 7 : 4));
+                            
+                            await new Promise(r => setTimeout(r, 5000)); // Final hydration breather
                         }
                     } catch (e) {
-                        log.warning('Timeout waiting for selector: ' + selector + ' on ' + request.url);
-                        
-                        // Fallback check if links exist but selector wait failed
-                        const linksExist = await page.evaluate((sel) => !!document.querySelector(sel), selector);
-                        if (!linksExist) {
-                             log.error('Links NOT found after waiting. Content may be blocked or not loading. URL: ' + request.url);
-                             return;
-                        }
+                        log.warning('Timeout or limited results during wait for ' + selector + ' on ' + request.url);
                     }
 
                     // 5. Enqueue product links manually for better reliability
@@ -261,7 +261,10 @@ export const handler = async (event, context) => {
                             if (!el) return null;
                             
                             // Special handling for Asda if it uses a button but we want a URL
-                            if (ret === 'Asda' && el.tagName === 'BUTTON') {
+                            if (ret === 'Asda') {
+                                // Prefer link if found, otherwise generate from URL
+                                if (el.tagName === 'A' && el.href) return el.href;
+                                
                                 const currentUrl = new URL(window.location.href);
                                 const pageNum = parseInt(currentUrl.searchParams.get('page') || '1');
                                 currentUrl.searchParams.set('page', (pageNum + 1).toString());
