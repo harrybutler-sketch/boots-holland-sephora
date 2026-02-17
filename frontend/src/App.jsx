@@ -314,7 +314,7 @@ function App() {
                 await fetch('/api/update-status', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ productUrl: url, status: newStatus })
+                  body: JSON.stringify({ productUrl: url, status: newStatus, workspace: workspace })
                 });
               } catch (e) {
                 console.error('Failed to update status:', e);
