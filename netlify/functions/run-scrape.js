@@ -104,7 +104,13 @@ export const handler = async (event, context) => {
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
-        startUrls.push({ url: 'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&page=5&facetsArgs=new%3Atrue&count=24#top', userData: { retailer: 'Tesco', label: 'LISTING' } });
+        const tescoUrls = [
+          'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
+          'https://www.tesco.com/groceries/en-GB/shop/frozen-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
+          'https://www.tesco.com/groceries/en-GB/shop/fresh-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
+          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24'
+        ];
+        tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         startUrls.push({ url: 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new', userData: { retailer: 'Sainsburys', label: 'LISTING' } });
@@ -125,7 +131,7 @@ export const handler = async (event, context) => {
           startUrls,
           useChrome: true,
           stealth: true,
-          maxPagesPerCrawl: pRetailers.some(r => r.includes('tesco')) ? 100 : 400,
+          maxPagesPerCrawl: pRetailers.some(r => r.includes('tesco')) ? 80 : 400, // ~50 items per category (4 categories = 200 items total)
           proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
           pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
