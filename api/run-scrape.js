@@ -74,7 +74,7 @@ export default async function handler(request, response) {
       if (inputUrls.length > 0) {
         console.log('Starting eCommerce Scraper...');
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
-          startUrls: inputUrls.map(url => ({ url })),
+          listingUrls: inputUrls,
           maxItems: 1000,
           proxyConfiguration: { useApifyProxy: true }
         }, {
