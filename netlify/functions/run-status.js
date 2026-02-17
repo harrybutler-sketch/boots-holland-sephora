@@ -203,9 +203,10 @@ export default async (req, context) => {
 
             // 4. Final Fallback: Take first 1-2 words of name if they look like a brand
             if (!brandName && name) {
-                const words = name.split(' ');
+                const words = name.split(' ').filter(w => w.trim());
                 if (words.length > 0) {
                     const firstOne = words[0];
+                    const secondOne = words[1] || '';
                     const firstTwo = words.slice(0, 2).join(' ');
 
                     const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks', 'Superdrug', 'Boots', 'Sephora'];
@@ -214,11 +215,17 @@ export default async (req, context) => {
                     if (isRetailerName) {
                         brandName = firstTwo.includes('Finest') || firstTwo.includes('Organic') || firstTwo.includes('Best') || firstTwo.includes('Collection') ? firstTwo : firstOne;
                     } else if (/^[A-Z]/.test(firstOne)) {
-                        const winePrefixes = ['Greasy', 'Oyster', 'Yellow', 'Red', 'Blue', 'Black', 'White', 'Silver', 'Gold', 'Wolf', 'Dark', 'Mud', 'Barefoot', 'Echo', 'Jam', 'Meat', 'Trivento', 'Casillero', 'Campo', 'Villa', 'Santa', 'Saint', 'St', 'Le', 'La', 'Les', 'El', 'Los', 'The', 'I'];
-                        if (winePrefixes.includes(firstOne) || /^\d+$/.test(firstOne) || firstOne === 'Diet') {
+                        // STRICTER: Check if the second word is also potentially part of a brand (Proper Noun check)
+                        const fillers = ['And', 'With', 'The', 'In', 'For', 'Of', 'At', 'By'];
+                        if (secondOne && /^[A-Z]/.test(secondOne) && !fillers.includes(secondOne)) {
                             brandName = firstTwo;
                         } else {
-                            brandName = firstOne;
+                            const winePrefixes = ['Greasy', 'Oyster', 'Yellow', 'Red', 'Blue', 'Black', 'White', 'Silver', 'Gold', 'Wolf', 'Dark', 'Mud', 'Barefoot', 'Echo', 'Jam', 'Meat', 'Trivento', 'Casillero', 'Campo', 'Villa', 'Santa', 'Saint', 'St', 'Le', 'La', 'Les', 'El', 'Los', 'The', 'I'];
+                            if (winePrefixes.includes(firstOne) || /^\d+$/.test(firstOne) || firstOne === 'Diet') {
+                                brandName = firstTwo;
+                            } else {
+                                brandName = firstOne;
+                            }
                         }
                     }
                 }
