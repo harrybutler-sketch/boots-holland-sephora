@@ -323,7 +323,7 @@ export default async function handler(request, response) {
                 'Asda': ['asda', 'extra special', 'just essentials', 'asda logo', 'george home', 'smart price', 'farm stores'],
                 'Morrisons': ['morrison', 'the best', 'savers', 'morrisons', 'nutmeg', 'market street', 'v taste'],
                 'Ocado': ['ocado', 'ocado own range', 'm&s', 'marks & spencer'],
-                'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners', 'lovifeel'],
+                'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners', 'lovifeel', 'heston', 'duchy'],
                 'Superdrug': ['superdrug', 'b.', 'b. by superdrug', 'studio', 'solait', 'me+', 'optimum', 'artisan']
             };
 
@@ -332,12 +332,16 @@ export default async function handler(request, response) {
             const lowercaseName = name.toLowerCase();
             const ownBrandKeywords = ownBrandMap[retailer] || [];
 
-            const isOwnBrand = ownBrandKeywords.some(kw =>
-                lowercaseManufacturer.includes(kw) ||
-                lowercaseBrand.includes(kw) ||
-                (lowercaseName.startsWith(kw) && !isFoodKettle) ||
-                (lowercaseBrand === retailer.toLowerCase())
-            );
+            const isOwnBrand = ownBrandKeywords.some(kw => {
+                const match = lowercaseManufacturer.includes(kw) ||
+                    lowercaseBrand.includes(kw) ||
+                    (lowercaseName.includes(kw) && !isFoodKettle);
+
+                // Extra safety: Waitrose specific substring match for name
+                if (retailer === 'Waitrose' && lowercaseName.includes('waitrose')) return true;
+
+                return match || (lowercaseBrand === retailer.toLowerCase());
+            });
 
 
             if (isOwnBrand) {

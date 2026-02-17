@@ -300,7 +300,8 @@ export default async function handler(request, response) {
                 }
             }`,
           timeoutSecs: 1200,
-          requestTimeoutSecs: 180
+          requestHandlerTimeoutSecs: 180,
+          navigationTimeoutSecs: 60
         }, {
           webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
         });
