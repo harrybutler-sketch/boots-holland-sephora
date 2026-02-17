@@ -30,7 +30,7 @@ export const handler = async (event, context) => {
 
     // 1. Defined eCommerce Scraper Retailers ("The Big 4")
     const ecommerceMap = {
-      'tesco': 'Tesco', 'asda': 'Asda', 'superdrug': 'Superdrug'
+      'asda': 'Asda', 'superdrug': 'Superdrug'
     };
 
     const groceryUrls = {
@@ -103,6 +103,9 @@ export const handler = async (event, context) => {
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
+      if (pRetailers.some(r => r.includes('tesco'))) {
+        startUrls.push({ url: 'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&page=5&facetsArgs=new%3Atrue&count=24#top', userData: { retailer: 'Tesco', label: 'LISTING' } });
+      }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         startUrls.push({ url: 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new', userData: { retailer: 'Sainsburys', label: 'LISTING' } });
       }
@@ -122,7 +125,7 @@ export const handler = async (event, context) => {
           startUrls,
           useChrome: true,
           stealth: true,
-          maxPagesPerCrawl: 400,
+          maxPagesPerCrawl: pRetailers.some(r => r.includes('tesco')) ? 100 : 400,
           proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
           pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
@@ -151,7 +154,8 @@ export const handler = async (event, context) => {
                         'Waitrose': 'a[href*="/ecom/products/"]',
                         'Ocado': 'a[href*="/products/"]',
                         'Morrisons': 'a[href*="/products/"]',
-                        'Sainsburys': 'a.pt__link, a[href*="/gol-ui/product/"]'
+                        'Sainsburys': 'a.pt__link, a[href*="/gol-ui/product/"]',
+                        'Tesco': 'a[href*="/products/"], a[class*="titleLink"]'
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
