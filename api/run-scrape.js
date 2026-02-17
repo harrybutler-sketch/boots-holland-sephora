@@ -111,7 +111,14 @@ export default async function handler(request, response) {
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
-        startUrls.push({ url: 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new', userData: { retailer: 'Sainsburys', label: 'LISTING' } });
+        const sainsburyUrls = [
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new',
+          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled'
+        ];
+        sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('waitrose'))) {
         startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new', userData: { retailer: 'Waitrose', label: 'LISTING' } });
