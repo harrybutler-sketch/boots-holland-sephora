@@ -242,7 +242,7 @@ export default async function handler(request, response) {
                     const productLinks = await page.evaluate((sel) => {
                         return Array.from(document.querySelectorAll(sel))
                             .map(a => a.href)
-                            .filter(href => href && (href.includes('/product/') || href.includes('/p/')));
+                            .filter(href => href && (href.includes('/product') || href.includes('/p/')));
                     }, selector);
 
                     log.info('Found ' + productLinks.length + ' validated product links for ' + retailer);

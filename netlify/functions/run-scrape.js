@@ -229,7 +229,7 @@ export const handler = async (event, context) => {
                     const productLinks = await page.evaluate((sel) => {
                         return Array.from(document.querySelectorAll(sel))
                             .map(a => a.href)
-                            .filter(href => href && (href.includes('/product/') || href.includes('/p/')));
+                            .filter(href => href && (href.includes('/product') || href.includes('/p/')));
                     }, selector);
 
                     log.info('Found ' + productLinks.length + ' validated product links for ' + retailer);
