@@ -74,7 +74,8 @@ export default async function handler(request, response) {
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
           listingUrls: inputUrls.map(url => ({ url })),
           maxItems: 1000,
-          proxyConfiguration: { useApifyProxy: true }
+          proxyConfiguration: { useApifyProxy: true },
+          timeoutSecs: 1200
         }, {
           webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=ecommerce' }]
         });
@@ -224,6 +225,7 @@ export default async function handler(request, response) {
                     }, retailer);
                 }
             }`,
+          timeoutSecs: 1200
         }, {
           webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
         });
