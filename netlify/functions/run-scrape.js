@@ -194,7 +194,9 @@ export const handler = async (event, context) => {
 
                     // 3. Robust Wait for links to appear
                     try {
-                        await page.waitForSelector(selector, { timeout: 20000 });
+                        const waitTimeout = retailer === 'Sainsburys' ? 40000 : 20000;
+                        await page.waitForSelector(selector, { timeout: waitTimeout });
+                        if (retailer === 'Sainsburys') await new Promise(r => setTimeout(r, 2000));
                     } catch (e) {
                         log.warning('Timeout waiting for selector: ' + selector);
                     }
@@ -297,7 +299,8 @@ export const handler = async (event, context) => {
                     }, retailer);
                 }
             }`,
-          timeoutSecs: 1200
+          timeoutSecs: 1200,
+          requestTimeoutSecs: 180
         }, {
           webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
         });
