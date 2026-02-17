@@ -387,6 +387,26 @@ export default async function handler(request, response) {
                                 if (match) results.reviews = parseInt(match[1]) || 0;
                             }
                         }
+
+                        // --- FINAL FILTERING ---
+                        const ownBrandKeywords = [
+                            'Asda', 'Extra Special', 'Sainsburys', 'Sainsbury\\'s', 'Taste the Difference', 'By Sainsbury\\'s',
+                            'Waitrose', 'Essential Waitrose', 'Waitrose No.1', 'Tesco', 'Tesco Finest', 'Morrisons', 'The Best',
+                            'Ocado', 'Boots', 'Superdrug', 'H&B', 'Holland & Barrett', 'Sephora'
+                        ];
+                        
+                        const isOwnBrand = ownBrandKeywords.some(kw => results.name.toLowerCase().includes(kw.toLowerCase()));
+                        
+                        if (isOwnBrand) {
+                            log.info('Skipping Own Brand: ' + results.name);
+                            return null;
+                        }
+                        
+                        if (results.reviews > 5) {
+                            log.info('Skipping High Reviews (' + results.reviews + '): ' + results.name);
+                            return null;
+                        }
+
                         return results;
                     }, retailer);
                 }
