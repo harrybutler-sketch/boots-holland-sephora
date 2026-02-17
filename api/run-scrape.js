@@ -150,9 +150,28 @@ export default async function handler(request, response) {
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
                     
-                    // Robust Wait for links to appear (handle lazy-loading skeletons)
+                    // 1. Handle Overlays (Cookie Banners)
                     try {
-                        await page.waitForSelector(selector, { timeout: 15000 });
+                        const cookieSelector = '#onetrust-accept-btn-handler';
+                        const cookieBtn = await page.$(cookieSelector);
+                        if (cookieBtn) {
+                            log.info('Accepting cookie banner...');
+                            await cookieBtn.click();
+                            await new Promise(r => setTimeout(r, 2000));
+                        }
+                    } catch (e) {
+                        log.debug('No cookie banner or error clicking it');
+                    }
+
+                    // 2. Pre-scroll to trigger lazy-loading
+                    await page.evaluate(async () => {
+                        window.scrollBy(0, 500);
+                        await new Promise(r => setTimeout(r, 1000));
+                    });
+
+                    // 3. Robust Wait for links to appear
+                    try {
+                        await page.waitForSelector(selector, { timeout: 20000 });
                     } catch (e) {
                         log.warning('Timeout waiting for selector: ' + selector);
                     }
