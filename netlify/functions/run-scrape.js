@@ -206,12 +206,12 @@ export const handler = async (event, context) => {
                     await page.evaluate(async (retailer) => {
                         const isSainsburys = retailer === 'Sainsburys';
                         const isAsda = retailer === 'Asda';
-                        const scrolls = isAsda ? 12 : (isSainsburys ? 8 : 6);
+                        const scrolls = isAsda ? 15 : (isSainsburys ? 10 : 6);
                         const distance = 800;
                         
                         for (let i = 0; i < scrolls; i++) {
                             window.scrollBy(0, distance);
-                            const waitTime = (isSainsburys || isAsda) ? (1200 + Math.random() * 1500) : 800;
+                            const waitTime = (isSainsburys || isAsda) ? (1500 + Math.random() * 2000) : 800;
                             await new Promise(r => setTimeout(r, waitTime));
                         }
                     }, retailer);
@@ -225,10 +225,10 @@ export const handler = async (event, context) => {
                         if (retailer === 'Asda' || retailer === 'Sainsburys') {
                             log.info('Waiting for product count to increase...');
                             await page.waitForFunction((sel, minCount) => {
-                                return document.querySelectorAll(sel).length > minCount;
-                            }, { timeout: 15000 }, selector, (retailer === 'Asda' ? 7 : 4));
+                                return document.querySelectorAll(sel).length >= minCount;
+                            }, { timeout: 20000 }, selector, (retailer === 'Asda' ? 40 : 15));
                             
-                            await new Promise(r => setTimeout(r, 5000)); // Final hydration breather
+                            await new Promise(r => setTimeout(r, 8000)); // Final hydration breather
                         }
                     } catch (e) {
                         log.warning('Timeout or limited results during wait for ' + selector + ' on ' + request.url);
