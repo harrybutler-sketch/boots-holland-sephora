@@ -224,13 +224,17 @@ export const handler = async (event, context) => {
                         let name = document.title;
                         const h1 = document.querySelector('h1');
                         if (h1 && h1.innerText && h1.innerText.length > 5 && h1.innerText.toLowerCase() !== 'error') {
-                            name = h1.innerText.trim();
+                            // IMPROVED: Join child nodes with spaces to avoid "WaitroseTripleSandwich"
+                            name = Array.from(h1.childNodes)
+                                .map(node => node.textContent.trim())
+                                .filter(t => t.length > 0)
+                                .join(' ');
                         } else {
                             const ogTitle = document.querySelector('meta[property="og:title"]');
                             if (ogTitle && ogTitle.content) name = ogTitle.content;
                         }
 
-                        // Clean up name
+                        // Clean up name (remove retailer suffixes)
                         name = name.replace(/ - Tesco Groceries$/i, '')
                                    .replace(/ | Boots$/i, '')
                                    .replace(/ | Sephora/i, '')
@@ -241,6 +245,14 @@ export const handler = async (event, context) => {
                         // Detect Error Pages
                         if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found')) {
                             results.status = 'Blocked/Error';
+                        }
+
+                        // Waitrose Specific: Detect own brands from page content
+                        if (retailer === 'Waitrose') {
+                            const pageText = document.body.innerText.toLowerCase();
+                            if (pageText.includes('waitrose own label') || name.toLowerCase().includes('waitrose')) {
+                                results.status = 'Own Brand';
+                            }
                         }
 
                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
