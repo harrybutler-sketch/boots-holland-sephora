@@ -119,7 +119,7 @@ export default async function handler(request, response) {
                 const row = existingRowsMap.get(url);
                 let updated = false;
 
-                const newReviews = item.reviews || item.rating_count || item.reviewCount || 0;
+                const newReviews = parseInt(item.reviews || item.ratingCount || item.rating_count || item.reviewCount || item.reviewsCount || item.reviews_count || item.rating_count || 0);
                 const newRating = item.rating || item.rating_value || item.ratingValue || 0;
 
                 // Dynamic Header Lookup
@@ -190,7 +190,18 @@ export default async function handler(request, response) {
             }
 
             // FILTER: Review Count (0-5 focus)
-            const reviewCount = parseInt(item.reviews || item.ratingCount || item.rating_count || item.reviewCount || item.reviewsCount || 0);
+            // Defensive extraction: catch all common Apify field names
+            const reviewCount = parseInt(
+                item.reviews ||
+                item.ratingCount ||
+                item.rating_count ||
+                item.reviewCount ||
+                item.reviewsCount ||
+                item.reviews_count ||
+                item.ratingsCount ||
+                0
+            );
+
             if (reviewCount > 5) {
                 console.log(`Skipping high-review product (${reviewCount} reviews): ${name}`);
                 continue;

@@ -132,7 +132,17 @@ export default async (req, context) => {
             }
 
             // FILTER: Review Count (0-5 focus)
-            const reviewCount = parseInt(item.reviews || item.ratingCount || item.rating_count || item.reviewCount || item.reviewsCount || 0);
+            const reviewCount = parseInt(
+                item.reviews ||
+                item.ratingCount ||
+                item.rating_count ||
+                item.reviewCount ||
+                item.reviewsCount ||
+                item.reviews_count ||
+                item.ratingsCount ||
+                0
+            );
+
             if (reviewCount > 5) {
                 console.log(`Skipping high-review product (${reviewCount} reviews): ${name}`);
                 continue;
