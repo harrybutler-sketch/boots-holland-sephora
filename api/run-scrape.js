@@ -238,17 +238,24 @@ export default async function handler(request, response) {
                         }
                     }
 
-                    // 5. Enqueue product links
-                    const links = await page.$$(selector);
-                    log.info('Found ' + (links ? links.length : 0) + ' potential links for ' + retailer);
+                    // 5. Enqueue product links manually for better reliability
+                    const productLinks = await page.evaluate((sel) => {
+                        return Array.from(document.querySelectorAll(sel))
+                            .map(a => a.href)
+                            .filter(href => href && (href.includes('/product/') || href.includes('/p/')));
+                    }, selector);
+
+                    log.info('Found ' + productLinks.length + ' validated product links for ' + retailer);
                     
-                    await enqueueLinks({
-                        selector: selector,
-                        userData: { 
-                            retailer: retailer,
-                            label: 'DETAIL'
-                        }
-                    });
+                    for (const link of productLinks) {
+                        await context.enqueueRequest({
+                            url: link,
+                            userData: { 
+                                retailer: retailer,
+                                label: 'DETAIL'
+                            }
+                        });
+                    }
                 } else {
                     log.info('Product page (' + retailer + '): ' + request.url);
                     await new Promise(r => setTimeout(r, 6000));
