@@ -179,6 +179,15 @@ export default async function handler(request, response) {
                         'Asda': 'a[href*="/product/"], a.chakra-link',
                         'Superdrug': 'a.cx-product-name, a.product-image-container'
                     };
+
+                    const nextSelectors = {
+                        'Sainsburys': 'a[aria-label="Next page"]',
+                        'Tesco': 'a.pagination--button--next, a[aria-label="Go to next page"]',
+                        'Waitrose': 'a[aria-label="Next page"]',
+                        'Morrisons': 'a.next-page, a[aria-label*="Next"]',
+                        'Ocado': 'a.next-page',
+                        'Asda': 'a[aria-label="Next page"], button[aria-label="Next page"]'
+                    };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
                     
@@ -255,6 +264,35 @@ export default async function handler(request, response) {
                                 label: 'DETAIL'
                             }
                         });
+                    }
+
+                    // 6. Discover and Enqueue Next Page
+                    const nextSelector = nextSelectors[retailer];
+                    if (nextSelector) {
+                        const nextUrl = await page.evaluate((sel, ret) => {
+                            const el = document.querySelector(sel);
+                            if (!el) return null;
+                            
+                            if (ret === 'Asda' && el.tagName === 'BUTTON') {
+                                const currentUrl = new URL(window.location.href);
+                                const pageNum = parseInt(currentUrl.searchParams.get('page') || '1');
+                                currentUrl.searchParams.set('page', (pageNum + 1).toString());
+                                return currentUrl.toString();
+                            }
+                            
+                            return el.href || null;
+                        }, nextSelector, retailer);
+
+                        if (nextUrl) {
+                            log.info('Next page discovered for ' + retailer + ': ' + nextUrl);
+                            await context.enqueueRequest({
+                                url: nextUrl,
+                                userData: { 
+                                    retailer: retailer, 
+                                    label: 'LISTING' 
+                                }
+                            });
+                        }
                     }
                 } else {
                     log.info('Product page (' + retailer + '): ' + request.url);
