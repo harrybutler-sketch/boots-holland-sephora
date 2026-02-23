@@ -36,14 +36,15 @@ export default async function handler(request, response) {
             return response.status(404).json({ error: 'Run not found' });
         }
 
-        if (run.status !== 'SUCCEEDED') {
+        const terminalStatuses = ['SUCCEEDED', 'ABORTED', 'TIMED-OUT', 'FAILED'];
+        if (!terminalStatuses.includes(run.status)) {
             return response.status(200).json({
                 status: run.status,
                 datasetId: run.defaultDatasetId,
             });
         }
 
-        // Run succeeded, process data
+        // Run has finished (either succeeded or aborted with partial data), process data
         const dataset = await client.dataset(run.defaultDatasetId).listItems();
         const items = dataset.items;
 
