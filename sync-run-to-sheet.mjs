@@ -54,7 +54,13 @@ async function syncRunToSheet(runId, force = false) {
             if (!url) continue;
 
             // Mapping Logic (Condensed)
-            const name = item.title || item.name || item.productName || item.product_name || '';
+            let name = item.title || item.name || item.productName || item.product_name || '';
+
+            // 0. Clean up completely glued PascalCase strings from Ocado/Sainsburys (e.g. TheSpiceTailor -> The Spice Tailor)
+            if (name && !name.includes(' ') && /[a-z][A-Z]|[A-Z][A-Z][a-z]/.test(name)) {
+                name = name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+            }
+
             if (!name || name.toLowerCase().includes('choose a shade')) continue;
 
             const reviewCount = parseInt(item.reviews || item.ratingCount || 0);
