@@ -163,6 +163,15 @@ async function syncRunToSheet(runId, force = false) {
                 }
             }
 
+            // 5. Clean up glued numbers (e.g. "Cadbury3x" -> "Cadbury", "Terry's5x" -> "Terry's")
+            if (brandName && brandName.length > 3 && !brandName.startsWith('No.')) {
+                // If it starts with letters/apostrophes/ampersands and then hits a number, strip from the number onwards
+                const sizeRegex = /^([a-zA-Z&'-]+?)(?:\d+.*)$/i;
+                if (sizeRegex.test(brandName)) {
+                    brandName = brandName.replace(sizeRegex, '$1').trim();
+                }
+            }
+
             let manufacturer = brandName ||
                 (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
                 item.vendor ||
