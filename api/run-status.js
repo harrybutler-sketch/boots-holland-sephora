@@ -180,8 +180,9 @@ export default async function handler(request, response) {
             let name = item.title || item.name || item.productName || item.product_name || '';
 
             // 0. Clean up completely glued PascalCase strings from Ocado/Sainsburys (e.g. TheSpiceTailor -> The Spice Tailor)
-            if (name && !name.includes(' ') && /[a-z][A-Z]|[A-Z][A-Z][a-z]/.test(name)) {
-                name = name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+            // Removed the !name.includes(' ') restriction to fix things like WinalotSalmonDry Dog
+            if (name && /[a-z][A-Z]/.test(name)) {
+                name = name.replace(/(?<!\bMc)(?<!\bMac)([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
             }
 
             // FILTER: Skip generic "Choose a shade" listings
@@ -239,6 +240,10 @@ export default async function handler(request, response) {
             // ROBUST BRAND MAPPING
             const rawBrand = item.brand || item.brandName || (item.attributes && item.attributes.brand) || '';
             let brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
+
+            if (brandName && /[a-z][A-Z]/.test(brandName)) {
+                brandName = brandName.replace(/(?<!\bMc)(?<!\bMac)([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+            }
 
             // 1. Clean up "Shop all" prefix and corporate suffixes
             if (brandName) {

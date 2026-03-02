@@ -135,7 +135,12 @@ export default async (req, context) => {
                 else retailer = 'Unknown';
             }
 
-            const name = item.title || item.name || item.productName || item.product_name || '';
+            let name = item.title || item.name || item.productName || item.product_name || '';
+
+            if (name && /[a-z][A-Z]/.test(name)) {
+                name = name.replace(/(?<!\bMc)(?<!\bMac)([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+            }
+
 
             // FILTER: Skip generic "Choose a shade" listings
             if (name.toLowerCase().includes('choose a shade')) {
@@ -191,6 +196,10 @@ export default async (req, context) => {
             // ROBUST BRAND MAPPING
             const rawBrand = item.brand || item.brandName || (item.attributes && item.attributes.brand) || '';
             let brandName = (typeof rawBrand === 'string' ? rawBrand : (rawBrand && (rawBrand.name || rawBrand.title || rawBrand.slogan || rawBrand.label))) || '';
+
+            if (brandName && /[a-z][A-Z]/.test(brandName)) {
+                brandName = brandName.replace(/(?<!\bMc)(?<!\bMac)([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+            }
 
             // 1. Clean up "Shop all" prefix and corporate suffixes
             if (brandName) {
