@@ -302,7 +302,7 @@ export default async function handler(request, response) {
 
                         const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
                         
-                        if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found')) {
+                        if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found') || name.toLowerCase().includes('oops')) {
                             results.status = 'Blocked/Error';
                         }
                         
@@ -386,6 +386,12 @@ export default async function handler(request, response) {
                         log.info('Skipping High Reviews (' + extractionData.reviews + '): ' + extractionData.name);
                         return null;
                     }
+
+                    if (extractionData.status === 'Blocked/Error' || extractionData.name.toLowerCase().includes('oops') || extractionData.name.toLowerCase().includes('went wrong')) {
+                        log.info('Skipping error page: ' + extractionData.name);
+                        return null;
+                    }
+                    
                     return extractionData;
                 }
             }`,

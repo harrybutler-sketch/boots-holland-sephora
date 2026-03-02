@@ -310,7 +310,7 @@ export const handler = async (event, context) => {
                         const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
 
                         // Detect Error Pages
-                        if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found')) {
+                        if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found') || name.toLowerCase().includes('oops')) {
                             results.status = 'Blocked/Error';
                         }
 
@@ -391,6 +391,12 @@ export const handler = async (event, context) => {
                         
                         if (results.reviews > 5) {
                             log.info('Skipping High Reviews (' + results.reviews + '): ' + results.name);
+                            return null;
+                        }
+                        
+                        // New filter: Skip error pages entirely
+                        if (results.status === 'Blocked/Error' || results.name.toLowerCase().includes('oops') || results.name.toLowerCase().includes('went wrong')) {
+                            log.info('Skipping error page: ' + results.name);
                             return null;
                         }
 
