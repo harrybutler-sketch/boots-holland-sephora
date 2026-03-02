@@ -27,9 +27,7 @@ export default async function handler(request, response) {
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
     // 1. Defined eCommerce Scraper Retailers ("The Big 4")
-    const ecommerceMap = {
-      'tesco': 'Tesco'
-    };
+    const ecommerceMap = {};
 
     const groceryUrls = {
       'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&page=5&facetsArgs=new%3Atrue&count=24#top',
