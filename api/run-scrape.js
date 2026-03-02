@@ -130,7 +130,7 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('asda'))) {
-        startUrls.push({ url: 'https://www.asda.com/groceries/event/new', userData: { retailer: 'Asda', label: 'LISTING' } });
+        startUrls.push({ url: 'https://groceries.asda.com/shelf/new/1215682845347', userData: { retailer: 'Asda', label: 'LISTING' } });
         startUrls.push({ url: 'https://groceries.asda.com/shelf/new-in/1215685911554', userData: { retailer: 'Asda', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('superdrug'))) {
@@ -153,52 +153,15 @@ export default async function handler(request, response) {
                 
                 if (label === 'LISTING') {
                     log.info('Listing page (' + retailer + '): ' + request.url);
-                    await page.evaluate(async () => {
-                        await new Promise((resolve) => {
-                            let totalHeight = 0;
-                            const distance = 100;
-                            let scrolls = 0;
-                            const timer = setInterval(() => {
-                                window.scrollBy(0, distance);
-                                totalHeight += distance;
-                                scrolls++;
-                                if (scrolls > 50) { clearInterval(timer); resolve(); }
-                            }, 100);
-                        });
-                    });
-                    
-                    const selectors = {
-                        'Holland & Barrett': 'a[href*="/shop/product/"]',
-                        'Sephora': 'a.Product-link',
-                        'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
-                        'Waitrose': 'a[href*="/ecom/products/"]',
-                        'Ocado': 'a[href*="/products/"]',
-                        'Morrisons': 'a[href*="/products/"]',
-                        'Sainsburys': '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]',
-                        'Tesco': 'a[href*="/products/"], a[class*="titleLink"]',
-                        'Asda': 'a[href*="/product/"], a.chakra-link',
-                        'Superdrug': 'a.cx-product-name, a.product-image-container'
-                    };
-
-                    const nextSelectors = {
-                        'Sainsburys': 'a[aria-label="Next page"]',
-                        'Tesco': 'a.pagination--button--next, a[aria-label="Go to next page"]',
-                        'Waitrose': 'a[aria-label="Next page"]',
-                        'Morrisons': 'a.next-page, a[aria-label*="Next"]',
-                        'Ocado': 'a.next-page',
-                        'Asda': 'a[aria-label="Next page"], button[aria-label="Next page"]'
-                    };
-                    
-                    const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
                     
                     // 1. Handle Overlays (Cookie Banners) FIRST
                     try {
-                        const cookieSelector = '#onetrust-accept-btn-handler, #onetrust-banner-sdk button';
+                        const cookieSelector = '#onetrust-accept-btn-handler, #onetrust-banner-sdk button, #truste-consent-button';
                         const cookieBtn = await page.$(cookieSelector);
                         if (cookieBtn) {
                             log.info('Accepting cookie banner...');
                             await cookieBtn.click();
-                            await new Promise(r => setTimeout(r, 3000));
+                            await new Promise(r => setTimeout(r, 4000));
                         }
                     } catch (e) {
                         log.debug('No cookie banner or error clicking it');
@@ -214,17 +177,41 @@ export default async function handler(request, response) {
                         return;
                     }
 
+                    const selectors = {
+                        'Holland & Barrett': 'a[href*="/shop/product/"]',
+                        'Sephora': 'a.Product-link',
+                        'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
+                        'Waitrose': 'a[href*="/ecom/products/"]',
+                        'Ocado': 'a[href*="/products/"]',
+                        'Morrisons': 'a[href*="/products/"]',
+                        'Sainsburys': '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]',
+                        'Tesco': 'a[href*="/products/"], a[class*="titleLink"]',
+                        'Asda': 'a[href*="/product/"], a.chakra-link, .co-product a',
+                        'Superdrug': 'a.cx-product-name, a.product-image-container'
+                    };
+
+                    const nextSelectors = {
+                        'Sainsburys': 'a[aria-label="Next page"]',
+                        'Tesco': 'a.pagination--button--next, a[aria-label="Go to next page"]',
+                        'Waitrose': 'a[aria-label="Next page"]',
+                        'Morrisons': 'a.next-page, a[aria-label*="Next"]',
+                        'Ocado': 'a.next-page',
+                        'Asda': 'a[aria-label="Next page"], button[aria-label="Next page"], .co-pagination__next'
+                    };
+                    
+                    const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
+                    
                     // 3. Humanized Scrolling to trigger JS hydration
                     log.info('Scrolling to trigger lazy-loading...');
                     await page.evaluate(async (retailer) => {
                         const isSainsburys = retailer === 'Sainsburys';
                         const isAsda = retailer === 'Asda';
-                        const scrolls = isAsda ? 15 : (isSainsburys ? 10 : 6);
-                        const distance = 800;
+                        const scrolls = isAsda ? 25 : (isSainsburys ? 15 : 10);
+                        const distance = 600;
                         
                         for (let i = 0; i < scrolls; i++) {
                             window.scrollBy(0, distance);
-                            const waitTime = (isSainsburys || isAsda) ? (1500 + Math.random() * 2000) : 800;
+                            const waitTime = (isSainsburys || isAsda) ? (2000 + Math.random() * 2000) : 1000;
                             await new Promise(r => setTimeout(r, waitTime));
                         }
                     }, retailer);
@@ -234,14 +221,10 @@ export default async function handler(request, response) {
                         const waitTimeout = (retailer === 'Sainsburys' || retailer === 'Asda') ? 60000 : 30000;
                         await page.waitForSelector(selector, { timeout: waitTimeout });
                         
-                        // Extra Waiter for Asda/Sainsbury's to ensure more than one row/swiper item is loaded
+                        // Extra Waiter for Asda/Sainsbury's to ensure content is stable
                         if (retailer === 'Asda' || retailer === 'Sainsburys') {
-                            log.info('Waiting for product count to increase...');
-                            await page.waitForFunction((sel, minCount) => {
-                                return document.querySelectorAll(sel).length >= minCount;
-                            }, { timeout: 20000 }, selector, (retailer === 'Asda' ? 40 : 15));
-                            
-                            await new Promise(r => setTimeout(r, 8000)); // Final hydration breather
+                            log.info('Waiting for product count to stabilize...');
+                            await new Promise(r => setTimeout(r, 10000));
                         }
                     } catch (e) {
                         log.warning('Timeout or limited results during wait for ' + selector + ' on ' + request.url);
@@ -298,13 +281,12 @@ export default async function handler(request, response) {
                     }
                 } else {
                     log.info('Product page (' + retailer + '): ' + request.url);
-                    await new Promise(r => setTimeout(r, 6000));
+                    await new Promise(r => setTimeout(r, 8000));
                     
-                    return await page.evaluate((retailer) => {
+                    const extractionData = await page.evaluate((retailer) => {
                         let name = document.title;
                         const h1 = document.querySelector('h1');
                         if (h1 && h1.innerText && h1.innerText.length > 5 && h1.innerText.toLowerCase() !== 'error') {
-                            // IMPROVED: Join child nodes with spaces to avoid "WaitroseTripleSandwich"
                             name = Array.from(h1.childNodes)
                                 .map(node => node.textContent.trim())
                                 .filter(t => t.length > 0)
@@ -314,20 +296,18 @@ export default async function handler(request, response) {
                             if (ogTitle && ogTitle.content) name = ogTitle.content;
                         }
                         
-                        // Clean up name (remove retailer suffixes)
                         name = name.replace(/ - Tesco Groceries$/i, '')
                                    .replace(/ | Boots$/i, '')
                                    .replace(/ | Sephora/i, '')
+                                   .replace(/ - Asda Groceries$/i, '')
                                    .trim();
 
                         const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
                         
-                        // Detect Error Pages
                         if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found')) {
                             results.status = 'Blocked/Error';
                         }
                         
-                        // Waitrose Specific: Detect own brands from page content
                         if (retailer === 'Waitrose') {
                             const pageText = document.body.innerText.toLowerCase();
                             if (pageText.includes('waitrose own label') || name.toLowerCase().includes('waitrose')) {
@@ -353,7 +333,6 @@ export default async function handler(request, response) {
                             } catch(e) {}
                         }
                         
-                        // Fallback Image Extraction
                         if (!results.image) {
                             const ogImage = document.querySelector('meta[property="og:image"]');
                             if (ogImage) results.image = ogImage.getAttribute('content');
@@ -365,7 +344,8 @@ export default async function handler(request, response) {
                                 'img[itemprop="image"]',
                                 '.product-image img',
                                 '.oct-teaser__image',
-                                '#main-product-image'
+                                '#main-product-image',
+                                '.co-product-image img'
                             ];
                             for (const sel of imgSelectors) {
                                 const img = document.querySelector(sel);
@@ -388,30 +368,30 @@ export default async function handler(request, response) {
                             }
                         }
 
-                        // --- FINAL FILTERING ---
+                        // Final logic checks
                         const ownBrandKeywords = [
                             'Asda', 'Extra Special', 'Sainsburys', 'Sainsbury\\'s', 'Taste the Difference', 'By Sainsbury\\'s',
                             'Waitrose', 'Essential Waitrose', 'Waitrose No.1', 'Tesco', 'Tesco Finest', 'Morrisons', 'The Best',
                             'Ocado', 'Boots', 'Superdrug', 'H&B', 'Holland & Barrett', 'Sephora'
                         ];
                         
-                        const isOwnBrand = ownBrandKeywords.some(kw => results.name.toLowerCase().includes(kw.toLowerCase()));
+                        results.isOwnBrand = ownBrandKeywords.some(kw => results.name.toLowerCase().includes(kw.toLowerCase()));
                         
-                        if (isOwnBrand) {
-                            log.info('Skipping Own Brand: ' + results.name);
-                            return null;
-                        }
-                        
-                        if (results.reviews > 5) {
-                            log.info('Skipping High Reviews (' + results.reviews + '): ' + results.name);
-                            return null;
-                        }
-
                         return results;
                     }, retailer);
+
+                    if (extractionData.isOwnBrand) {
+                        log.info('Skipping Own Brand: ' + extractionData.name);
+                        return null;
+                    }
+                    if (extractionData.reviews > 5) {
+                        log.info('Skipping High Reviews (' + extractionData.reviews + '): ' + extractionData.name);
+                        return null;
+                    }
+                    return extractionData;
                 }
             }`,
-          timeoutSecs: 1200,
+          timeoutSecs: 1800,
           requestHandlerTimeoutSecs: 180,
           navigationTimeoutSecs: 60
         }, {

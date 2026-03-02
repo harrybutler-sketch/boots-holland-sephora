@@ -28,19 +28,36 @@ export default async (req, context) => {
             });
         }
 
-        if (run.status !== 'SUCCEEDED') {
+        const terminalStatuses = ['SUCCEEDED', 'TIMED-OUT', 'ABORTED', 'FAILED'];
+        const isTerminal = terminalStatuses.includes(run.status);
+
+        if (!isTerminal) {
             return new Response(JSON.stringify({
                 status: run.status,
                 datasetId: run.defaultDatasetId,
+                itemCount: run.stats?.itemCount || 0,
+                message: 'Scrape in progress...'
             }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        // Run succeeded, process data
+        // Run is terminal, process whatever we have in the dataset
         const dataset = await client.dataset(run.defaultDatasetId).listItems();
         const items = dataset.items;
+
+        console.log(`Fetched ${items.length} items from Apify dataset (Run Status: ${run.status}).`);
+
+        if (items.length === 0) {
+            return new Response(JSON.stringify({
+                status: run.status,
+                message: 'No items found. Skipping sync.'
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
 
         console.log(`Fetched ${items.length} items from Apify dataset.`);
         if (items.length > 0) {
@@ -320,6 +337,49 @@ export default async (req, context) => {
                 await sheet.addRows(chunk);
             }
             appendedCount = newRows.length;
+
+            // ZOHO FLOW INTEGRATION
+            const ZOHO_WEBHOOK_URL = process.env.ZOHO_FLOW_WEBHOOK_URL;
+            if (ZOHO_WEBHOOK_URL) {
+                console.log(`Sending ${newRows.length} items to Zoho Flow...`);
+                // We send them individually as Zoho Flow expects one object per task
+                for (const row of newRows) {
+                    try {
+                        const sanitize = (str) => {
+                            if (!str) return '';
+                            return str
+                                .replace(/&/g, ' and ')
+                                .replace(/'/g, ' ')
+                                .replace(/"/g, ' ')
+                                .replace(/[()]/g, ' ')
+                                .trim();
+                        };
+
+                        await fetch(ZOHO_WEBHOOK_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product: sanitize(row.product),
+                                manufacturer: sanitize(row.manufacturer),
+                                product_url: row['product url'],
+                                retailer: row.retailer,
+                                price: row.price,
+                                image_url: row.image_url || '',
+                                scrape_timestamp: row.scrape_timestamp,
+                                tag: "new in",
+                                tags: ["new in"]
+                            })
+                        });
+
+                        // Add 5s delay to prevent Zoho Flow deactivation (410 Gone)
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                    } catch (err) {
+                        console.error('Failed to trigger Zoho Flow for item:', row.product, err.message);
+                    }
+                }
+            } else {
+                console.log('Zoho Flow Webhook URL not configured. Skipping webhook.');
+            }
         }
 
         return new Response(JSON.stringify({

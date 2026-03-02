@@ -27,8 +27,9 @@ const latestRun = runs.items[0];
 console.log(`\n=== Syncing Latest Run: ${latestRun.id} ===`);
 console.log(`Status: ${latestRun.status}`);
 
-if (latestRun.status !== 'SUCCEEDED') {
-    console.log('Run has not succeeded yet. Exiting.');
+const isProcessable = ['SUCCEEDED', 'TIMED-OUT', 'ABORTED', 'FAILED'].includes(latestRun.status);
+if (!isProcessable || (latestRun.status !== 'SUCCEEDED' && (latestRun.stats?.itemCount || 0) === 0)) {
+    console.log(`Run status is ${latestRun.status} with 0 items. Nothing to sync.`);
     process.exit(0);
 }
 

@@ -92,8 +92,8 @@ function App() {
             localStorage.removeItem('scraper_runId');
             localStorage.setItem('scraper_runStatus', result.status);
 
-            // Refresh results on success
-            if (result.status === 'SUCCEEDED') {
+            // Refresh results on success or partial success (timeout)
+            if (result.status === 'SUCCEEDED' || result.status === 'TIMED-OUT') {
               fetchResults();
             }
           }
@@ -210,6 +210,9 @@ function App() {
       <header style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '1rem' }}>
         <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1>Brand Allies Scraper</h1>
+          <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', background: '#f9fafb', padding: '0.5rem 1rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}>
+            Last Scrape: <strong>{(data && data.length > 0 && data[0].date_found) ? new Date(data[0].date_found).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Loading...'}</strong>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
