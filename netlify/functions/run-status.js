@@ -314,7 +314,8 @@ export default async (req, context) => {
                     "natura &co": "Natura &Co",
                     "kao ": "Kao",
                     "amorepacific": "Amorepacific",
-                    "clarins ": "Clarins"
+                    "clarins ": "Clarins",
+                    "huel ": "Huel"
                 };
 
                 let foundCorporate = false;

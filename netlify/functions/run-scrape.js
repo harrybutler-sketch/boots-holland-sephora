@@ -394,6 +394,20 @@ export const handler = async (event, context) => {
                             }
                         }
 
+                        // Specific Extraction for Holland & Barrett (since they put it at the bottom of the description)
+                        if (retailer === 'Holland & Barrett' && !addressText) {
+                            // Find all paragraphs in the description tabs/sections
+                            const descParagraphs = Array.from(document.querySelectorAll('div[data-testid="content-tabs-description"] p, section[aria-label="Description"] p'));
+                            if (descParagraphs.length > 0) {
+                                // Usually the manufacturer and address is the very last paragraph
+                                const lastP = descParagraphs[descParagraphs.length - 1].innerText;
+                                // Or check if it has address-like structures like LTD or a standard postal code length/commas
+                                if (lastP && lastP.length < 300) {
+                                    addressText += ' ' + lastP;
+                                }
+                            }
+                        }
+
                         results.manufacturer_address = addressText.trim().replace(/\\n/g, ' ');
 
                         // Final logic checks
