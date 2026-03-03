@@ -136,30 +136,45 @@ function isProductLaunch(text) {
     if (!text) return false;
     const lower = text.toLowerCase();
 
-    // STRICT Negative Keywords (Job posts, etc.)
+    // STRICT Negative Keywords (Job posts, Tech, B2B, etc.)
     const negativeKeywords = [
+        // Jobs/Hiring
         'hiring', 'vacancy', 'job', 'recruit', 'career', 'opportunity', 'looking for a',
         'join our team', 'join the team', 'apply now', 'roles available', 'work with us',
-        'report', 'whitepaper', 'webinar', 'seminar', 'conference', 'panel discussion'
+        // Events/Content
+        'report', 'whitepaper', 'webinar', 'seminar', 'conference', 'panel discussion',
+        // Tech/B2B/SaaS
+        'saas', 'software', 'app', 'b2b', 'platform', 'ai ', 'artificial intelligence',
+        'plugin', 'dashboard', 'tech', 'automation', 'autonomous', 'api'
     ];
 
     if (negativeKeywords.some(kw => lower.includes(kw))) {
         // Double check: if it says "launching a NEW RANGE" it might still be valid even if it says "great job team"
-        // But "job" is tricky. Let's be stick with stricter negatives for "hiring" context.
-        if (lower.includes('hiring') || lower.includes('vacancy') || lower.includes('recruit')) {
+        // But "job" or Tech words are tricky. Let's be stick with stricter negatives for "hiring" and "tech" context.
+        if (negativeKeywords.some(kw => lower.includes(kw))) {
             return false;
         }
     }
 
-    // Positive Keywords (Strong Intent)
+    // Positive Keywords (Strong Intent for FMCG/Retail)
     const positiveKeywords = [
-        'launch', 'listing', 'shelf', 'shelves', 'store', 'stockist', 'range', 'flavour', 'flavor',
-        'sku', 'available now', 'buy now', 'grab yours', 'find us', 'waitrose', 'tesco', 'sainsbury',
-        'asda', 'morrisons', 'ocado', 'boots', 'superdrug', 'sephora', 'holland & barrett', 'retailer',
-        'roll out', 'rolling out', 'landed', 'hitting'
+        // Launch specific
+        'launch', 'listing', 'shelf', 'shelves', 'store', 'stockist', 'range', 'flavour', 'flavor', 'sku', 'fmcg', 'cpg',
+        // Availability
+        'available now', 'buy now', 'grab yours', 'find us', 'roll out', 'rolling out', 'landed', 'hitting', 'supermarket',
+        // Specific Retailers
+        'waitrose', 'tesco', 'sainsbury', 'asda', 'morrisons', 'ocado', 'boots', 'superdrug', 'sephora', 'holland & barrett', 'retailer'
     ];
 
     const hasPositive = positiveKeywords.some(kw => lower.includes(kw));
 
-    return hasPositive;
+    // Must have at least one Retailer string AND a Launch/FMCG string to be highly confident
+    const retailerKeywords = ['waitrose', 'tesco', 'sainsbury', 'asda', 'morrisons', 'ocado', 'boots', 'superdrug', 'sephora', 'holland & barrett'];
+    const launchKeywords = ['launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'available now', 'roll out', 'hitting', 'landed'];
+
+    const hasRetailer = retailerKeywords.some(kw => lower.includes(kw));
+    const hasLaunchLogic = launchKeywords.some(kw => lower.includes(kw));
+
+    // Stricter return: Requires both a known retailer and a launch word
+    return hasRetailer && hasLaunchLogic;
 }
