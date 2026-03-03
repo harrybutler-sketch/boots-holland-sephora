@@ -321,11 +321,77 @@ export default async function handler(request, response) {
                 }
             }
 
-            let manufacturer = brandName ||
-                (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
+            let manufacturer = (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
                 item.vendor ||
                 item.merchant ||
+                brandName ||
                 '';
+
+            // 6. Extract corporate client from Manufacturer Address block
+            if (item.manufacturer_address) {
+                const lowerAddress = item.manufacturer_address.toLowerCase();
+                const mfnDict = {
+                    "pepsico": "PepsiCo",
+                    "pepsi-cola": "PepsiCo",
+                    "coca-cola europacific": "CCEP",
+                    "ccep": "CCEP",
+                    "a.g. barr": "AG Barr",
+                    "ag barr": "AG Barr",
+                    "ferrero": "Ferrero",
+                    "unilever": "Unilever",
+                    "nestle": "Nestle",
+                    "mars ": "Mars",
+                    "mondelez": "Mondelez",
+                    "premier foods": "Premier Foods",
+                    "britvic": "Britvic",
+                    "arla ": "Arla",
+                    "danone": "Danone",
+                    "l'oreal": "L'Oreal",
+                    "reckitt": "Reckitt",
+                    "haleon": "Haleon",
+                    "pladis": "Pladis",
+                    "kellogg": "Kellanova (Kellogg's)",
+                    "general mills": "General Mills",
+                    "kraft heinz": "Kraft Heinz",
+                    "procter & gamble": "P&G",
+                    "p&g": "P&G"
+                };
+
+                let foundCorporate = false;
+                for (const [key, val] of Object.entries(mfnDict)) {
+                    if (lowerAddress.includes(key)) {
+                        manufacturer = val;
+                        foundCorporate = true;
+                        break;
+                    }
+                }
+
+                // Fallback to Regex for corporate suffixes
+                if (!foundCorporate) {
+                    const corporateRegex = /([A-Z][A-Za-z0-9&\\s\\-\\']+(?:Ltd|Limited|PLC|UC|Inc|Corp|Corporation|Partners|GmbH|Group))/i;
+                    const match = item.manufacturer_address.match(corporateRegex);
+                    if (match && match[1]) {
+                        manufacturer = match[1].trim()
+                            .replace(/^By\\s+/i, '')
+                            .replace(/^Return to\\s+/i, '');
+                    } else {
+                        // Break address by comma/period and take first non-PO box part
+                        const parts = item.manufacturer_address.split(/,|\\.|;/);
+                        const firstPart = parts[0] ? parts[0].trim() : '';
+                        const secondPart = parts.length > 1 ? parts[1].trim() : '';
+
+                        // If Tropicana is first part, it might just be the brand. We can at least use it if manufacturer is empty.
+                        if (firstPart && firstPart.length < 40 && !firstPart.toLowerCase().includes('freepost') && !firstPart.toLowerCase().includes('box')) {
+                            // If the second part has a corporate suffix, take that piece instead
+                            if (secondPart && corporateRegex.test(secondPart)) {
+                                manufacturer = secondPart.trim();
+                            } else if (!manufacturer || manufacturer === brandName) {
+                                manufacturer = firstPart;
+                            }
+                        }
+                    }
+                }
+            }
 
             if (manufacturer) {
                 manufacturer = manufacturer

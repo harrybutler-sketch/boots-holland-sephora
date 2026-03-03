@@ -366,6 +366,27 @@ export default async function handler(request, response) {
                             }
                         }
 
+                        // Extract Manufacturer Address Block specifically for Sainsbury's, Tesco, & others
+                        let addressText = '';
+                        const mfnHeaders = Array.from(document.querySelectorAll('h3, strong, span, div, summary'))
+                            .filter(el => {
+                                const t = el.innerText ? el.innerText.toLowerCase().trim() : '';
+                                return t === 'manufacturer address' || t === 'manufacturer' || t === 'return to' || t === 'manufacturer details' || t === 'brand details';
+                            });
+                            
+                        for (const el of mfnHeaders) {
+                            let text = el.nextElementSibling ? el.nextElementSibling.innerText : '';
+                            if (!text && el.parentElement) {
+                                // Sometimes the header is inside a detail or div alongside the text
+                                text = el.parentElement.innerText.replace(el.innerText, '');
+                            }
+                            if (text && text.length > 5 && text.length < 1000) {
+                                addressText += ' ' + text;
+                            }
+                        }
+
+                        results.manufacturer_address = addressText.trim().replace(/\\n/g, ' ');
+
                         // Final logic checks
                         const ownBrandKeywords = [
                             'Asda', 'Extra Special', 'Sainsburys', 'Sainsbury\\'s', 'Taste the Difference', 'By Sainsbury\\'s',
