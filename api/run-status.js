@@ -354,7 +354,21 @@ export default async function handler(request, response) {
                     "general mills": "General Mills",
                     "kraft heinz": "Kraft Heinz",
                     "procter & gamble": "P&G",
-                    "p&g": "P&G"
+                    "p&g": "P&G",
+                    "estee lauder": "Estée Lauder",
+                    "estée lauder": "Estée Lauder",
+                    "coty ": "Coty",
+                    "shiseido ": "Shiseido",
+                    "lvmh ": "LVMH",
+                    "johnson & johnson": "Johnson & Johnson",
+                    "kenvue": "Kenvue",
+                    "beiersdorf": "Beiersdorf",
+                    "puig ": "Puig",
+                    "naturactor": "Natura &Co",
+                    "natura &co": "Natura &Co",
+                    "kao ": "Kao",
+                    "amorepacific": "Amorepacific",
+                    "clarins ": "Clarins"
                 };
 
                 let foundCorporate = false;
