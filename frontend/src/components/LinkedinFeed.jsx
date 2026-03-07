@@ -62,6 +62,35 @@ const LinkedinFeed = () => {
         return false;
     });
 
+    const exportCSV = () => {
+        if (visibleItems.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+
+        const headers = ['Poster', 'Brand', 'Product', 'Retailer', 'Date', 'Post URL'];
+        const csvContent = [
+            headers.join(','),
+            ...visibleItems.map(item => [
+                `"${item.manufacturer ? item.manufacturer.replace(/"/g, '""') : 'Unknown'}"`,
+                `"${item.brand ? item.brand.replace(/"/g, '""') : 'Unknown'}"`,
+                `"${item.product ? item.product.replace(/"/g, '""') : 'Unknown'}"`,
+                `"${item.retailer ? item.retailer.replace(/"/g, '""') : 'Unknown'}"`,
+                `"${item.date ? item.date.replace(/"/g, '""') : 'Unknown'}"`,
+                `"${item.postUrl ? item.postUrl.replace(/"/g, '""') : ''}"`
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `linkedin_scraper_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading LinkedIn Feed...</div>;
 
     return (
@@ -85,9 +114,14 @@ const LinkedinFeed = () => {
                         <strong>Other News</strong>
                     </label>
                 </div>
-                <button className="btn" onClick={runScrape}>
-                    🔄 Run LinkedIn Scraper
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn btn-outline" onClick={exportCSV} disabled={visibleItems.length === 0}>
+                        📥 Export CSV
+                    </button>
+                    <button className="btn" onClick={runScrape}>
+                        🔄 Run LinkedIn Scraper
+                    </button>
+                </div>
             </div>
 
             {error && (
