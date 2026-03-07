@@ -3,6 +3,7 @@ import Controls from './components/Controls';
 import Filters from './components/Filters';
 import ResultsTable from './components/ResultsTable';
 import LinkedinFeed from './components/LinkedinFeed';
+import NewsFeed from './components/NewsFeed';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'linkedin'
@@ -251,6 +252,25 @@ function App() {
             <span>LinkedIn Scraper</span>
             <span style={{ fontSize: '0.7rem', background: '#e0e7ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>BETA</span>
           </button>
+          <button
+            onClick={() => setCurrentView('news')}
+            style={{
+              padding: '0.75rem 1rem',
+              background: 'none',
+              border: 'none',
+              borderBottom: currentView === 'news' ? '2px solid var(--color-accent)' : '2px solid transparent',
+              color: currentView === 'news' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              fontWeight: currentView === 'news' ? '600' : '500',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>News Scraper</span>
+            <span style={{ fontSize: '0.7rem', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>NEW</span>
+          </button>
         </div>
       </header>
 
@@ -327,8 +347,10 @@ function App() {
             }}
           />
         </>
-      ) : (
+      ) : currentView === 'linkedin' ? (
         <LinkedinFeed />
+      ) : (
+        <NewsFeed />
       )}
     </div>
   );
