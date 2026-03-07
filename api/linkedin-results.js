@@ -88,48 +88,74 @@ function extractRetailer(text) {
 }
 
 function extractBrand(text, authorName) {
-    // 1. If the author is NOT a generic news/aggregator, it's likely the brand
-    const genericAuthors = ['Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight'];
-    if (authorName && !genericAuthors.some(ga => authorName.includes(ga))) {
-        return authorName;
-    }
+    if (!text) return authorName;
+    const lowerText = text.toLowerCase();
 
-    // 2. Look for "Brand: X" or "Manufacturer: X"
+    // 1. Look for explicit Brand/Manufacturer tags
     const brandMatch = text.match(/(?:Brand|Manufacturer):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
     if (brandMatch) return brandMatch[1].trim();
 
-    // 3. Hashtags are often the brand
-    const hashtagMatch = text.match(/#([A-Z][a-zA-Z0-9]+)/);
-    if (hashtagMatch) {
-        // camelsplit: "OcadoLogistics" -> "Ocado Logistics"
-        return hashtagMatch[1].replace(/([A-Z])/g, ' $1').trim();
+    // 2. Look for "from [Brand]" or "by [Brand]" immediately followed by a capitalized phrase
+    const fromByMatch = text.match(/(?:from|by)\s+([A-Z][A-Za-z0-9&]+(?:\s+[A-Z][A-Za-z0-9&]+)*(?:\s+Ltd|\s+Brands|\s+Group)?)/);
+    if (fromByMatch) return fromByMatch[1].trim();
+
+    // 3. Hashtags: If there's a hashtag that matches the author name (or first part), or is a known FMCG pattern
+    const hashtags = Array.from(text.matchAll(/#([a-zA-Z0-9_]+)/g)).map(m => m[1]);
+    if (hashtags.length > 0) {
+        // Simple camelCase splitter for the very first hashtag as a decent fallback
+        const firstHashtagSplit = hashtags[0].replace(/([A-Z])/g, ' $1').trim();
+        // If author name is known generic, use the hashtag. Otherwise, we might prefer author later.
+        const genericAuthors = ['Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight', 'Gymfluencers.com'];
+        if (authorName && genericAuthors.some(ga => authorName.toLowerCase().includes(ga.toLowerCase()))) {
+            return firstHashtagSplit;
+        }
     }
 
+    // 4. Default to Author if it sounds like a Company (Group, Ltd, Drinks, Beauty)
+    const companyKeywords = ['ltd', 'limited', 'group', 'brands', 'drinks', 'beauty', 'foods', 'brewing', 'kombucha', 'nutrition'];
+    if (authorName && companyKeywords.some(kw => authorName.toLowerCase().includes(kw))) {
+        return authorName; // Clean copy of author
+    }
+
+    // 5. Fallback - attempt to rip the sentence with "launch"
     return 'Unknown Brand';
 }
 
 function extractProduct(text) {
+    if (!text) return 'New Launch';
     const lowerText = text.toLowerCase();
 
-    // 1. Look for definitive launch phrases
-    // "launched X", "introducing X", "new X"
-    const launchRegex = /(?:launched|introducing|announcing|unveiling|bringing you)\s+(?:our\s+|the\s+|a\s+|new\s+)?([A-Z][a-zA-Z0-9\s&']{3,30})(?:\.|!|\n|with|at|in)/i;
-    const match = text.match(launchRegex);
+    // 1. Look for explicit product names in quotes ('Product Name' or "Product Name" or ‘Product Name’)
+    const quoteMatch = text.match(/(?:launched|introducing|unveiling|bringing you)\s+(?:.*?)(?:'|"|‘|“)(.+?)(?:'|"|’|”)/i);
+    if (quoteMatch && quoteMatch[1] && quoteMatch[1].length > 3) {
+        return quoteMatch[1].trim();
+    }
 
-    if (match && match[1]) {
-        // Filter out generic words if captured
-        const ignored = ['new', 'range', 'products', 'collection', 'collaboration', 'partnership'];
-        if (!ignored.includes(match[1].toLowerCase().trim())) {
-            return match[1].trim();
+    // 2. Look for capitalized phrases immediately following launch verbs
+    // Matches "launched the new [Capitalized Phrase]"
+    const capPhraseMatch = text.match(/(?:launched|introducing|announcing|unveiling|bringing you|rolling out)\s+(?:(?:our|the|a|new|brand new|exciting)\s+)*([A-Z][a-z0-9&']+(?:\s+[A-Z][a-z0-9&']+)*)/);
+
+    if (capPhraseMatch && capPhraseMatch[1]) {
+        const product = capPhraseMatch[1].trim();
+        const ignored = ['New', 'Range', 'Products', 'Collection', 'Partnership', 'Stores'];
+        // Ensure it's not just "New" or a generic word
+        if (!ignored.includes(product) && product.length > 2) {
+            return product;
         }
     }
 
-    // 2. Identify "New [Key Phrase]" pattern
-    if (lowerText.includes('new ') && lowerText.includes('range')) {
-        return 'New Range';
+    // 3. Fallback: Identify specific product descriptors if capitalization formatting failed
+    if (lowerText.match(/(?:flavour|flavor|variant|edition)/)) {
+        return 'New Variant/Flavour';
     }
 
-    return 'New Launch'; // Generic fallback is better than "Unknown"
+    // 4. Extract snippet: if we can't find the name, grab the 6 words after "launch"
+    const snippetMatch = lowerText.match(/launch(?:ed|ing)?\s+((?:\S+\s+){1,5}\S+)/);
+    if (snippetMatch) {
+        return '...' + snippetMatch[1].substring(0, 30) + '...';
+    }
+
+    return 'New Launch'; // Generic fallback
 }
 
 function isProductLaunch(text) {
