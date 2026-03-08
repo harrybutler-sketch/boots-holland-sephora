@@ -8,42 +8,76 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
     const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : groceryRetailers;
 
     return (
-        <div className="card controls">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="card controls" style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Workspace Switcher */}
-                <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem' }}>
-                    <button
-                        className={`btn ${workspace === 'beauty' ? 'btn-primary' : ''}`}
-                        onClick={() => onWorkspaceChange('beauty')}
-                        style={{ backgroundColor: workspace === 'beauty' ? '' : 'transparent', border: workspace === 'beauty' ? '' : '1px solid var(--color-border)' }}
-                    >
-                        💄 Beauty & Health
-                    </button>
-                    <button
-                        className={`btn ${workspace === 'grocery' ? 'btn-primary' : ''}`}
-                        onClick={() => onWorkspaceChange('grocery')}
-                        style={{ backgroundColor: workspace === 'grocery' ? '' : 'transparent', border: workspace === 'grocery' ? '' : '1px solid var(--color-border)' }}
-                    >
-                        🛒 Grocery
-                    </button>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.03)', padding: '0.4rem', borderRadius: '9999px' }}>
+                        <button
+                            onClick={() => onWorkspaceChange('beauty')}
+                            style={{
+                                padding: '0.625rem 1.25rem',
+                                background: workspace === 'beauty' ? 'white' : 'transparent',
+                                border: 'none',
+                                borderRadius: '9999px',
+                                color: workspace === 'beauty' ? 'var(--color-purple)' : 'var(--color-text-secondary)',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                boxShadow: workspace === 'beauty' ? 'var(--shadow-sm)' : 'none',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            <span>💄 Beauty</span>
+                        </button>
+                        <button
+                            onClick={() => onWorkspaceChange('grocery')}
+                            style={{
+                                padding: '0.625rem 1.25rem',
+                                background: workspace === 'grocery' ? 'white' : 'transparent',
+                                border: 'none',
+                                borderRadius: '9999px',
+                                color: workspace === 'grocery' ? 'var(--color-purple)' : 'var(--color-text-secondary)',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                boxShadow: workspace === 'grocery' ? 'var(--shadow-sm)' : 'none',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            <span>🛒 Grocery</span>
+                        </button>
+                    </div>
                     <div style={{ flex: 1 }}></div>
                     <button
                         className="btn"
                         onClick={onExportCSV}
-                        style={{ backgroundColor: 'var(--color-accent)', color: 'white', border: 'none' }}
+                        style={{ padding: '0.75rem 1.5rem', fontSize: '0.9rem', background: 'white', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
                     >
                         📥 Export CSV
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
                         <button
-                            className="btn btn-primary"
+                            className="btn"
                             onClick={onRunScrape}
                             disabled={isRunning}
+                            style={{ minWidth: '220px' }}
                         >
-                            {isRunning ? 'Scraping...' : `▶ Run ${workspace === 'beauty' ? 'Beauty' : 'Grocery'} Scrape`}
+                            {isRunning ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span className="status-dot running" style={{ background: 'white' }}></span>
+                                    Scraping...
+                                </div>
+                            ) : `▶ Run ${workspace === 'beauty' ? 'Beauty' : 'Grocery'} Scrape`}
                         </button>
 
                         <button
@@ -53,31 +87,18 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                                 backgroundColor: 'transparent',
                                 color: 'var(--color-text-secondary)',
                                 border: '1px solid var(--color-border)',
-                                marginLeft: '0.5rem'
+                                boxShadow: 'none'
                             }}
                         >
                             ↺ Reset
                         </button>
 
-                        <div style={{ display: 'flex', gap: '1.2rem', marginLeft: '1rem', alignItems: 'center' }}>
-                            <button
-                                className="btn"
-                                onClick={onTestConnection}
-                                disabled={isRunning}
-                                style={{
-                                    backgroundColor: 'transparent',
-                                    color: 'var(--color-primary)',
-                                    border: '1px solid var(--color-primary)',
-                                    fontSize: '0.8rem',
-                                    padding: '0.25rem 0.5rem'
-                                }}
-                            >
-                                Test Sheet
-                            </button>
+                        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', background: 'rgba(0,0,0,0.02)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
                             {selectedRetailers && activeWorkspaceRetailers.map(retailer => (
-                                <label key={retailer} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                <label key={retailer} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
                                     <input
                                         type="checkbox"
+                                        style={{ accentColor: 'var(--color-purple)', width: '16px', height: '16px' }}
                                         checked={!!selectedRetailers[retailer]}
                                         onChange={() => onToggleRetailer(retailer)}
                                         disabled={isRunning}
@@ -88,11 +109,13 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                         </div>
                     </div>
 
-                    <div className="status-indicator">
-                        <span>Status: </span>
-                        <span className={`status-dot ${runStatus.toLowerCase()}`}></span>
-                        <span className="status-text">{runStatus}</span>
-                        {lastRun && <span className="last-run" style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#8899ac' }}>Last: {new Date(lastRun).toLocaleTimeString()}</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                        <div className="status-indicator" style={{ background: 'rgba(0,0,0,0.03)', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '0.9rem' }}>
+                            <span style={{ fontWeight: '600' }}>Status: </span>
+                            <span className={`status-dot ${runStatus.toLowerCase()}`} style={{ margin: '0 8px' }}></span>
+                            <span className="status-text" style={{ textTransform: 'capitalize', fontWeight: '600', color: 'var(--color-text-primary)' }}>{runStatus.toLowerCase()}</span>
+                        </div>
+                        {lastRun && <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '0.75rem' }}>Last Run: {new Date(lastRun).toLocaleTimeString()}</span>}
                     </div>
                 </div>
             </div>

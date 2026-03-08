@@ -208,68 +208,94 @@ function App() {
 
   return (
     <div className="container">
-      <header style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '1rem' }}>
+      <header style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '3rem' }}>
         <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1>Brand Allies Scraper</h1>
-          <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', background: '#f9fafb', padding: '0.5rem 1rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}>
+          <h1>Brand Allies <span className="highlight">Scraper</span></h1>
+          <div style={{
+            fontSize: '0.85rem',
+            color: 'var(--color-text-secondary)',
+            background: 'rgba(255, 255, 255, 0.5)',
+            backdropFilter: 'blur(4px)',
+            padding: '0.625rem 1.25rem',
+            borderRadius: '9999px',
+            border: '1px solid var(--color-border)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
             Last Scrape: <strong>{(data && data.length > 0 && data[0].date_found) ? new Date(data[0].date_found).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Loading...'}</strong>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-border)', width: '100%' }}>
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          background: 'rgba(0, 0, 0, 0.03)',
+          padding: '0.4rem',
+          borderRadius: '9999px',
+          width: 'fit-content'
+        }}>
           <button
             onClick={() => setCurrentView('dashboard')}
             style={{
-              padding: '0.75rem 1rem',
-              background: 'none',
+              padding: '0.625rem 1.5rem',
+              background: currentView === 'dashboard' ? 'white' : 'transparent',
               border: 'none',
-              borderBottom: currentView === 'dashboard' ? '2px solid var(--color-accent)' : '2px solid transparent',
-              color: currentView === 'dashboard' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-              fontWeight: currentView === 'dashboard' ? '600' : '500',
+              borderRadius: '9999px',
+              color: currentView === 'dashboard' ? 'var(--color-purple)' : 'var(--color-text-secondary)',
+              fontWeight: '600',
               cursor: 'pointer',
-              fontSize: '1rem'
+              fontSize: '0.95rem',
+              boxShadow: currentView === 'dashboard' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s ease'
             }}
           >
-            Scraper Dashboard
+            Dashboard
           </button>
           <button
             onClick={() => setCurrentView('linkedin')}
             style={{
-              padding: '0.75rem 1rem',
-              background: 'none',
+              padding: '0.625rem 1.5rem',
+              background: currentView === 'linkedin' ? 'white' : 'transparent',
               border: 'none',
-              borderBottom: currentView === 'linkedin' ? '2px solid var(--color-accent)' : '2px solid transparent',
-              color: currentView === 'linkedin' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-              fontWeight: currentView === 'linkedin' ? '600' : '500',
+              borderRadius: '9999px',
+              color: currentView === 'linkedin' ? 'var(--color-purple)' : 'var(--color-text-secondary)',
+              fontWeight: '600',
               cursor: 'pointer',
-              fontSize: '1rem',
+              fontSize: '0.95rem',
+              boxShadow: currentView === 'linkedin' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '8px'
             }}
           >
-            <span>LinkedIn Scraper</span>
-            <span style={{ fontSize: '0.7rem', background: '#e0e7ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>BETA</span>
+            <span>LinkedIn</span>
+            <span style={{ fontSize: '0.65rem', background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: '9999px' }}>BETA</span>
           </button>
           <button
             onClick={() => setCurrentView('news')}
             style={{
-              padding: '0.75rem 1rem',
-              background: 'none',
+              padding: '0.625rem 1.5rem',
+              background: currentView === 'news' ? 'white' : 'transparent',
               border: 'none',
-              borderBottom: currentView === 'news' ? '2px solid var(--color-accent)' : '2px solid transparent',
-              color: currentView === 'news' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-              fontWeight: currentView === 'news' ? '600' : '500',
+              borderRadius: '9999px',
+              color: currentView === 'news' ? 'var(--color-purple)' : 'var(--color-text-secondary)',
+              fontWeight: '600',
               cursor: 'pointer',
-              fontSize: '1rem',
+              fontSize: '0.95rem',
+              boxShadow: currentView === 'news' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '8px'
             }}
           >
-            <span>News Scraper</span>
-            <span style={{ fontSize: '0.7rem', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>NEW</span>
+            <span>News Feed</span>
+            <span style={{ fontSize: '0.65rem', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '9999px' }}>NEW</span>
           </button>
         </div>
       </header>
