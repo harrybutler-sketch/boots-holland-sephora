@@ -29,18 +29,49 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                     {data.map((item, index) => (
                         <tr key={`${item.product_url}-${index}`} className={item.status === 'Dealt With' ? 'row-dealt-with' : ''}>
                             <td style={{ paddingLeft: '2rem' }}>
-                                {item.image_url ? (
-                                    <img
-                                        src={item.image_url}
-                                        alt=""
-                                        style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #f1f5f9', background: 'white' }}
-                                        onError={(e) => { e.target.style.display = 'none'; }}
-                                    />
-                                ) : (
-                                    <div style={{ width: '48px', height: '48px', background: '#f8fafc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '10px', border: '1px solid #f1f5f9' }}>
-                                        N/A
-                                    </div>
-                                )}
+                                <div style={{ position: 'relative', width: '48px', height: '48px' }} className="image-container">
+                                    {item.image_url ? (
+                                        <>
+                                            <img
+                                                src={item.image_url}
+                                                alt=""
+                                                style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #f1f5f9', background: 'white' }}
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(item.image_url);
+                                                    const btn = document.activeElement;
+                                                    btn.style.opacity = '1';
+                                                    setTimeout(() => { btn.style.opacity = ''; }, 2000);
+                                                }}
+                                                title="Copy image URL"
+                                                style={{
+                                                    position: 'absolute',
+                                                    bottom: '-4px',
+                                                    right: '-4px',
+                                                    background: 'white',
+                                                    border: '1px solid var(--color-border)',
+                                                    borderRadius: '4px',
+                                                    padding: '2px',
+                                                    fontSize: '10px',
+                                                    cursor: 'pointer',
+                                                    boxShadow: 'var(--shadow-sm)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    zIndex: 2
+                                                }}
+                                            >
+                                                🖼️
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <div style={{ width: '48px', height: '48px', background: '#f8fafc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '10px', border: '1px solid #f1f5f9' }}>
+                                            N/A
+                                        </div>
+                                    )}
+                                </div>
                             </td>
                             <td style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: '500' }}>
                                 {new Date(item.date_found).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
