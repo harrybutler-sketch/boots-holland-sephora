@@ -125,14 +125,13 @@ export const handler = async (event, context) => {
         startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new?srsltid=AfmBOorjNX_GLyjbbfrykWC7OqgShf3o0CYOM7VKzp9aU3DHE97vcGOn', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
-        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/192077?srsltid=AfmBOorhOdt9OWlrNkD5Rl9czvTv6Mqsn584Mj5sWMiaJbfacF3w56JD', userData: { retailer: 'Morrisons', label: 'LISTING' } });
+        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/all-new/192781', userData: { retailer: 'Morrisons', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('asda'))) {
-        startUrls.push({ url: 'https://www.asda.com/groceries/event/new', userData: { retailer: 'Asda', label: 'LISTING' } });
-        startUrls.push({ url: 'https://groceries.asda.com/shelf/new-in/1215685911554', userData: { retailer: 'Asda', label: 'LISTING' } });
+        startUrls.push({ url: 'https://groceries.asda.com/search/New%20in', userData: { retailer: 'Asda', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('superdrug'))) {
         startUrls.push({ url: 'https://www.superdrug.com/new-in/c/new', userData: { retailer: 'Superdrug', label: 'LISTING' } });
@@ -225,9 +224,9 @@ export const handler = async (event, context) => {
                             log.info('Waiting for product count to increase...');
                             await page.waitForFunction((sel, minCount) => {
                                 return document.querySelectorAll(sel).length >= minCount;
-                            }, { timeout: 20000 }, selector, (retailer === 'Asda' ? 40 : 15));
+                            }, { timeout: 15000 }, selector, (retailer === 'Asda' ? 10 : 10));
                             
-                            await new Promise(r => setTimeout(r, 8000)); // Final hydration breather
+                            await new Promise(r => setTimeout(r, 6000)); // Final hydration breather
                         }
                     } catch (e) {
                         log.warning('Timeout or limited results during wait for ' + selector + ' on ' + request.url);
