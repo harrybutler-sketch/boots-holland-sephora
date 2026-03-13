@@ -136,7 +136,7 @@ export default async function handler(request, response) {
 
       if (startUrls.length > 0) {
         console.log('Starting Puppeteer Scraper...');
-        const maxPages = 600; // Increased limit to crawl much deeper across all provided category URLs
+        const maxPages = 300; // Adjusted limit to 300 to balance cost and yield
 
         const run = await client.actor('apify/puppeteer-scraper').start({
           startUrls,
