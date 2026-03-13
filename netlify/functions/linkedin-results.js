@@ -47,6 +47,7 @@ export default async (req, context) => {
                 managingDirector: '', // Placeholder
                 marketingDirector: '', // Placeholder
                 postSnippet: text ? text.substring(0, 150) + '...' : '',
+                fullText: text,
                 dealtWith: false,
                 postUrl: item.linkedinUrl || item.url || '#'
             };
@@ -64,7 +65,8 @@ export default async (req, context) => {
             return true;
         }).map(item => {
             // 2. Assign Type
-            const isLaunch = isProductLaunch(item.postSnippet, item.retailer);
+            const isLaunch = isProductLaunch(item.fullText, item.retailer);
+            delete item.fullText;
             return {
                 ...item,
                 type: isLaunch ? 'launch' : 'other'

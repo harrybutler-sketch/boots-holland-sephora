@@ -40,6 +40,7 @@ export default async function handler(req, res) {
                 managingDirector: '', // Placeholder
                 marketingDirector: '', // Placeholder
                 postSnippet: text ? text.substring(0, 150) + '...' : '',
+                fullText: text, // Keep full text for categorization
                 dealtWith: false,
                 postUrl: item.linkedinUrl || item.url || '#'
             };
@@ -54,9 +55,18 @@ export default async function handler(req, res) {
             if (item.date && item.date !== 'Unknown' && new Date(item.date) < fourWeeksAgo) {
                 return false;
             }
-
-            // 2. Content Filter (Product Launches ONLY)
-            return isProductLaunch(item.postSnippet);
+            return true;
+        }).map(item => {
+            // 2. Assign Type based on FULL text
+            const isLaunch = isProductLaunch(item.fullText);
+            
+            // Clean up fullText so we don't bloat the payload
+            delete item.fullText;
+            
+            return {
+                ...item,
+                type: isLaunch ? 'launch' : 'other'
+            };
         });
 
         return res.status(200).json(filteredItems);
