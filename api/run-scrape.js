@@ -105,6 +105,8 @@ export default async function handler(request, response) {
           'https://www.tesco.com/groceries/en-GB/shop/frozen-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
           'https://www.tesco.com/groceries/en-GB/shop/fresh-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
           'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
+          'https://www.tesco.com/groceries/en-GB/shop/health-and-beauty/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
+          'https://www.tesco.com/groceries/en-GB/shop/home-and-ents/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
           'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-pet#new-pet'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
@@ -115,7 +117,9 @@ export default async function handler(request, response) {
           'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks',
           'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
           'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled'
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-health-and-beauty',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-pet'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
@@ -137,7 +141,7 @@ export default async function handler(request, response) {
 
       if (startUrls.length > 0) {
         console.log('Starting Puppeteer Scraper...');
-        const maxPages = puppeteerRetailersToScrape.some(r => r.toLowerCase().includes('tesco')) ? 80 : 400; // ~50 items per category (4 categories = 200 items total)
+        const maxPages = 600; // Increased limit to crawl much deeper across all provided category URLs
 
         const run = await client.actor('apify/puppeteer-scraper').start({
           startUrls,
