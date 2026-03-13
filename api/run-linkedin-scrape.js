@@ -13,7 +13,15 @@ export default async function handler(req, res) {
 
         // Search Queries for "New Launches"
         const searchQueries = [
+            // Tesco specific queries
             'launched in Tesco',
+            'new listing at Tesco',
+            'now available at Tesco',
+            'listed in Tesco',
+            'launching in Tesco',
+            'hitting Tesco shelves',
+            
+            // Other retailers
             'launched in Sainsbury\'s',
             'launched in Asda',
             'launched in Morrisons',
@@ -23,10 +31,8 @@ export default async function handler(req, res) {
             'launched in Superdrug',
             'launched in Sephora',
             'launched in Holland & Barrett',
-            'new listing at Tesco',
             'new listing at Sainsbury\'s',
             'new listing at Boots',
-            'now available at Tesco',
             'now available at Boots'
         ];
 
@@ -39,7 +45,7 @@ export default async function handler(req, res) {
         // Start the actor
         const run = await client.actor('harvestapi/linkedin-post-search').call({
             searchQueries: searchQueries,
-            maxPosts: 50, // Limit to 50 posts for now to save credits/time
+            maxPosts: 100, // Increased to 100 to capture more results across all queries
             minDate: minDate,
             sortBy: 'date'
         });

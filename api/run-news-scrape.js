@@ -28,12 +28,15 @@ export default async function handler(req, res) {
         let queries = [];
         for (const pub of publishers) {
             for (const term of launchTerms) {
+                // Add a generic query for the publisher
                 queries.push(`${pub} ${term}`);
+                // Add a Tesco-specific query to force Tesco results to the surface
+                queries.push(`${pub} "Tesco" ${term}`);
             }
         }
 
-        // Limit to a subset to keep runs fast/cheap for now
-        const selectedQueries = queries.slice(0, 10).join('\n');
+        // We will run up to 20 queries rather than just 10, prioritizing the Tesco ones by putting them first
+        const selectedQueries = queries.filter(q => q.includes('Tesco')).concat(queries.filter(q => !q.includes('Tesco'))).slice(0, 20).join('\n');
 
         // Start the Apify Google Search Scraper actor
         const run = await client.actor('apify/google-search-scraper').call({
