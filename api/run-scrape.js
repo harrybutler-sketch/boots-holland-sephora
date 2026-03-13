@@ -104,10 +104,7 @@ export default async function handler(request, response) {
           'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
           'https://www.tesco.com/groceries/en-GB/shop/frozen-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
           'https://www.tesco.com/groceries/en-GB/shop/fresh-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/groceries/en-GB/shop/health-and-beauty/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/groceries/en-GB/shop/home-and-ents/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-pet#new-pet'
+          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
@@ -117,9 +114,7 @@ export default async function handler(request, response) {
           'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks',
           'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
           'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-health-and-beauty',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-pet'
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
@@ -413,9 +408,18 @@ export default async function handler(request, response) {
                         
                         results.isOwnBrand = ownBrandKeywords.some(kw => results.name.toLowerCase().includes(kw.toLowerCase()));
                         
+                        // Exclusion for Habitat at Sainsbury's
+                        if (retailer === 'Sainsburys' && (results.name.toLowerCase().includes('habitat') || window.location.href.toLowerCase().includes('habitat'))) {
+                            results.isHabitat = true;
+                        }
+
                         return results;
                     }, retailer);
 
+                    if (extractionData.isHabitat) {
+                        log.info('Skipping Habitat product: ' + extractionData.name);
+                        return null;
+                    }
                     if (extractionData.isOwnBrand) {
                         log.info('Skipping Own Brand: ' + extractionData.name);
                         return null;
