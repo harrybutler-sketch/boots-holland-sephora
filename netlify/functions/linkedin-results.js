@@ -1,76 +1,48 @@
-
-import { ApifyClient } from 'apify-client';
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { getGoogleAuth } from '../../lib/google-auth.js';
 
 export default async (req, context) => {
-    // Similar to results.js but for LinkedIn data
-    // For MVP, we might need to fetch from the LAST run of the LinkedIn Scraper
-    // Or a specific dataset if we saved it somewhere.
-
-    // For now, let's fetch the results of the *latest* run of the LinkedIn Actor.
-
     try {
-        const client = new ApifyClient({
-            token: process.env.APIFY_TOKEN,
-        });
+        const serviceAccountAuth = getGoogleAuth();
+        const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+        await doc.loadInfo();
 
-        // Get last run of the LinkedIn Actor
-        const runs = await client.actor('harvestapi/linkedin-post-search').runs().list({
-            desc: true,
-            limit: 1,
-            status: 'SUCCEEDED' // Only successful runs
-        });
-
-        if (runs.items.length === 0) {
-            return new Response(JSON.stringify([]), {
+        const sheet = doc.sheetsByTitle['LinkedIn'];
+        if (!sheet) {
+             return new Response(JSON.stringify([]), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        const lastRunId = runs.items[0].id;
-        const dataset = await client.run(lastRunId).dataset();
-        const { items } = await dataset.listItems();
-
-        // Transform items to match our Frontend Schema
-        const mappedItems = items.map((item, index) => {
-            const text = item.content || item.text || '';
-            const author = item.author ? item.author.name : (item.authorName || 'Unknown Author');
-
+        const rows = await sheet.getRows();
+        
+        const mappedItems = rows.map((row, index) => {
             return {
-                id: item.id || `linkedin-${index}`,
-                brand: extractBrand(text, author) || 'Unknown Brand',
-                product: extractProduct(text) || 'Unknown Product',
-                manufacturer: author,
-                manufacturerUrl: (item.author && item.author.linkedinUrl) || item.authorUrl || '#',
-                date: (item.postedAt && item.postedAt.date) || item.date || 'Unknown',
-                retailer: extractRetailer(text) || 'Unknown Retailer',
-                managingDirector: '', // Placeholder
-                marketingDirector: '', // Placeholder
-                postSnippet: text ? text.substring(0, 150) + '...' : '',
-                fullText: text,
-                dealtWith: false,
-                postUrl: item.linkedinUrl || item.url || '#'
+                id: row.get('id') || `linkedin-${index}`,
+                brand: row.get('brand') || 'Unknown Brand',
+                product: row.get('product') || 'Unknown Product',
+                manufacturer: row.get('manufacturer') || 'Unknown Author',
+                manufacturerUrl: row.get('manufacturer url') || '#',
+                date: row.get('date') || 'Unknown',
+                retailer: row.get('retailer') || 'Unknown',
+                managingDirector: '', 
+                marketingDirector: '', 
+                postSnippet: row.get('post snippet') || '',
+                type: row.get('type') || 'other',
+                dealtWith: row.get('dealtWith') === 'TRUE',
+                postUrl: row.get('post url') || '#'
             };
         });
 
-        // Filter for posts within the last 4 weeks (28 days)
         const fourWeeksAgo = new Date();
         fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
         const filteredItems = mappedItems.filter(item => {
-            // 1. Date Filter (Keep this to ensure relevance)
             if (item.date && item.date !== 'Unknown' && new Date(item.date) < fourWeeksAgo) {
                 return false;
             }
             return true;
-        }).map(item => {
-            // 2. Assign Type
-            const isLaunch = isProductLaunch(item.fullText, item.retailer);
-            delete item.fullText;
-            return {
-                ...item,
-                type: isLaunch ? 'launch' : 'other'
-            };
         });
 
         return new Response(JSON.stringify(filteredItems), {
@@ -79,8 +51,8 @@ export default async (req, context) => {
         });
 
     } catch (error) {
-        console.error('Error fetching LinkedIn results:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to fetch results', stack: error.stack }), {
+        console.error('Error fetching LinkedIn results from Sheets:', error);
+        return new Response(JSON.stringify({ error: error.message || 'Failed to fetch results' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });

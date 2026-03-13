@@ -34,10 +34,42 @@ const NewsFeed = () => {
         fetchNewsResults();
     }, []);
 
-    const toggleDealtWith = (id) => {
+    const toggleDealtWith = async (id) => {
+        // Optimistic UI Update
+        const targetItem = items.find(item => item.id === id);
+        if (!targetItem) return;
+
+        const newDealtStatus = !targetItem.dealtWith;
+
         setItems(items.map(item =>
-            item.id === id ? { ...item, dealtWith: !item.dealtWith } : item
+            item.id === id ? { ...item, dealtWith: newDealtStatus } : item
         ));
+
+        try {
+            const response = await fetch('/api/mark-dealt-sheet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: id,
+                    type: 'news',
+                    dealtWith: newDealtStatus
+                })
+            });
+
+            if (!response.ok) {
+                // Revert if failed
+                setItems(items.map(item =>
+                    item.id === id ? { ...item, dealtWith: !newDealtStatus } : item
+                ));
+                console.error('Failed to update dealt status in Sheets');
+            }
+        } catch (err) {
+            console.error('Error updating status:', err);
+            // Revert if failed
+            setItems(items.map(item =>
+                item.id === id ? { ...item, dealtWith: !newDealtStatus } : item
+            ));
+        }
     };
 
     const runScrape = async () => {

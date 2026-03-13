@@ -1,79 +1,56 @@
-
-import { ApifyClient } from 'apify-client';
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { getGoogleAuth } from '../lib/google-auth.js';
 
 export default async function handler(req, res) {
-    // Vercel Serverless Function (Node.js)
+    if (req.method !== 'GET') {
+        return res.status(405).send('Method Not Allowed');
+    }
 
     try {
-        const client = new ApifyClient({
-            token: process.env.APIFY_TOKEN,
-        });
+        const serviceAccountAuth = getGoogleAuth();
+        const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+        await doc.loadInfo();
 
-        // Get last run of the LinkedIn Actor (CORRECT ID: harvestapi/linkedin-post-search)
-        const runs = await client.actor('harvestapi/linkedin-post-search').runs().list({
-            desc: true,
-            limit: 1,
-            status: 'SUCCEEDED' // Only successful runs
-        });
-
-        if (runs.items.length === 0) {
+        const sheet = doc.sheetsByTitle['LinkedIn'];
+        if (!sheet) {
             return res.status(200).json([]);
         }
 
-        const lastRunId = runs.items[0].id;
-        const dataset = await client.run(lastRunId).dataset();
-        const { items } = await dataset.listItems();
-
-        // Transform items to match our Frontend Schema
-        const mappedItems = items.map((item, index) => {
-            const text = item.content || item.text || '';
-            const author = item.author ? item.author.name : (item.authorName || 'Unknown Author');
-
+        const rows = await sheet.getRows();
+        
+        const mappedItems = rows.map((row, index) => {
             return {
-                id: item.id || `linkedin-${index}`,
-                brand: extractBrand(text, author) || 'Unknown Brand',
-                product: extractProduct(text) || 'Unknown Product',
-                manufacturer: author,
-                manufacturerUrl: (item.author && item.author.linkedinUrl) || item.authorUrl || '#',
-                date: (item.postedAt && item.postedAt.date) || item.date || 'Unknown',
-                retailer: extractRetailer(text) || 'Unknown Retailer',
-                managingDirector: '', // Placeholder
-                marketingDirector: '', // Placeholder
-                postSnippet: text ? text.substring(0, 150) + '...' : '',
-                fullText: text, // Keep full text for categorization
-                dealtWith: false,
-                postUrl: item.linkedinUrl || item.url || '#'
+                id: row.get('id') || `linkedin-${index}`,
+                brand: row.get('brand') || 'Unknown Brand',
+                product: row.get('product') || 'Unknown Product',
+                manufacturer: row.get('manufacturer') || 'Unknown Author',
+                manufacturerUrl: row.get('manufacturer url') || '#',
+                date: row.get('date') || 'Unknown',
+                retailer: row.get('retailer') || 'Unknown',
+                managingDirector: '', 
+                marketingDirector: '', 
+                postSnippet: row.get('post snippet') || '',
+                type: row.get('type') || 'other',
+                dealtWith: row.get('dealtWith') === 'TRUE',
+                postUrl: row.get('post url') || '#'
             };
         });
 
-        // Filter for posts within the last 4 weeks (28 days)
         const fourWeeksAgo = new Date();
         fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
         const filteredItems = mappedItems.filter(item => {
-            // 1. Date Filter
             if (item.date && item.date !== 'Unknown' && new Date(item.date) < fourWeeksAgo) {
                 return false;
             }
             return true;
-        }).map(item => {
-            // 2. Assign Type based on FULL text
-            const isLaunch = isProductLaunch(item.fullText);
-            
-            // Clean up fullText so we don't bloat the payload
-            delete item.fullText;
-            
-            return {
-                ...item,
-                type: isLaunch ? 'launch' : 'other'
-            };
         });
 
         return res.status(200).json(filteredItems);
 
     } catch (error) {
-        console.error('Error fetching LinkedIn results:', error);
-        return res.status(500).json({ error: error.message || 'Failed to fetch results', stack: error.stack });
+        console.error('Error fetching LinkedIn results from Sheets:', error);
+        return res.status(500).json({ error: error.message || 'Failed to fetch results' });
     }
 }
 
