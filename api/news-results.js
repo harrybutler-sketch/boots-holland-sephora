@@ -42,6 +42,7 @@ export default async function handler(req, res) {
                         date: extractDate(textToAnalyze) || 'Recent',
                         brand: extractBrandNews(textToAnalyze),
                         product: extractProductNews(textToAnalyze),
+                        retailer: extractRetailerNews(textToAnalyze),
                         dealtWith: false
                     });
                 });
@@ -105,4 +106,22 @@ function extractProductNews(text) {
     }
 
     return 'New Launch';
+}
+
+function extractRetailerNews(text) {
+    if (!text) return 'Unknown';
+    const lowerText = text.toLowerCase();
+    
+    if (lowerText.includes('tesco')) return 'Tesco';
+    if (lowerText.includes('sainsbury')) return 'Sainsbury\'s';
+    if (lowerText.includes('boots')) return 'Boots';
+    if (lowerText.includes('asda')) return 'Asda';
+    if (lowerText.includes('morrisons')) return 'Morrisons';
+    if (lowerText.includes('waitrose')) return 'Waitrose';
+    if (lowerText.includes('ocado')) return 'Ocado';
+    if (lowerText.includes('holland') || lowerText.includes('barrett')) return 'Holland & Barrett';
+    if (lowerText.includes('superdrug')) return 'Superdrug';
+    if (lowerText.includes('sephora')) return 'Sephora';
+    
+    return 'Unknown';
 }

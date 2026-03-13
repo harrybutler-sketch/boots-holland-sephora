@@ -9,6 +9,9 @@ const LinkedinFeed = () => {
     const [showLaunches, setShowLaunches] = useState(true);
     const [showOther, setShowOther] = useState(false);
 
+    const [filterRetailer, setFilterRetailer] = useState('All');
+    const [filterDate, setFilterDate] = useState('All');
+
     // Fetch Logic
     const fetchLinkedinResults = async () => {
         setLoading(true);
@@ -51,16 +54,42 @@ const LinkedinFeed = () => {
         }
     };
 
-    // Filter Items based on Toggles
+    // Filter Items based on Toggles and Filters
     const visibleItems = items.filter(item => {
-        if (item.type === 'launch' && showLaunches) return true;
-        if (item.type === 'other' && showOther) return true;
+        if (item.type === 'launch' && !showLaunches) return false;
+        if (item.type === 'other' && !showOther) return false;
+        if (!item.type && !showLaunches) return false;
 
-        // Backwards compatibility for old items without 'type' (Show if showLaunches is true, assuming old items are launches)
-        if (!item.type && showLaunches) return true;
+        if (filterRetailer !== 'All' && item.retailer !== filterRetailer) {
+            return false;
+        }
 
-        return false;
+        if (filterDate !== 'All') {
+            if (!item.date || item.date === 'Unknown') return false;
+            const dateObj = new Date(item.date);
+            if (!isNaN(dateObj.getTime())) {
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - parseInt(filterDate));
+                if (dateObj < cutoff) return false;
+            } else {
+                const lower = item.date.toLowerCase();
+                const num = parseInt(lower);
+                if (!isNaN(num)) {
+                    let daysAgo = 0;
+                    if (lower.includes('h')) daysAgo = num / 24;
+                    else if (lower.includes('d')) daysAgo = num;
+                    else if (lower.includes('w')) daysAgo = num * 7;
+                    else if (lower.includes('m') && !lower.includes('min')) daysAgo = num * 30;
+                    
+                    if (daysAgo > parseInt(filterDate)) return false;
+                }
+            }
+        }
+
+        return true;
     });
+
+    const uniqueRetailers = ['All', ...new Set(items.map(i => i.retailer).filter(Boolean))].sort();
 
     const exportCSV = () => {
         if (visibleItems.length === 0) {
@@ -121,6 +150,35 @@ const LinkedinFeed = () => {
                     <button className="btn" onClick={runScrape}>
                         🔄 Run LinkedIn Scraper
                     </button>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Retailer</label>
+                    <select 
+                        value={filterRetailer} 
+                        onChange={(e) => setFilterRetailer(e.target.value)}
+                        className="select"
+                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)', minWidth: '150px' }}
+                    >
+                        {uniqueRetailers.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Posted Date</label>
+                    <select 
+                        value={filterDate} 
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        className="select"
+                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)', minWidth: '150px' }}
+                    >
+                        <option value="All">All Time</option>
+                        <option value="1">Last 24 Hours</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
+                        <option value="30">Last 30 Days</option>
+                    </select>
                 </div>
             </div>
 

@@ -5,6 +5,9 @@ const NewsFeed = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const [filterRetailer, setFilterRetailer] = useState('All');
+    const [filterDate, setFilterDate] = useState('All');
+
     // Fetch Logic
     const fetchNewsResults = async () => {
         setLoading(true);
@@ -46,8 +49,46 @@ const NewsFeed = () => {
         }
     };
 
+    const visibleItems = items.filter(item => {
+        if (filterRetailer !== 'All' && item.retailer !== filterRetailer) {
+            return false;
+        }
+
+        if (filterDate !== 'All') {
+            if (!item.date || item.date === 'Recent' || item.date === 'Unknown') return false;
+            
+            let daysAgo = 0;
+            const lowerDate = item.date.toLowerCase();
+            if (lowerDate.includes('ago')) {
+                const match = lowerDate.match(/(\d+)\s+(hour|day|week|month)/);
+                if (match) {
+                    const num = parseInt(match[1]);
+                    const unit = match[2];
+                    if (unit === 'hour') daysAgo = num / 24;
+                    if (unit === 'day') daysAgo = num;
+                    if (unit === 'week') daysAgo = num * 7;
+                    if (unit === 'month') daysAgo = num * 30;
+                }
+            } else {
+                const dateObj = new Date(item.date);
+                if (!isNaN(dateObj.getTime())) {
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - parseInt(filterDate));
+                    if (dateObj < cutoff) return false;
+                    return true;
+                }
+            }
+            
+            if (daysAgo > parseInt(filterDate)) return false;
+        }
+
+        return true;
+    });
+
+    const uniqueRetailers = ['All', ...new Set(items.map(i => i.retailer).filter(Boolean).filter(r => r !== 'Unknown'))].sort();
+
     const exportCSV = () => {
-        if (items.length === 0) {
+        if (visibleItems.length === 0) {
             alert('No data to export.');
             return;
         }
@@ -55,7 +96,7 @@ const NewsFeed = () => {
         const headers = ['Source', 'Brand', 'Product', 'Headline', 'Date', 'Article URL'];
         const csvContent = [
             headers.join(','),
-            ...items.map(item => [
+            ...visibleItems.map(item => [
                 `"${item.source ? item.source.replace(/"/g, '""') : 'Unknown'}"`,
                 `"${item.brand ? item.brand.replace(/"/g, '""') : 'Unknown'}"`,
                 `"${item.product ? item.product.replace(/"/g, '""') : 'Unknown'}"`,
@@ -81,12 +122,41 @@ const NewsFeed = () => {
         <div className="linkedin-feed">
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-outline" onClick={exportCSV} disabled={items.length === 0}>
+                    <button className="btn btn-outline" onClick={exportCSV} disabled={visibleItems.length === 0}>
                         📥 Export CSV
                     </button>
                     <button className="btn" onClick={runScrape}>
                         🔄 Run News Scraper
                     </button>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Retailer</label>
+                    <select 
+                        value={filterRetailer} 
+                        onChange={(e) => setFilterRetailer(e.target.value)}
+                        className="select"
+                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)', minWidth: '150px' }}
+                    >
+                        {uniqueRetailers.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Date</label>
+                    <select 
+                        value={filterDate} 
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        className="select"
+                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)', minWidth: '150px' }}
+                    >
+                        <option value="All">All Time</option>
+                        <option value="1">Last 24 Hours</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
+                        <option value="30">Last 30 Days</option>
+                    </select>
                 </div>
             </div>
 
@@ -99,20 +169,23 @@ const NewsFeed = () => {
                 </div>
             )}
 
-            {!error && items.length === 0 && (
+            {!error && visibleItems.length === 0 && (
                 <div className="empty-state">
-                    No news articles found. Try running a scrape.
+                    No news articles found matching your filters. Try adjusting the dropdowns or running a scrape.
                 </div>
             )}
 
             {!error && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '2rem' }}>
-                    {items.map(item => (
+                    {visibleItems.map(item => (
                         <div key={item.id} className="card" style={{ opacity: item.dealtWith ? 0.6 : 1, transition: 'opacity 0.2s', display: 'flex', flexDirection: 'column' }}>
                             {/* Header */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                     <span className="badge badge-retailer" style={{ textTransform: 'uppercase', background: '#dbeafe', color: '#1e40af' }}>{item.source}</span>
+                                    {item.retailer && item.retailer !== 'Unknown' && (
+                                        <span className="badge badge-retailer" style={{ textTransform: 'uppercase' }}>{item.retailer}</span>
+                                    )}
                                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         📅 {item.date}
                                     </span>
