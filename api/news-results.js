@@ -55,6 +55,10 @@ export default async function handler(req, res) {
         for (const res of allResults) {
             if (!seenUrls.has(res.articleUrl)) {
                 seenUrls.add(res.articleUrl);
+                
+                const isLaunch = isProductLaunch(res.headline + ' ' + res.snippet, res.retailer);
+                res.type = isLaunch ? 'launch' : 'other';
+                
                 uniqueResults.push(res);
             }
         }
@@ -124,4 +128,44 @@ function extractRetailerNews(text) {
     if (lowerText.includes('sephora')) return 'Sephora';
     
     return 'Unknown';
+}
+
+function isProductLaunch(text, retailer) {
+    if (!text) return false;
+
+    // Constraint 1: Must be a specific retailer (No "Unknown")
+    if (!retailer || retailer === 'Unknown') {
+        return false;
+    }
+
+    const lower = text.toLowerCase();
+
+    // STRICT Negative Keywords
+    const negativeKeywords = [
+        'hiring', 'vacancy', 'job', 'recruit', 'career', 'opportunity',
+        'report', 'whitepaper', 'webinar', 'seminar', 'conference',
+        'new store', 'new shop', 'new branch', 'managed store', 'convenience store', 'store opening',
+        'opened', 'opening', 'expansion', 'refurbishment', 'refit', 'franchise',
+        'ai agent', 'artificial intelligence', 'software', 'platform', 'app', 'update'
+    ];
+
+    if (negativeKeywords.some(kw => lower.includes(kw))) {
+        if (lower.includes('hiring') || lower.includes('vacancy') || lower.includes('recruit')) {
+            return false;
+        }
+        if (lower.includes('new store') || lower.includes('new shop') || lower.includes('opened')) {
+            return false;
+        }
+    }
+
+    // Positive Keywords (Strong Intent - MUST be present)
+    const positiveKeywords = [
+        'launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'flavour', 'flavor',
+        'sku', 'available now', 'buy now', 'grab yours', 'find us',
+        'roll out', 'rolling out', 'landed', 'hitting', 'arrived', 'introducing'
+    ];
+
+    const hasPositive = positiveKeywords.some(kw => lower.includes(kw));
+
+    return hasPositive;
 }

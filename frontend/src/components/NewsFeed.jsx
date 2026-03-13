@@ -5,6 +5,9 @@ const NewsFeed = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const [showLaunches, setShowLaunches] = useState(true);
+    const [showOther, setShowOther] = useState(false);
+
     const [filterRetailer, setFilterRetailer] = useState('All');
     const [filterDate, setFilterDate] = useState('All');
 
@@ -50,6 +53,10 @@ const NewsFeed = () => {
     };
 
     const visibleItems = items.filter(item => {
+        if (item.type === 'launch' && !showLaunches) return false;
+        if (item.type === 'other' && !showOther) return false;
+        if (!item.type && !showLaunches) return false;
+
         if (filterRetailer !== 'All' && item.retailer !== filterRetailer) {
             return false;
         }
@@ -120,7 +127,25 @@ const NewsFeed = () => {
 
     return (
         <div className="linkedin-feed">
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                            type="checkbox"
+                            checked={showLaunches}
+                            onChange={(e) => setShowLaunches(e.target.checked)}
+                        />
+                        <strong>Product Launches</strong>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                            type="checkbox"
+                            checked={showOther}
+                            onChange={(e) => setShowOther(e.target.checked)}
+                        />
+                        <strong>Other News</strong>
+                    </label>
+                </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-outline" onClick={exportCSV} disabled={visibleItems.length === 0}>
                         📥 Export CSV
@@ -186,6 +211,7 @@ const NewsFeed = () => {
                                     {item.retailer && item.retailer !== 'Unknown' && (
                                         <span className="badge badge-retailer" style={{ textTransform: 'uppercase' }}>{item.retailer}</span>
                                     )}
+                                    {item.type === 'other' && <span className="badge" style={{ background: '#cbd5e1', color: '#475569' }}>Other</span>}
                                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         📅 {item.date}
                                     </span>
