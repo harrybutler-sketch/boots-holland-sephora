@@ -119,7 +119,11 @@ export default async function handler(request, response) {
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('waitrose'))) {
-        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/frozen?srsltid=AfmBOooKM98Ui8176ymqqxOJPFOQXSyUlzCwkxv5jd3yb4VseBO_bBKu', userData: { retailer: 'Waitrose', label: 'LISTING' } });
+        const waitroseUrls = [
+          'https://www.waitrose.com/ecom/shop/browse/groceries/new/frozen?srsltid=AfmBOooKM98Ui8176ymqqxOJPFOQXSyUlzCwkxv5jd3yb4VseBO_bBKu',
+          'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOooKM98Ui8176ymqqxOJPFOQXSyUlzCwkxv5jd3yb4VseBO_bBKu'
+        ];
+        waitroseUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Waitrose', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOoo-ONo2qwBeZl3L-4y-TYaHWAQRonE7GE-fBZHExT7sQvai2YZT', userData: { retailer: 'Morrisons', label: 'LISTING' } });
