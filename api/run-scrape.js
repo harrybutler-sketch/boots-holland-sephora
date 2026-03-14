@@ -180,7 +180,7 @@ export default async function handler(request, response) {
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
                         'Waitrose': 'a[href*="/ecom/products/"]',
                         'Ocado': 'a[href*="/products/"]',
-                        'Morrisons': 'a[href*="/products/"]',
+                        'Morrisons': 'div.title-container a[href*="/products/"]',
                         'Sainsburys': '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]',
                         'Tesco': 'a[href*="/products/"], a[class*="titleLink"]',
                         'Asda': 'a[href*="/product/"], a.chakra-link, .co-product a',
