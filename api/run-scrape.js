@@ -180,7 +180,7 @@ export default async function handler(request, response) {
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
                         'Waitrose': 'a[href*="/ecom/products/"]',
                         'Ocado': 'a[href*="/products/"]',
-                        'Morrisons': 'div.title-container a[href*="/products/"]',
+                        'Morrisons': 'a[href*="/products/"]:not([href*="onetrust"])',
                         'Sainsburys': '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]',
                         'Tesco': 'a[href*="/products/"], a[class*="titleLink"]',
                         'Asda': 'a[href*="/product/"], a.chakra-link, .co-product a',
@@ -218,10 +218,10 @@ export default async function handler(request, response) {
                         const waitTimeout = (retailer === 'Sainsburys' || retailer === 'Asda') ? 60000 : 30000;
                         await page.waitForSelector(selector, { timeout: waitTimeout });
                         
-                        // Extra Waiter for Asda/Sainsbury's to ensure content is stable
-                        if (retailer === 'Asda' || retailer === 'Sainsburys') {
+                        // Extra Waiter for stability (prevent React re-renders from hiding new elements)
+                        if (retailer === 'Asda' || retailer === 'Sainsburys' || retailer === 'Morrisons') {
                             log.info('Waiting for product count to stabilize...');
-                            await new Promise(r => setTimeout(r, 6000));
+                            await new Promise(r => setTimeout(r, 8000));
                         }
                     } catch (e) {
                         log.warning('Timeout or limited results during wait for ' + selector + ' on ' + request.url);
