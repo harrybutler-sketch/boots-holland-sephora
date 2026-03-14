@@ -455,6 +455,7 @@ export default async function handler(request, response) {
                 }
             }`,
           timeoutSecs: 1800,
+          pageFunctionTimeoutSecs: 180,
           requestHandlerTimeoutSecs: 180,
           navigationTimeoutSecs: 60
         }, {
