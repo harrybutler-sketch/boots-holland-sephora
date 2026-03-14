@@ -203,12 +203,13 @@ export default async function handler(request, response) {
                     await page.evaluate(async (retailer) => {
                         const isSainsburys = retailer === 'Sainsburys';
                         const isAsda = retailer === 'Asda';
-                        const scrolls = isAsda ? 25 : (isSainsburys ? 15 : 10);
-                        const distance = 600;
+                        const isMorrisons = retailer === 'Morrisons';
+                        const scrolls = (isAsda || isMorrisons) ? 25 : (isSainsburys ? 15 : 10);
+                        const distance = 800; // Increase distance slightly to trigger infinite grid faster
                         
                         for (let i = 0; i < scrolls; i++) {
                             window.scrollBy(0, distance);
-                            const waitTime = (isSainsburys || isAsda) ? (2000 + Math.random() * 2000) : 1000;
+                            const waitTime = (isSainsburys || isAsda || isMorrisons) ? (2000 + Math.random() * 2000) : 1500;
                             await new Promise(r => setTimeout(r, waitTime));
                         }
                     }, retailer);
