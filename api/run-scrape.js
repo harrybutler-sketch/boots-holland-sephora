@@ -204,13 +204,33 @@ export default async function handler(request, response) {
                         const isSainsburys = retailer === 'Sainsburys';
                         const isAsda = retailer === 'Asda';
                         const isMorrisons = retailer === 'Morrisons';
-                        const scrolls = (isAsda || isMorrisons) ? 25 : (isSainsburys ? 15 : 10);
-                        const distance = 800; // Increase distance slightly to trigger infinite grid faster
                         
-                        for (let i = 0; i < scrolls; i++) {
-                            window.scrollBy(0, distance);
-                            const waitTime = (isSainsburys || isAsda || isMorrisons) ? (2000 + Math.random() * 2000) : 1500;
-                            await new Promise(r => setTimeout(r, waitTime));
+                        if (isMorrisons || isAsda) {
+                            // Smooth continuous scrolling for React lazy-loaders
+                            await new Promise((resolve) => {
+                                let totalHeight = 0;
+                                let distance = 200; // Scroll 200px at a time
+                                let timer = setInterval(() => {
+                                    let scrollHeight = document.body.scrollHeight;
+                                    window.scrollBy(0, distance);
+                                    totalHeight += distance;
+                                    
+                                    // Stop after scrolling down enough to trigger all products 
+                                    if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 25000){
+                                        clearInterval(timer);
+                                        resolve();
+                                    }
+                                }, 150); // Every 150ms
+                            });
+                        } else {
+                            // Block scrolling for simpler sites
+                            const scrolls = isSainsburys ? 15 : 10;
+                            const distance = 800; 
+                            for (let i = 0; i < scrolls; i++) {
+                                window.scrollBy(0, distance);
+                                const waitTime = isSainsburys ? (2000 + Math.random() * 2000) : 1500;
+                                await new Promise(r => setTimeout(r, waitTime));
+                            }
                         }
                     }, retailer);
 
@@ -222,7 +242,7 @@ export default async function handler(request, response) {
                         // Extra Waiter for stability (prevent React re-renders from hiding new elements)
                         if (retailer === 'Asda' || retailer === 'Sainsburys' || retailer === 'Morrisons') {
                             log.info('Waiting for product count to stabilize...');
-                            await new Promise(r => setTimeout(r, 8000));
+                            await new Promise(r => setTimeout(r, 12000));
                         }
                     } catch (e) {
                         log.warning('Timeout or limited results during wait for ' + selector + ' on ' + request.url);
