@@ -228,12 +228,29 @@ export default async function handler(request, response) {
                         const isMorrisons = retailer === 'Morrisons';
                         
                         if (isMorrisons) {
-                            // Force Morrisons to think it's on a desktop to prevent mobile layout collapse
-                            document.body.style.minWidth = '1920px';
-                            document.body.style.width = '1920px';
+                            // Defensive styling for desktop layout
+                            if (document.body) {
+                                document.body.style.minWidth = '1920px';
+                                document.body.style.width = '1920px';
+                            }
                         }
                         
+                        // Wait for products to appear before starting the scroll loop
+                        const waitForProducts = () => {
+                            return new Promise((resolve) => {
+                                const check = () => {
+                                    const products = document.querySelectorAll('a[href*="/products/"]:not([href*="onetrust"])');
+                                    if (products.length > 0) resolve();
+                                    else setTimeout(check, 500);
+                                };
+                                check();
+                                // Timeout after 10s if no products appear
+                                setTimeout(resolve, 10000);
+                            });
+                        };
+                        
                         if (isMorrisons || isAsda) {
+                            await waitForProducts();
                             // Robust Dynamic Scroll for React Infinite Grids
                             await new Promise((resolve) => {
                                 let lastHeight = document.body.scrollHeight;
