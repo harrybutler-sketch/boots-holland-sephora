@@ -173,10 +173,13 @@ export default async function handler(request, response) {
                         log.error('Access Denied or Challenge on Listing Page! URL: ' + request.url + ' Title: ' + pageTitle);
                         return;
                     }
+                    // 1. Force desktop viewport for all Puppeteer retailers
+                    log.info('Setting desktop viewport...');
+                    await page.setViewport({ width: 1920, height: 1080 });
 
                     const selectors = {
                         'Holland & Barrett': 'a[href*="/shop/product/"]',
-                        'Sephora': 'a.Product-link',
+                        'Sephora': 'a.product-link',
                         'Boots': 'a.oct-teaser-wrapper-link, a.oct-teaser__title-link',
                         'Waitrose': 'a[href*="/ecom/products/"]',
                         'Ocado': 'a[href*="/products/"]',
@@ -197,7 +200,18 @@ export default async function handler(request, response) {
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
-                    
+
+                    // 2. Accept Cookies immediately
+                    try {
+                        const cookieSelectors = ['#onetrust-accept-btn-handler', '#sp-cc-accept', 'button:contains("Accept")'];
+                        for (const sel of cookieSelectors) {
+                            if (await page.$(sel)) {
+                                await page.click(sel);
+                                await new Promise(r => setTimeout(r, 1000));
+                            }
+                        }
+                    } catch (e) {}
+
                     // 3. Humanized Scrolling to trigger JS hydration
                     log.info('Scrolling to trigger lazy-loading...');
                     await page.evaluate(async (retailer) => {
@@ -205,24 +219,18 @@ export default async function handler(request, response) {
                         const isAsda = retailer === 'Asda';
                         const isMorrisons = retailer === 'Morrisons';
                         
-                        if (isMorrisons) {
-                            // Force Morrisons to think it's on a desktop to prevent mobile layout collapse
-                            document.body.style.minWidth = '1920px';
-                            document.body.style.width = '1920px';
-                        }
-                        
                         if (isMorrisons || isAsda) {
                             // Smooth continuous scrolling for React lazy-loaders
                             await new Promise((resolve) => {
                                 let totalHeight = 0;
-                                let distance = 200; // Scroll 200px at a time
+                                let distance = 300; // Scroll 300px at a time
                                 let timer = setInterval(() => {
                                     let scrollHeight = document.body.scrollHeight;
                                     window.scrollBy(0, distance);
                                     totalHeight += distance;
                                     
                                     // Stop after scrolling down enough to trigger all products 
-                                    if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 25000){
+                                    if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 30000){
                                         clearInterval(timer);
                                         resolve();
                                     }
@@ -480,14 +488,6 @@ export default async function handler(request, response) {
                     return extractionData;
                 }
             }`,
-          preNavigationHooks: `
-            [
-                async (crawlingContext) => {
-                    const { page } = crawlingContext;
-                    await page.setViewport({ width: 1920, height: 1080 });
-                }
-            ]
-          `,
           timeoutSecs: 1800,
           pageFunctionTimeoutSecs: 180,
           requestHandlerTimeoutSecs: 180,
