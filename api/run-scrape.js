@@ -127,9 +127,7 @@ export default async function handler(request, response) {
           'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new',
           'https://groceries.morrisons.com/categories/frozen-food/180331?boolean=new',
           'https://groceries.morrisons.com/categories/food-cupboard/102705?boolean=new',
-          'https://groceries.morrisons.com/categories/drinks/103644?boolean=new',
-          'https://groceries.morrisons.com/categories/bakery-cakes/102210?boolean=new',
-          'https://groceries.morrisons.com/categories/beer-wines-spirits/103120?boolean=new'
+          'https://groceries.morrisons.com/categories/drinks/103644?boolean=new'
         ];
         morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }
