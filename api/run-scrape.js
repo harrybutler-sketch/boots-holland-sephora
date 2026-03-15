@@ -474,6 +474,14 @@ export default async function handler(request, response) {
                     return extractionData;
                 }
             }`,
+          preNavigationHooks: `
+            [
+                async (crawlingContext) => {
+                    const { page } = crawlingContext;
+                    await page.setViewport({ width: 1920, height: 1080 });
+                }
+            ]
+          `,
           timeoutSecs: 1800,
           pageFunctionTimeoutSecs: 180,
           requestHandlerTimeoutSecs: 180,
