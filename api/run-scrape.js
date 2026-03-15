@@ -123,7 +123,6 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         const morrisonsUrls = [
-          'https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOopfaey-T0tr6Q8uoDhSbaguk8_lqL-cPk4-iS5WbMWMzn9Ma3nJ',
           'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new',
           'https://groceries.morrisons.com/categories/frozen-food/180331?boolean=new',
           'https://groceries.morrisons.com/categories/food-cupboard/102705?boolean=new',
