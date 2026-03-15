@@ -258,8 +258,9 @@ export default async function handler(request, response) {
                                         }
                                     }
                                     
-                                    // Stop if no height change for 20 ticks (5 seconds) or we scrolled a massive amount
-                                    if (noChangeCount > 20 || totalScrolls > 400) {
+                                    // Stop if no height change for 80 ticks (20 seconds) 
+                                    // Morrisons can be very slow to re-hydrate, so we must be patient.
+                                    if (noChangeCount > 80 || totalScrolls > 600) {
                                         clearInterval(scrollInterval);
                                         resolve();
                                     }
