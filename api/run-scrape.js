@@ -122,7 +122,16 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOooKM98Ui8176ymqqxOJPFOQXSyUlzCwkxv5jd3yb4VseBO_bBKu', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
-        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOopfaey-T0tr6Q8uoDhSbaguk8_lqL-cPk4-iS5WbMWMzn9Ma3nJ', userData: { retailer: 'Morrisons', label: 'LISTING' } });
+        const morrisonsUrls = [
+          'https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOopfaey-T0tr6Q8uoDhSbaguk8_lqL-cPk4-iS5WbMWMzn9Ma3nJ',
+          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new',
+          'https://groceries.morrisons.com/categories/frozen-food/180331?boolean=new',
+          'https://groceries.morrisons.com/categories/food-cupboard/102705?boolean=new',
+          'https://groceries.morrisons.com/categories/drinks/103644?boolean=new',
+          'https://groceries.morrisons.com/categories/bakery-cakes/102210?boolean=new',
+          'https://groceries.morrisons.com/categories/beer-wines-spirits/103120?boolean=new'
+        ];
+        morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
@@ -228,21 +237,35 @@ export default async function handler(request, response) {
                         }
                         
                         if (isMorrisons || isAsda) {
-                            // Smooth continuous scrolling for React lazy-loaders
+                            // Robust Dynamic Scroll for React Infinite Grids
                             await new Promise((resolve) => {
-                                let totalHeight = 0;
-                                let distance = 400; // Scroll 400px at a time
-                                let timer = setInterval(async () => {
-                                    let scrollHeight = document.body.scrollHeight;
-                                    window.scrollBy(0, distance);
-                                    totalHeight += distance;
+                                let lastHeight = document.body.scrollHeight;
+                                let noChangeCount = 0;
+                                let totalScrolls = 0;
+                                
+                                const scrollInterval = setInterval(async () => {
+                                    window.scrollBy(0, 500);
+                                    totalScrolls++;
                                     
-                                    // Stop after scrolling down enough to trigger all products 
-                                    if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 40000){
-                                        clearInterval(timer);
+                                    const currentHeight = document.body.scrollHeight;
+                                    const scrolledToBottom = (window.innerHeight + window.scrollY) >= (currentHeight - 200);
+                                    
+                                    if (scrolledToBottom) {
+                                        // We hit bottom, wait and see if it expands
+                                        if (currentHeight === lastHeight) {
+                                            noChangeCount++;
+                                        } else {
+                                            noChangeCount = 0;
+                                            lastHeight = currentHeight;
+                                        }
+                                    }
+                                    
+                                    // Stop if no height change for 20 ticks (5 seconds) or we scrolled a massive amount
+                                    if (noChangeCount > 20 || totalScrolls > 400) {
+                                        clearInterval(scrollInterval);
                                         resolve();
                                     }
-                                }, 250); // Slower interval (250ms) to allow React to breathe
+                                }, 250);
                             });
                         } else {
                             // Block scrolling for simpler sites
