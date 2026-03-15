@@ -110,7 +110,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/groceries/beauty-and-cosmetics/make-up/new/c:1018966'
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
