@@ -203,11 +203,13 @@ export default async function handler(request, response) {
 
                     // 2. Accept Cookies immediately
                     try {
-                        const cookieSelectors = ['#onetrust-accept-btn-handler', '#sp-cc-accept', 'button:contains("Accept")'];
+                        const cookieSelectors = ['#onetrust-accept-btn-handler', '#sp-cc-accept', 'button#onetrust-accept-btn-handler', 'button.accept-all'];
                         for (const sel of cookieSelectors) {
-                            if (await page.$(sel)) {
-                                await page.click(sel);
-                                await new Promise(r => setTimeout(r, 1000));
+                            const btn = await page.$(sel);
+                            if (btn) {
+                                await btn.click();
+                                await new Promise(r => setTimeout(r, 2000));
+                                break; 
                             }
                         }
                     } catch (e) {}
@@ -219,22 +221,28 @@ export default async function handler(request, response) {
                         const isAsda = retailer === 'Asda';
                         const isMorrisons = retailer === 'Morrisons';
                         
+                        if (isMorrisons) {
+                            // Force Morrisons to think it's on a desktop to prevent mobile layout collapse
+                            document.body.style.minWidth = '1920px';
+                            document.body.style.width = '1920px';
+                        }
+                        
                         if (isMorrisons || isAsda) {
                             // Smooth continuous scrolling for React lazy-loaders
                             await new Promise((resolve) => {
                                 let totalHeight = 0;
-                                let distance = 300; // Scroll 300px at a time
-                                let timer = setInterval(() => {
+                                let distance = 400; // Scroll 400px at a time
+                                let timer = setInterval(async () => {
                                     let scrollHeight = document.body.scrollHeight;
                                     window.scrollBy(0, distance);
                                     totalHeight += distance;
                                     
                                     // Stop after scrolling down enough to trigger all products 
-                                    if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 30000){
+                                    if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 40000){
                                         clearInterval(timer);
                                         resolve();
                                     }
-                                }, 150); // Every 150ms
+                                }, 250); // Slower interval (250ms) to allow React to breathe
                             });
                         } else {
                             // Block scrolling for simpler sites
