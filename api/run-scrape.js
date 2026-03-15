@@ -205,6 +205,12 @@ export default async function handler(request, response) {
                         const isAsda = retailer === 'Asda';
                         const isMorrisons = retailer === 'Morrisons';
                         
+                        if (isMorrisons) {
+                            // Force Morrisons to think it's on a desktop to prevent mobile layout collapse
+                            document.body.style.minWidth = '1920px';
+                            document.body.style.width = '1920px';
+                        }
+                        
                         if (isMorrisons || isAsda) {
                             // Smooth continuous scrolling for React lazy-loaders
                             await new Promise((resolve) => {
