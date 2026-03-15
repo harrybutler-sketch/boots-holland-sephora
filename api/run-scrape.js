@@ -110,11 +110,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new',
-          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks',
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled'
+          'https://www.sainsburys.co.uk/gol-ui/groceries/beauty-and-cosmetics/make-up/new/c:1018966'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
