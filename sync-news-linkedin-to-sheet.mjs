@@ -120,7 +120,7 @@ async function syncNewsLinkedinToSheet() {
 
         // 2. LinkedIn Data
         console.log('Fetching LinkedIn data...');
-        const linkedinRuns = await client.actor('harvestapi/linkedin-post-search').runs().list({ desc: true, limit: 1, status: 'SUCCEEDED' });
+        const linkedinRuns = await client.actor('harvestapi/linkedin-post-search').runs().list({ desc: true, limit: 1 });
         const newLinkedinRows = [];
         
         if (linkedinRuns.items.length > 0) {
@@ -156,7 +156,7 @@ async function syncNewsLinkedinToSheet() {
 
         // 3. News Data
         console.log('Fetching News data...');
-        const newsRuns = await client.actor('apify/google-search-scraper').runs().list({ desc: true, limit: 1, status: 'SUCCEEDED' });
+        const newsRuns = await client.actor('apify/google-search-scraper').runs().list({ desc: true, limit: 1 });
         const newNewsRows = [];
         
         if (newsRuns.items.length > 0) {
