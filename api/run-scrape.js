@@ -122,7 +122,7 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOooKM98Ui8176ymqqxOJPFOQXSyUlzCwkxv5jd3yb4VseBO_bBKu', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
-        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOoo-ONo2qwBeZl3L-4y-TYaHWAQRonE7GE-fBZHExT7sQvai2YZT', userData: { retailer: 'Morrisons', label: 'LISTING' } });
+        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOopfaey-T0tr6Q8uoDhSbaguk8_lqL-cPk4-iS5WbMWMzn9Ma3nJ', userData: { retailer: 'Morrisons', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
