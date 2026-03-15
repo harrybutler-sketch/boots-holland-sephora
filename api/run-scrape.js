@@ -147,7 +147,12 @@ export default async function handler(request, response) {
         const run = await client.actor('apify/puppeteer-scraper').start({
           startUrls,
           useChrome: true,
+          useStealth: true,
           stealth: true,
+          launchContext: {
+            stealth: true,
+            useChrome: true
+          },
           maxPagesPerCrawl: maxPages,
           proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
           pageFunction: `async function pageFunction(context) {
@@ -172,10 +177,14 @@ export default async function handler(request, response) {
 
                     // 2. DETECT BLOCKS on Listing Page
                     const pageTitle = await page.title();
+                    const bodyText = (await page.evaluate(() => document.body ? document.body.innerText : '')).toLowerCase();
+                    
                     if (pageTitle.toLowerCase().includes('access denied') || 
                         pageTitle.toLowerCase().includes('site load error') ||
                         pageTitle.toLowerCase().includes('just a moment') ||
-                        pageTitle.toLowerCase().includes('attention required')) {
+                        pageTitle.toLowerCase().includes('attention required') ||
+                        bodyText.includes('access denied') ||
+                        bodyText.includes('access to this page has been denied')) {
                         log.error('Access Denied or Challenge on Listing Page! URL: ' + request.url + ' Title: ' + pageTitle);
                         return;
                     }
@@ -296,7 +305,7 @@ export default async function handler(request, response) {
 
                     // 4. Robust Wait for links and hydration
                     try {
-                        const waitTimeout = (retailer === 'Sainsburys' || retailer === 'Asda') ? 60000 : 30000;
+                        const waitTimeout = retailer === 'Sainsburys' ? 75000 : (retailer === 'Asda' ? 60000 : 30000);
                         await page.waitForSelector(selector, { timeout: waitTimeout });
                         
                         // Extra Waiter for stability (prevent React re-renders from hiding new elements)
