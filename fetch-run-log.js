@@ -9,7 +9,11 @@ const client = new ApifyClient({
 
 async function fetchRunLog() {
     try {
-        const runId = '13kwLQqZjbSHxzjJo';
+        const runId = process.argv[2];
+        if (!runId) {
+            console.error('Please provide a runId');
+            process.exit(1);
+        }
         console.log(`Fetching log for run: ${runId}`);
         const log = await client.run(runId).log().get();
         console.log(log);
