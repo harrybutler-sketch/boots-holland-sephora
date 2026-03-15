@@ -11,30 +11,29 @@ export default async function handler(req, res) {
             token: process.env.APIFY_TOKEN,
         });
 
-        // Search Queries for "New Launches"
-        const searchQueries = [
-            // Tesco specific queries
-            'launched in Tesco',
-            'new listing at Tesco',
-            'now available at Tesco',
-            'listed in Tesco',
-            'launching in Tesco',
-            'hitting Tesco shelves',
-            
-            // Other retailers
-            'launched in Sainsbury\'s',
-            'launched in Asda',
-            'launched in Morrisons',
-            'launched in Waitrose',
-            'launched in Ocado',
-            'launched in Boots',
-            'launched in Superdrug',
-            'launched in Sephora',
-            'launched in Holland & Barrett',
-            'new listing at Sainsbury\'s',
-            'new listing at Boots',
-            'now available at Boots'
+        // Retailers to monitor
+        const retailers = [
+            'Tesco',
+            'Sainsbury\'s',
+            'Asda',
+            'Morrisons',
+            'Waitrose',
+            'Ocado',
+            'Boots',
+            'Superdrug',
+            'Sephora',
+            'Holland & Barrett'
         ];
+
+        // Symmetrical search patterns for all retailers
+        const searchQueries = retailers.flatMap(retailer => [
+            `launched in ${retailer}`,
+            `new listing at ${retailer}`,
+            `now available at ${retailer}`,
+            `listed in ${retailer}`,
+            `launching in ${retailer}`,
+            `hitting ${retailer} shelves`
+        ]);
 
 
         // Calculate date 4 weeks ago
