@@ -36,7 +36,8 @@ export default async function handler(req, res) {
             'https://www.linkedin.com/company/boots/',
             'https://www.linkedin.com/company/superdrug/',
             'https://www.linkedin.com/company/sephora/',
-            'https://www.linkedin.com/company/holland-&-barrett/'
+            'https://www.linkedin.com/company/holland-&-barrett/',
+            'https://www.linkedin.com/company/thegrocer/posts/?feedView=all'
         ];
 
         // Symmetrical search patterns for product discovery

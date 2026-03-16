@@ -22,7 +22,8 @@ export default async (req, context) => {
             'https://www.linkedin.com/company/boots/',
             'https://www.linkedin.com/company/superdrug/',
             'https://www.linkedin.com/company/sephora/',
-            'https://www.linkedin.com/company/holland-&-barrett/'
+            'https://www.linkedin.com/company/holland-&-barrett/',
+            'https://www.linkedin.com/company/thegrocer/posts/?feedView=all'
         ];
 
         // Search Queries for "New Launches" (Related to products)

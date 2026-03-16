@@ -82,14 +82,15 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
 
                         {workspace === 'grocery' && (
                             <button
-                                className="btn btn-secondary"
+                                className="btn"
                                 onClick={onRunLinkedinScrape}
                                 disabled={isRunning}
                                 style={{ 
                                     minWidth: '220px', 
-                                    background: 'var(--color-slate)', 
+                                    background: '#334155', // Slate-700
                                     color: 'white',
-                                    opacity: isRunning ? 0.6 : 1
+                                    opacity: isRunning ? 0.6 : 1,
+                                    boxShadow: '0 4px 6px -1px rgba(51, 65, 85, 0.2)'
                                 }}
                             >
                                 {isRunning ? (
@@ -97,7 +98,12 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                                         <span className="status-dot running" style={{ background: 'white' }}></span>
                                         Scraping...
                                     </div>
-                                ) : `🔗 Scrape LinkedIn Grocers`}
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span>🔗</span>
+                                        <span>Scrape LinkedIn Grocers</span>
+                                    </div>
+                                )}
                             </button>
                         )}
 
