@@ -163,12 +163,25 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
                         <strong>Other News</strong>
                     </label>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button className="btn btn-outline" onClick={exportCSV} disabled={visibleItems.length === 0}>
                         📥 Export CSV
                     </button>
-                    <button className="btn" onClick={onRunLinkedinScrape} disabled={isRunning} style={{ padding: '0.75rem 1.5rem', background: 'var(--color-slate)', color: 'white' }}>
-                        {isRunning ? 'Scraping...' : '🔗 Scrape LinkedIn Grocers'}
+                    <button 
+                        className="btn" 
+                        onClick={() => onRunLinkedinScrape('retailer-mentions')} 
+                        disabled={isRunning} 
+                        style={{ padding: '0.75rem 1.5rem', background: '#4338ca', color: 'white' }}
+                    >
+                        {isRunning ? 'Scraping...' : '🔗 Scrape Retailer Mentions'}
+                    </button>
+                    <button 
+                        className="btn" 
+                        onClick={() => onRunLinkedinScrape('grocer-pages')} 
+                        disabled={isRunning} 
+                        style={{ padding: '0.75rem 1.5rem', background: '#334155', color: 'white' }}
+                    >
+                        {isRunning ? 'Scraping...' : '🗞️ Scrape Grocer Pages'}
                     </button>
                 </div>
             </div>

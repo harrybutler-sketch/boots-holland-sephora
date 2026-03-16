@@ -161,8 +161,12 @@ function App() {
     }
   };
 
-  const handleRunLinkedinScrape = async () => {
-    const proceed = window.confirm("Start a new LinkedIn Scrape? This will monitor official grocer pages for recent product mentions.");
+  const handleRunLinkedinScrape = async (mode = 'retailer-mentions') => {
+    const message = mode === 'grocer-pages' 
+      ? "Start Grocer Page Scrape? This will monitor official grocer pages (Tesco, The Grocer, etc.) for new product posts."
+      : "Start Retailer Mention Scrape? This will search all of LinkedIn for 'launched in Tesco/Asda/etc'.";
+    
+    const proceed = window.confirm(message);
     if (!proceed) return;
 
     setRunStatus('RUNNING');
@@ -171,13 +175,14 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({ mode })
       });
       const result = await response.json();
 
       if (result.runId) {
         setRunId(result.runId);
-        alert('LinkedIn Scrape Started! We will poll for results.');
+        alert(`${mode === 'grocer-pages' ? 'Grocer Page' : 'Retailer Mention'} Scrape Started! We will poll for results.`);
       } else {
         setRunStatus('FAILED');
         alert('Failed to start LinkedIn scrape: ' + (result.error || 'Unknown error'));

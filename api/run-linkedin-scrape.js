@@ -7,11 +7,12 @@ export default async function handler(req, res) {
     }
 
     try {
+        const { mode } = req.body || {};
         const client = new ApifyClient({
             token: process.env.APIFY_TOKEN,
         });
 
-        // Retailers to monitor
+        // Retailers to monitor for mentions
         const retailers = [
             'Tesco',
             'Sainsbury\'s',
@@ -25,8 +26,9 @@ export default async function handler(req, res) {
             'Holland & Barrett'
         ];
 
-        // Targeted Grocer LinkedIn Pages
+        // Targeted Grocer/Industry LinkedIn Pages
         const targetUrls = [
+            'https://www.linkedin.com/company/thegrocer/posts/?feedView=all',
             'https://www.linkedin.com/company/tesco/',
             'https://www.linkedin.com/company/sainsbury\'s/',
             'https://www.linkedin.com/company/asda/',
@@ -36,26 +38,46 @@ export default async function handler(req, res) {
             'https://www.linkedin.com/company/boots/',
             'https://www.linkedin.com/company/superdrug/',
             'https://www.linkedin.com/company/sephora/',
-            'https://www.linkedin.com/company/holland-&-barrett/',
-            'https://www.linkedin.com/company/thegrocer/posts/?feedView=all'
+            'https://www.linkedin.com/company/holland-&-barrett/'
         ];
 
-        // Symmetrical search patterns for product discovery
-        const searchQueries = [
-            "new product",
-            "launch",
-            "listing",
-            "available now",
-            "shelf",
-            "shelves",
-            "hitting shelves",
-            "now in stock",
-            "new brand",
-            "exclusive",
-            "range",
-            "introducing",
-            "latest launch"
-        ];
+        let config = {};
+
+        if (mode === 'grocer-pages') {
+            // Mode: Scrape what the grocers/industry news pages are posting
+            config = {
+                searchQueries: [
+                    "new product",
+                    "launch",
+                    "listing",
+                    "available now",
+                    "shelf",
+                    "shelves",
+                    "hitting shelves",
+                    "now in stock",
+                    "new brand",
+                    "exclusive",
+                    "range",
+                    "introducing",
+                    "latest launch"
+                ],
+                targetUrls: targetUrls,
+                maxPosts: 150
+            };
+        } else {
+            // Default Mode: Search mentions across all of LinkedIn
+            config = {
+                searchQueries: retailers.flatMap(retailer => [
+                    `launched in ${retailer}`,
+                    `new listing at ${retailer}`,
+                    `now available at ${retailer}`,
+                    `listed in ${retailer}`,
+                    `launching in ${retailer}`,
+                    `hitting ${retailer} shelves`
+                ]),
+                maxPosts: 150
+            };
+        }
 
 
         // Calculate date 4 weeks ago
@@ -65,9 +87,7 @@ export default async function handler(req, res) {
 
         // Start the actor
         const run = await client.actor('harvestapi/linkedin-post-search').call({
-            searchQueries: searchQueries,
-            targetUrls: targetUrls, // Monitor these specific grocer pages
-            maxPosts: 150, // Increased to capture more results
+            ...config,
             minDate: minDate,
             sortBy: 'date'
         });
