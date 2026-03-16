@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 
-const LinkedinFeed = () => {
+const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
+    const isRunning = runStatus === 'RUNNING';
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -70,19 +71,6 @@ const LinkedinFeed = () => {
             setItems(items.map(item =>
                 item.id === id ? { ...item, dealtWith: !newDealtStatus } : item
             ));
-        }
-    };
-
-    const runScrape = async () => {
-        const proceed = window.confirm("Start a new LinkedIn Scrape? This will search for 'launched in Tesco/Boots/etc' and may take a few minutes.");
-        if (!proceed) return;
-
-        try {
-            alert('Scrape Started! Please check back in a few minutes.');
-            await fetch('/api/run-linkedin-scrape', { method: 'POST' });
-            // Ideally we'd poll for status, but for MVP just notify start
-        } catch (e) {
-            alert('Failed to start scrape');
         }
     };
 
@@ -179,8 +167,8 @@ const LinkedinFeed = () => {
                     <button className="btn btn-outline" onClick={exportCSV} disabled={visibleItems.length === 0}>
                         📥 Export CSV
                     </button>
-                    <button className="btn" onClick={runScrape}>
-                        🔄 Run LinkedIn Scraper
+                    <button className="btn" onClick={onRunLinkedinScrape} disabled={isRunning} style={{ padding: '0.75rem 1.5rem', background: 'var(--color-slate)', color: 'white' }}>
+                        {isRunning ? 'Scraping...' : '🔗 Scrape LinkedIn Grocers'}
                     </button>
                 </div>
             </div>

@@ -403,7 +403,10 @@ function App() {
           />
         </>
       ) : currentView === 'linkedin' ? (
-        <LinkedinFeed />
+        <LinkedinFeed 
+          onRunLinkedinScrape={handleRunLinkedinScrape} 
+          runStatus={runStatus} 
+        />
       ) : (
         <NewsFeed />
       )}
