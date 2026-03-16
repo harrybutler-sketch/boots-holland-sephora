@@ -158,6 +158,19 @@ async function syncNewsLinkedinToSheet() {
                 
                 const text = item.content || item.text || '';
                 const author = (item.author && item.author.name) || item.authorName || 'Unknown Author';
+                
+                // USER REQUEST: For grocers/retailers, only pull posts containing "new"
+                const genericAuthors = [
+                    'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
+                    'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
+                ];
+                const isGenericAuthor = genericAuthors.some(ga => author.toLowerCase().includes(ga.toLowerCase()));
+                
+                if (isGenericAuthor && !text.toLowerCase().includes('new')) {
+                    console.log(`Skipping post by ${author} - no "new" keyword found.`);
+                    continue;
+                }
+
                 const retailer = extractRetailer(text);
                 const isLaunch = isProductLaunchLinkedin(text, retailer);
                 
