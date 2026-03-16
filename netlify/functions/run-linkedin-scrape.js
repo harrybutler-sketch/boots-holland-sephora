@@ -25,30 +25,21 @@ export default async (req, context) => {
             'https://www.linkedin.com/company/holland-&-barrett/'
         ];
 
-        // Search Queries for "New Launches"
+        // Search Queries for "New Launches" (Related to products)
         const searchQueries = [
-            'launched in Tesco',
-            'launched in Sainsbury\'s',
-            'launched in Asda',
-            'launched in Morrisons',
-            'launched in Waitrose',
-            'launched in Ocado',
-            'launched in Boots',
-            'launched in Superdrug',
-            'launched in Sephora',
-            'launched in Holland & Barrett',
-            'new listing at Tesco',
-            'new listing at Sainsbury\'s',
-            'new listing at Boots',
-            'now available at Tesco',
-            'now available at Boots',
-            // General product launch queries for the target pages
-            "new product launch",
-            "exclusive launch",
-            "new brand alert",
+            "new product",
+            "launch",
+            "listing",
+            "available now",
+            "shelf",
+            "shelves",
+            "hitting shelves",
             "now in stock",
-            "excited to share our new",
-            "introducing our latest"
+            "new brand",
+            "exclusive",
+            "range",
+            "introducing",
+            "latest launch"
         ];
 
 

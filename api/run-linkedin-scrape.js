@@ -39,23 +39,21 @@ export default async function handler(req, res) {
             'https://www.linkedin.com/company/holland-&-barrett/'
         ];
 
-        // Symmetrical search patterns for all retailers
+        // Symmetrical search patterns for product discovery
         const searchQueries = [
-            ...retailers.flatMap(retailer => [
-                `launched in ${retailer}`,
-                `new listing at ${retailer}`,
-                `now available at ${retailer}`,
-                `listed in ${retailer}`,
-                `launching in ${retailer}`,
-                `hitting ${retailer} shelves`
-            ]),
-            // General product launch queries for the target pages
-            "new product launch",
-            "exclusive launch",
-            "new brand alert",
+            "new product",
+            "launch",
+            "listing",
+            "available now",
+            "shelf",
+            "shelves",
+            "hitting shelves",
             "now in stock",
-            "excited to share our new",
-            "introducing our latest"
+            "new brand",
+            "exclusive",
+            "range",
+            "introducing",
+            "latest launch"
         ];
 
 
