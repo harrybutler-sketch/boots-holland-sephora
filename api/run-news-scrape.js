@@ -25,18 +25,29 @@ export default async function handler(req, res) {
             '"exclusive to"'
         ];
 
+        const retailers = [
+            'Tesco', 'Sainsburys', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
+        ];
+
         let queries = [];
         for (const pub of publishers) {
+            // Generic publisher launch search
             for (const term of launchTerms) {
-                // Add a generic query for the publisher
                 queries.push(`${pub} ${term}`);
-                // Add a Tesco-specific query to force Tesco results to the surface
-                queries.push(`${pub} "Tesco" ${term}`);
+            }
+            // Retailer specific news on these sites
+            for (const retailer of retailers) {
+                queries.push(`${pub} "${retailer}" "new product"`);
+                queries.push(`${pub} "${retailer}" "launch"`);
+                queries.push(`${pub} "${retailer}" "listing"`);
             }
         }
 
-        // We will run up to 20 queries rather than just 10, prioritizing the Tesco ones by putting them first
-        const selectedQueries = queries.filter(q => q.includes('Tesco')).concat(queries.filter(q => !q.includes('Tesco'))).slice(0, 20).join('\n');
+        // Shuffle and take top 30 queries (Google Scraper can handle it)
+        const selectedQueries = queries
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 30)
+            .join('\n');
 
         // Start the Apify Google Search Scraper actor
         const run = await client.actor('apify/google-search-scraper').call({

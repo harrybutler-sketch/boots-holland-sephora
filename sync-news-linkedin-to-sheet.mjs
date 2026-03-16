@@ -127,7 +127,7 @@ function extractProductNews(text) {
 
 async function syncNewsLinkedinToSheet() {
     try {
-        console.log(`\n=== Starting Sync for LinkedIn ONLY ===`);
+        console.log(`\n=== Starting Sync for LinkedIn ONLY (Unifying News & LinkedIn) ===`);
         
         // 1. Google Sheets Auth
         const serviceAccountAuth = getGoogleAuth();
@@ -141,12 +141,12 @@ async function syncNewsLinkedinToSheet() {
             return;
         }
 
-        const existingLinkedinUrls = new Set((await linkedinSheet.getRows()).map(r => r.get('post url') || r.get('Post URL')));
+        const existingUrls = new Set((await linkedinSheet.getRows()).map(r => r.get('post url') || r.get('Post URL')));
 
         // 2. LinkedIn Data
         console.log('Fetching LinkedIn data from latest actor run...');
         const linkedinRuns = await client.actor('harvestapi/linkedin-post-search').runs().list({ desc: true, limit: 1 });
-        const newLinkedinRows = [];
+        const batchRows = [];
         
         if (linkedinRuns.items.length > 0) {
             const dataset = await client.run(linkedinRuns.items[0].id).dataset();
@@ -154,7 +154,7 @@ async function syncNewsLinkedinToSheet() {
             
             for (const item of items) {
                 const url = item.linkedinUrl || item.url;
-                if (!url || existingLinkedinUrls.has(url)) continue;
+                if (!url || existingUrls.has(url)) continue;
                 
                 const text = item.content || item.text || '';
                 const author = (item.author && item.author.name) || item.authorName || 'Unknown Author';
@@ -166,21 +166,13 @@ async function syncNewsLinkedinToSheet() {
                 ];
                 const isGenericAuthor = genericAuthors.some(ga => author.toLowerCase().includes(ga.toLowerCase()));
                 
-                if (isGenericAuthor && !text.toLowerCase().includes('new')) {
-                    console.log(`Skipping post by ${author} - no "new" keyword found.`);
-                    continue;
-                }
+                if (isGenericAuthor && !text.toLowerCase().includes('new')) continue;
 
                 const retailer = extractRetailer(text);
                 const isLaunch = isProductLaunchLinkedin(text, retailer);
-                
-                // If it's from "The Grocer" and we extracted "Unknown" retailer, 
-                // we'll still tag it as "The Grocer" to make it filterable
-                const finalRetailer = (retailer === 'Unknown' && author.toLowerCase().includes('the grocer')) 
-                    ? 'The Grocer' 
-                    : retailer;
+                const finalRetailer = (retailer === 'Unknown' && author.toLowerCase().includes('the grocer')) ? 'The Grocer' : retailer;
 
-                newLinkedinRows.push({
+                batchRows.push({
                     'id': item.id || '',
                     'brand': extractBrandLinkedin(text, author) || 'Unknown Brand',
                     'product': extractProductLinkedin(text) || 'Unknown Product',
@@ -194,16 +186,58 @@ async function syncNewsLinkedinToSheet() {
                     'post url': url,
                     'scrape_timestamp': new Date().toISOString()
                 });
-                existingLinkedinUrls.add(url);
+                existingUrls.add(url);
             }
         }
 
-        // 3. Save to Sheets
-        if (newLinkedinRows.length > 0) {
-            console.log(`Adding ${newLinkedinRows.length} new LinkedIn rows...`);
-            // Ensure headers match if it's the first time, but usually we just append
-            await linkedinSheet.addRows(newLinkedinRows);
-            console.log(`\nFinished sync to LinkedIn sheet.`);
+        // 3. News Data (Syncing into same LinkedIn sheet)
+        console.log('Fetching News data from latest actor run...');
+        const newsRuns = await client.actor('apify/google-search-scraper').runs().list({ desc: true, limit: 1 });
+        
+        if (newsRuns.items.length > 0) {
+            const dataset = await client.run(newsRuns.items[0].id).dataset();
+            const { items } = await dataset.listItems();
+            
+            items.forEach((page) => {
+                if (page.organicResults && Array.isArray(page.organicResults)) {
+                    page.organicResults.forEach((result) => {
+                        const url = result.url || result.displayedUrl;
+                        if (!url || existingUrls.has(url)) return;
+
+                        const textToAnalyze = `${result.title || ''} ${result.description || ''}`;
+                        const retailer = extractRetailer(textToAnalyze);
+                        
+                        // For news, we only want "new" things
+                        if (!textToAnalyze.toLowerCase().includes('new')) return;
+
+                        const isLaunch = isProductLaunchLinkedin(textToAnalyze, retailer);
+                        const source = extractSource(url);
+
+                        batchRows.push({
+                            'id': '',
+                            'brand': extractBrandNews(textToAnalyze),
+                            'product': extractProductNews(textToAnalyze),
+                            'manufacturer': source,
+                            'manufacturer url': url,
+                            'date': extractDateNews(textToAnalyze) || 'Recent',
+                            'retailer': retailer,
+                            'type': isLaunch ? 'launch' : 'other',
+                            'post snippet': `NEWS: ${result.title} - ${result.description}`.substring(0, 250),
+                            'dealtWith': 'FALSE',
+                            'post url': url,
+                            'scrape_timestamp': new Date().toISOString()
+                        });
+                        existingUrls.add(url);
+                    });
+                }
+            });
+        }
+
+        // 4. Save to Sheets
+        if (batchRows.length > 0) {
+            console.log(`Adding ${batchRows.length} total new rows to LinkedIn sheet...`);
+            await linkedinSheet.addRows(batchRows);
+            console.log(`\nFinished sync.`);
         } else {
             console.log('No new items found to sync.');
         }
