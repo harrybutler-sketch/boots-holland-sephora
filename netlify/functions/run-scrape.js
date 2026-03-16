@@ -128,7 +128,12 @@ export const handler = async (event, context) => {
         startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/all-new/192781', userData: { retailer: 'Morrisons', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
-        startUrls.push({ url: 'https://www.ocado.com/categories/new-trending/new/9c727c0b-e6d8-4e07-b6d9-5126e8c9ef9d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } });
+        const ocadoUrls = [
+          'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new',
+          'https://www.ocado.com/search?q=goodies&boolean=new',
+          'https://www.ocado.com/categories/food-cupboard/biscuits/8b50328c-ddf3-487a-9aef-957c07d2d0cc?boolean=new&sortBy=favorite'
+        ];
+        ocadoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Ocado', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('asda'))) {
         startUrls.push({ url: 'https://groceries.asda.com/search/New%20in', userData: { retailer: 'Asda', label: 'LISTING' } });
