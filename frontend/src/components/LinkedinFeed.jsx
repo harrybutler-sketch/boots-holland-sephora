@@ -23,7 +23,34 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
                 throw new Error(errorData.error || errorData.details || 'Failed to fetch data');
             }
             const data = await response.json();
-            setItems(data);
+            
+            // Sort by date (descending)
+            const sortedData = data.sort((a, b) => {
+                if (!a.date || a.date === 'Unknown') return 1;
+                if (!b.date || b.date === 'Unknown') return -1;
+                
+                const parseDate = (d) => {
+                    const dateObj = new Date(d);
+                    if (!isNaN(dateObj.getTime())) return dateObj.getTime();
+                    
+                    const lower = d.toLowerCase();
+                    const num = parseInt(lower);
+                    if (!isNaN(num)) {
+                        const now = Date.now();
+                        let msAgo = 0;
+                        if (lower.includes('h')) msAgo = num * 60 * 60 * 1000;
+                        else if (lower.includes('d')) msAgo = num * 24 * 60 * 60 * 1000;
+                        else if (lower.includes('w')) msAgo = num * 7 * 24 * 60 * 60 * 1000;
+                        else if (lower.includes('m') && !lower.includes('min')) msAgo = num * 30 * 24 * 60 * 60 * 1000;
+                        return now - msAgo;
+                    }
+                    return 0;
+                };
+                
+                return parseDate(b.date) - parseDate(a.date);
+            });
+            
+            setItems(sortedData);
         } catch (err) {
             console.error('Error fetching LinkedIn data:', err);
             setError(err.message);

@@ -28,6 +28,7 @@ function extractRetailer(text) {
     if (lowerText.includes('holland') || lowerText.includes('barrett')) return 'Holland & Barrett';
     if (lowerText.includes('superdrug')) return 'Superdrug';
     if (lowerText.includes('sephora')) return 'Sephora';
+    if (lowerText.includes('the grocer')) return 'The Grocer';
     return 'Unknown';
 }
 
@@ -36,33 +37,56 @@ function extractBrandLinkedin(text, authorName) {
         'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
         'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
     ];
+    // If author is not a retailer/news site, assume author is the brand
     if (authorName && !genericAuthors.some(ga => authorName.toLowerCase().includes(ga.toLowerCase()))) return authorName;
+    
+    // Otherwise try to find brand in text
     const brandMatch = text.match(/(?:Brand|Manufacturer):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
     if (brandMatch) return brandMatch[1].trim();
+    
     const hashtagMatch = text.match(/#([A-Z][a-zA-Z0-9]+)/);
     if (hashtagMatch) return hashtagMatch[1].replace(/([A-Z])/g, ' $1').trim();
+    
+    // Last resort: look for capitalized words before "has launched"
+    const launchMatch = text.match(/([A-Z][a-zA-Z0-9&]+(?:\s+[A-Z][a-zA-Z0-9&]+)?)\s+(?:has\s+)?(?:launched|unveiled|introduced)/);
+    if (launchMatch) return launchMatch[1].trim();
+
     return 'Unknown Brand';
 }
 
 function extractProductLinkedin(text) {
     const lowerText = text.toLowerCase();
-    const launchRegex = /(?:launched|introducing|announcing|unveiling|bringing you)\s+(?:our\s+|the\s+|a\s+|new\s+)?([A-Z][a-zA-Z0-9\s&']{3,30})(?:\.|!|\n|with|at|in)/i;
-    const match = text.match(launchRegex);
-    if (match && match[1]) {
-        const ignored = ['new', 'range', 'products', 'collection', 'collaboration', 'partnership'];
-        if (!ignored.includes(match[1].toLowerCase().trim())) return match[1].trim();
+    
+    // Patterns for finding product names
+    const patterns = [
+        /(?:launched|introducing|announcing|unveiling|bringing you)\s+(?:our\s+|the\s+|a\s+|new\s+)?([A-Z][a-zA-Z0-9\s&']{3,40})(?:\.|!|\n|with|at|in)/i,
+        /new\s+([A-Z][a-zA-Z0-9\s&']{3,40})\s+(?:range|listing|launch)/i,
+        /^([A-Z][a-zA-Z0-9\s&']{3,50})(?:\s+has\s+launched|\s+arrives|\s+hits)/m // Headline style
+    ];
+
+    for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+            const val = match[1].trim();
+            const ignored = ['new', 'range', 'products', 'collection', 'collaboration', 'partnership', 'brand', 'launch'];
+            if (!ignored.includes(val.toLowerCase())) return val;
+        }
     }
+
     if (lowerText.includes('new ') && lowerText.includes('range')) return 'New Range';
     return 'New Launch';
 }
 
 function isProductLaunchLinkedin(text, retailer) {
-    if (!text || !retailer || retailer === 'Unknown') return false;
+    if (!text) return false;
     const lower = text.toLowerCase();
-    const negativeKeywords = ['hiring', 'vacancy', 'job', 'recruit', 'career', 'opportunity', 'report', 'whitepaper', 'webinar', 'seminar', 'conference', 'new store', 'new shop', 'new branch', 'managed store', 'convenience store', 'store opening', 'opened', 'opening', 'expansion', 'refurbishment', 'refit', 'franchise', 'ai agent', 'artificial intelligence', 'software', 'platform', 'app', 'update'];
+    
+    // If it's from a known generic author (like The Grocer), we are more lenient
+    const negativeKeywords = ['hiring', 'vacancy', 'job', 'recruit', 'career', 'opportunity', 'report', 'whitepaper', 'webinar', 'seminar', 'conference', 'new store', 'new shop', 'new branch', 'managed store', 'convenience store', 'store opening', 'opened', 'opening', 'expansion', 'refurbishment', 'refit', 'franchise', 'ai agent', 'software', 'platform', 'app', 'update'];
     if (negativeKeywords.some(kw => lower.includes(kw))) {
-        if (lower.includes('hiring') || lower.includes('vacancy') || lower.includes('recruit') || lower.includes('new store') || lower.includes('new shop') || lower.includes('opened')) return false;
+        return false;
     }
+    
     const positiveKeywords = ['launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'flavour', 'flavor', 'sku', 'available now', 'buy now', 'grab yours', 'find us', 'roll out', 'rolling out', 'landed', 'hitting', 'arrived', 'introducing'];
     return positiveKeywords.some(kw => lower.includes(kw));
 }
@@ -103,7 +127,7 @@ function extractProductNews(text) {
 
 async function syncNewsLinkedinToSheet() {
     try {
-        console.log(`\n=== Starting Sync for News & LinkedIn ===`);
+        console.log(`\n=== Starting Sync for LinkedIn ONLY ===`);
         
         // 1. Google Sheets Auth
         const serviceAccountAuth = getGoogleAuth();
@@ -111,18 +135,16 @@ async function syncNewsLinkedinToSheet() {
         await doc.loadInfo();
 
         const linkedinSheet = doc.sheetsByTitle['LinkedIn'];
-        const newsSheet = doc.sheetsByTitle['News'];
 
-        if (!linkedinSheet || !newsSheet) {
-            console.error('LinkedIn or News missing in Google Sheet! Please create them.');
+        if (!linkedinSheet) {
+            console.error('LinkedIn sheet missing in Google Sheet! Please create it.');
             return;
         }
 
         const existingLinkedinUrls = new Set((await linkedinSheet.getRows()).map(r => r.get('post url') || r.get('Post URL')));
-        const existingNewsUrls = new Set((await newsSheet.getRows()).map(r => r.get('article url') || r.get('Article URL')));
 
         // 2. LinkedIn Data
-        console.log('Fetching LinkedIn data...');
+        console.log('Fetching LinkedIn data from latest actor run...');
         const linkedinRuns = await client.actor('harvestapi/linkedin-post-search').runs().list({ desc: true, limit: 1 });
         const newLinkedinRows = [];
         
@@ -135,10 +157,16 @@ async function syncNewsLinkedinToSheet() {
                 if (!url || existingLinkedinUrls.has(url)) continue;
                 
                 const text = item.content || item.text || '';
-                const author = item.author ? item.author.name : (item.authorName || 'Unknown Author');
+                const author = (item.author && item.author.name) || item.authorName || 'Unknown Author';
                 const retailer = extractRetailer(text);
                 const isLaunch = isProductLaunchLinkedin(text, retailer);
                 
+                // If it's from "The Grocer" and we extracted "Unknown" retailer, 
+                // we'll still tag it as "The Grocer" to make it filterable
+                const finalRetailer = (retailer === 'Unknown' && author.toLowerCase().includes('the grocer')) 
+                    ? 'The Grocer' 
+                    : retailer;
+
                 newLinkedinRows.push({
                     'id': item.id || '',
                     'brand': extractBrandLinkedin(text, author) || 'Unknown Brand',
@@ -146,9 +174,9 @@ async function syncNewsLinkedinToSheet() {
                     'manufacturer': author,
                     'manufacturer url': (item.author && item.author.linkedinUrl) || item.authorUrl || '',
                     'date': (item.postedAt && item.postedAt.date) || item.date || 'Unknown',
-                    'retailer': retailer,
+                    'retailer': finalRetailer,
                     'type': isLaunch ? 'launch' : 'other',
-                    'post snippet': text ? text.substring(0, 150) + '...' : '',
+                    'post snippet': text ? text.substring(0, 200).replace(/\n/g, ' ') + '...' : '',
                     'dealtWith': 'FALSE',
                     'post url': url,
                     'scrape_timestamp': new Date().toISOString()
@@ -157,62 +185,15 @@ async function syncNewsLinkedinToSheet() {
             }
         }
 
-        // 3. News Data
-        console.log('Fetching News data...');
-        const newsRuns = await client.actor('apify/google-search-scraper').runs().list({ desc: true, limit: 1 });
-        const newNewsRows = [];
-        
-        if (newsRuns.items.length > 0) {
-            const dataset = await client.run(newsRuns.items[0].id).dataset();
-            const { items } = await dataset.listItems();
-            
-            items.forEach((page) => {
-                if (page.organicResults && Array.isArray(page.organicResults)) {
-                    page.organicResults.forEach((result) => {
-                        const url = result.url || result.displayedUrl;
-                        if (!url || existingNewsUrls.has(url)) return;
-
-                        const textToAnalyze = `${result.title || ''} ${result.description || ''}`;
-                        const retailer = extractRetailer(textToAnalyze);
-                        const isLaunch = isProductLaunchLinkedin(textToAnalyze, retailer);
-
-                        newNewsRows.push({
-                            'id': '',
-                            'source': extractSource(url),
-                            'headline': result.title || 'Unknown Headline',
-                            'snippet': result.description || '',
-                            'article url': url,
-                            'date': extractDateNews(textToAnalyze) || 'Recent',
-                            'brand': extractBrandNews(textToAnalyze),
-                            'product': extractProductNews(textToAnalyze),
-                            'retailer': retailer,
-                            'type': isLaunch ? 'launch' : 'other',
-                            'dealtWith': 'FALSE',
-                            'scrape_timestamp': new Date().toISOString()
-                        });
-                        existingNewsUrls.add(url);
-                    });
-                }
-            });
+        // 3. Save to Sheets
+        if (newLinkedinRows.length > 0) {
+            console.log(`Adding ${newLinkedinRows.length} new LinkedIn rows...`);
+            // Ensure headers match if it's the first time, but usually we just append
+            await linkedinSheet.addRows(newLinkedinRows);
+            console.log(`\nFinished sync to LinkedIn sheet.`);
+        } else {
+            console.log('No new items found to sync.');
         }
-
-        // 4. Save to Sheets
-        const updates = [
-            { sheet: linkedinSheet, rows: newLinkedinRows, name: 'LinkedIn' },
-            { sheet: newsSheet, rows: newNewsRows, name: 'News' }
-        ];
-
-        let totalAdded = 0;
-        for (const update of updates) {
-            if (update.rows.length > 0) {
-                console.log(`Adding ${update.rows.length} rows to ${update.name}...`);
-                await update.sheet.setHeaderRow(Object.keys(update.rows[0]));
-                await update.sheet.addRows(update.rows);
-                totalAdded += update.rows.length;
-            }
-        }
-
-        console.log(`\nFinished. Added total of: ${totalAdded} new items`);
 
     } catch (e) {
         console.error('API Error:', e);

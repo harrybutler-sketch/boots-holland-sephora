@@ -40,10 +40,28 @@ export default async function handler(req, res) {
         fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
         const filteredItems = mappedItems.filter(item => {
-            if (item.date && item.date !== 'Unknown' && new Date(item.date) < fourWeeksAgo) {
-                return false;
+            if (!item.date || item.date === 'Unknown') return true;
+            
+            // Try parsing as actual date
+            const dateObj = new Date(item.date);
+            if (!isNaN(dateObj.getTime())) {
+                return dateObj >= fourWeeksAgo;
             }
-            return true;
+            
+            // Handle relative strings (e.g., "3 days ago")
+            const lower = item.date.toLowerCase();
+            const num = parseInt(lower);
+            if (!isNaN(num)) {
+                let daysAgo = 0;
+                if (lower.includes('h')) daysAgo = num / 24;
+                else if (lower.includes('d')) daysAgo = num;
+                else if (lower.includes('w')) daysAgo = num * 7;
+                else if (lower.includes('m') && !lower.includes('min')) daysAgo = num * 30;
+                
+                return daysAgo <= 28;
+            }
+            
+            return true; // Fallback to show if we can't parse
         });
 
         return res.status(200).json(filteredItems);
@@ -70,6 +88,7 @@ function extractRetailer(text) {
     if (lowerText.includes('holland') || lowerText.includes('barrett')) return 'Holland & Barrett';
     if (lowerText.includes('superdrug')) return 'Superdrug';
     if (lowerText.includes('sephora')) return 'Sephora';
+    if (lowerText.includes('the grocer')) return 'The Grocer';
 
     return 'Unknown';
 }
