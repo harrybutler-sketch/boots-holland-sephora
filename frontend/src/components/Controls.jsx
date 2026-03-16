@@ -1,5 +1,5 @@
 
-function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrape, onReset, onExportCSV, selectedRetailers, onToggleRetailer, onTestConnection }) {
+function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrape, onRunLinkedinScrape, onReset, onExportCSV, selectedRetailers, onToggleRetailer, onTestConnection }) {
     const isRunning = runStatus === 'RUNNING';
 
     // Retailer sets
@@ -65,20 +65,41 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                         <button
                             className="btn"
                             onClick={onRunScrape}
                             disabled={isRunning}
-                            style={{ minWidth: '220px' }}
+                            style={{ minWidth: '200px' }}
                         >
                             {isRunning ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <span className="status-dot running" style={{ background: 'white' }}></span>
                                     Scraping...
                                 </div>
-                            ) : `▶ Run ${workspace === 'beauty' ? 'Beauty' : 'Grocery'} Scrape`}
+                            ) : `▶ Scrape Retailers`}
                         </button>
+
+                        {workspace === 'grocery' && (
+                            <button
+                                className="btn btn-secondary"
+                                onClick={onRunLinkedinScrape}
+                                disabled={isRunning}
+                                style={{ 
+                                    minWidth: '220px', 
+                                    background: 'var(--color-slate)', 
+                                    color: 'white',
+                                    opacity: isRunning ? 0.6 : 1
+                                }}
+                            >
+                                {isRunning ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span className="status-dot running" style={{ background: 'white' }}></span>
+                                        Scraping...
+                                    </div>
+                                ) : `🔗 Scrape LinkedIn Grocers`}
+                            </button>
+                        )}
 
                         <button
                             className="btn"

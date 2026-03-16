@@ -161,6 +161,34 @@ function App() {
     }
   };
 
+  const handleRunLinkedinScrape = async () => {
+    const proceed = window.confirm("Start a new LinkedIn Scrape? This will monitor official grocer pages for recent product mentions.");
+    if (!proceed) return;
+
+    setRunStatus('RUNNING');
+    try {
+      const response = await fetch('/api/run-linkedin-scrape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      const result = await response.json();
+
+      if (result.runId) {
+        setRunId(result.runId);
+        alert('LinkedIn Scrape Started! We will poll for results.');
+      } else {
+        setRunStatus('FAILED');
+        alert('Failed to start LinkedIn scrape: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error starting LinkedIn scrape:', error);
+      setRunStatus('FAILED');
+      alert('Error starting LinkedIn scrape. Check console.');
+    }
+  };
+
   const handleReset = () => {
     setRunStatus('Idle');
     setRunId(null);
@@ -327,6 +355,7 @@ function App() {
             runStatus={runStatus}
             lastRun={lastRunTime}
             onRunScrape={handleRunScrape}
+            onRunLinkedinScrape={handleRunLinkedinScrape}
             onReset={handleReset}
             onExportCSV={handleExportCSV}
             selectedRetailers={selectedRetailers}
