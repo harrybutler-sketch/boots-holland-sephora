@@ -25,15 +25,38 @@ export default async function handler(req, res) {
             'Holland & Barrett'
         ];
 
+        // Targeted Grocer LinkedIn Pages
+        const targetUrls = [
+            'https://www.linkedin.com/company/tesco/',
+            'https://www.linkedin.com/company/sainsbury\'s/',
+            'https://www.linkedin.com/company/asda/',
+            'https://www.linkedin.com/company/morrisons/',
+            'https://www.linkedin.com/company/johnlewisandpartners/', // Waitrose
+            'https://www.linkedin.com/company/ocadogroup/',
+            'https://www.linkedin.com/company/boots/',
+            'https://www.linkedin.com/company/superdrug/',
+            'https://www.linkedin.com/company/sephora/',
+            'https://www.linkedin.com/company/holland-&-barrett/'
+        ];
+
         // Symmetrical search patterns for all retailers
-        const searchQueries = retailers.flatMap(retailer => [
-            `launched in ${retailer}`,
-            `new listing at ${retailer}`,
-            `now available at ${retailer}`,
-            `listed in ${retailer}`,
-            `launching in ${retailer}`,
-            `hitting ${retailer} shelves`
-        ]);
+        const searchQueries = [
+            ...retailers.flatMap(retailer => [
+                `launched in ${retailer}`,
+                `new listing at ${retailer}`,
+                `now available at ${retailer}`,
+                `listed in ${retailer}`,
+                `launching in ${retailer}`,
+                `hitting ${retailer} shelves`
+            ]),
+            // General product launch queries for the target pages
+            "new product launch",
+            "exclusive launch",
+            "new brand alert",
+            "now in stock",
+            "excited to share our new",
+            "introducing our latest"
+        ];
 
 
         // Calculate date 4 weeks ago
@@ -44,7 +67,8 @@ export default async function handler(req, res) {
         // Start the actor
         const run = await client.actor('harvestapi/linkedin-post-search').call({
             searchQueries: searchQueries,
-            maxPosts: 100, // Increased to 100 to capture more results across all queries
+            targetUrls: targetUrls, // Monitor these specific grocer pages
+            maxPosts: 150, // Increased to capture more results
             minDate: minDate,
             sortBy: 'date'
         });

@@ -11,6 +11,20 @@ export default async (req, context) => {
             token: process.env.APIFY_TOKEN,
         });
 
+        // Targeted Grocer LinkedIn Pages
+        const targetUrls = [
+            'https://www.linkedin.com/company/tesco/',
+            'https://www.linkedin.com/company/sainsbury\'s/',
+            'https://www.linkedin.com/company/asda/',
+            'https://www.linkedin.com/company/morrisons/',
+            'https://www.linkedin.com/company/johnlewisandpartners/', // Waitrose
+            'https://www.linkedin.com/company/ocadogroup/',
+            'https://www.linkedin.com/company/boots/',
+            'https://www.linkedin.com/company/superdrug/',
+            'https://www.linkedin.com/company/sephora/',
+            'https://www.linkedin.com/company/holland-&-barrett/'
+        ];
+
         // Search Queries for "New Launches"
         const searchQueries = [
             'launched in Tesco',
@@ -27,7 +41,14 @@ export default async (req, context) => {
             'new listing at Sainsbury\'s',
             'new listing at Boots',
             'now available at Tesco',
-            'now available at Boots'
+            'now available at Boots',
+            // General product launch queries for the target pages
+            "new product launch",
+            "exclusive launch",
+            "new brand alert",
+            "now in stock",
+            "excited to share our new",
+            "introducing our latest"
         ];
 
 
@@ -39,7 +60,8 @@ export default async (req, context) => {
         // Start the actor
         const run = await client.actor('harvestapi/linkedin-post-search').call({
             searchQueries: searchQueries,
-            maxPosts: 50, // Limit to 50 posts for now to save credits/time
+            targetUrls: targetUrls, // Monitor these specific grocer pages
+            maxPosts: 100, // Increased to capture more results
             minDate: minDate,
             sortBy: 'date'
         });

@@ -32,8 +32,11 @@ function extractRetailer(text) {
 }
 
 function extractBrandLinkedin(text, authorName) {
-    const genericAuthors = ['Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight'];
-    if (authorName && !genericAuthors.some(ga => authorName.includes(ga))) return authorName;
+    const genericAuthors = [
+        'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
+        'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
+    ];
+    if (authorName && !genericAuthors.some(ga => authorName.toLowerCase().includes(ga.toLowerCase()))) return authorName;
     const brandMatch = text.match(/(?:Brand|Manufacturer):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
     if (brandMatch) return brandMatch[1].trim();
     const hashtagMatch = text.match(/#([A-Z][a-zA-Z0-9]+)/);
