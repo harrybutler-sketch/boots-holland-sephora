@@ -515,25 +515,10 @@ export default async function handler(request, response) {
                             results.isHabitat = true;
                         }
 
-                        // Exclusion for Tesco Marketplace
-                        if (retailer === 'Tesco') {
-                            const isMarketplace = Array.from(document.querySelectorAll('a, span, div, li')).some(el => {
-                                const t = el.innerText ? el.innerText.trim().toLowerCase() : '';
-                                return t === 'marketplace' || t.includes('sold and shipped by') || t.includes('sold and dispatched by');
-                            });
-                            
-                            if (isMarketplace || window.location.href.toLowerCase().includes('marketplace') || document.body.innerText.toLowerCase().includes('sold and shipped by')) {
-                                results.isMarketplace = true;
-                            }
-                        }
 
                         return results;
                     }, retailer);
 
-                    if (extractionData.isMarketplace) {
-                        log.info('Skipping Tesco Marketplace product: ' + extractionData.name);
-                        return null;
-                    }
                     if (extractionData.isHabitat) {
                         log.info('Skipping Habitat product: ' + extractionData.name);
                         return null;
