@@ -166,7 +166,7 @@ export const handler = async (event, context) => {
                         'Ocado': 'a[href*="/products/"]',
                         'Morrisons': 'a[href*="/products/"]',
                         'Sainsburys': '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]',
-                        'Tesco': 'a[href*="/products/"], a[class*="titleLink"]',
+                        'Tesco': 'a[href*="/products/"]:not([href*="onetrust"]), a[class*="titleLink"]',
                         'Asda': 'a[href*="/product/"], a.chakra-link',
                         'Superdrug': 'a.cx-product-name, a.product-image-container'
                     };
@@ -239,11 +239,19 @@ export const handler = async (event, context) => {
                     }
 
                     // 5. Enqueue product links manually for better reliability
-                    const productLinks = await page.evaluate((sel) => {
+                    const productLinks = await page.evaluate((sel, ret) => {
                         return Array.from(document.querySelectorAll(sel))
                             .map(a => a.href)
-                            .filter(href => href && (href.includes('/product') || href.includes('/p/')));
-                    }, selector);
+                            .filter(href => {
+                                if (!href) return false;
+                                if (href.includes('onetrust')) return false;
+                                try {
+                                    const urlObj = new URL(href);
+                                    // Ensure the link is on the same domain or at least contains the retailer name for safety
+                                    return urlObj.hostname.includes(ret.toLowerCase().replace('sainsburys', 'sainsbury').replace(' ', '')) || urlObj.hostname.includes('tesco.com') || urlObj.hostname.includes('asda.com');
+                                } catch (e) { return false; }
+                            });
+                    }, selector, retailer);
 
                     log.info('Found ' + productLinks.length + ' validated product links for ' + retailer);
                     
