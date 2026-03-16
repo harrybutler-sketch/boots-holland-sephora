@@ -172,13 +172,23 @@ async function syncNewsLinkedinToSheet() {
                 const isLaunch = isProductLaunchLinkedin(text, retailer);
                 const finalRetailer = (retailer === 'Unknown' && author.toLowerCase().includes('the grocer')) ? 'The Grocer' : retailer;
 
+                // Better date extraction for LinkedIn
+                let postDate = 'Unknown';
+                if (item.postedAt) {
+                    postDate = typeof item.postedAt === 'string' ? item.postedAt : (item.postedAt.date || item.postedAt.text || 'Unknown');
+                } else if (item.date) {
+                    postDate = item.date;
+                } else if (item.timeRange) {
+                    postDate = item.timeRange;
+                }
+
                 batchRows.push({
                     'id': item.id || '',
                     'brand': extractBrandLinkedin(text, author) || 'Unknown Brand',
                     'product': extractProductLinkedin(text) || 'Unknown Product',
                     'manufacturer': author,
                     'manufacturer url': (item.author && item.author.linkedinUrl) || item.authorUrl || '',
-                    'date': (item.postedAt && item.postedAt.date) || item.date || 'Unknown',
+                    'date': postDate,
                     'retailer': finalRetailer,
                     'type': isLaunch ? 'launch' : 'other',
                     'post snippet': text ? text.substring(0, 200).replace(/\n/g, ' ') + '...' : '',
@@ -212,11 +222,19 @@ async function syncNewsLinkedinToSheet() {
 
                         const isLaunch = isProductLaunchLinkedin(textToAnalyze, retailer);
                         const source = extractSource(url);
+                        
+                        // Try to get a better product name for news - use the title if extract fails
+                        let prodName = extractProductNews(textToAnalyze);
+                        if (prodName === 'New Launch' || !prodName) {
+                            // Take the first few words of the title as the product if it looks like a brand launch
+                            const titleParts = result.title.split(':');
+                            prodName = titleParts.length > 1 ? titleParts[1].trim() : result.title.substring(0, 40) + '...';
+                        }
 
                         batchRows.push({
                             'id': '',
                             'brand': extractBrandNews(textToAnalyze),
-                            'product': extractProductNews(textToAnalyze),
+                            'product': prodName,
                             'manufacturer': source,
                             'manufacturer url': url,
                             'date': extractDateNews(textToAnalyze) || 'Recent',
