@@ -360,7 +360,6 @@ function App() {
             runStatus={runStatus}
             lastRun={lastRunTime}
             onRunScrape={handleRunScrape}
-            onRunLinkedinScrape={handleRunLinkedinScrape}
             onReset={handleReset}
             onExportCSV={handleExportCSV}
             selectedRetailers={selectedRetailers}
