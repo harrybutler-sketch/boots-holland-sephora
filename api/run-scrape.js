@@ -112,7 +112,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks'
+          'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
