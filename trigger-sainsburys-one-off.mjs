@@ -1,0 +1,83 @@
+import { ApifyClient } from 'apify-client';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const APIFY_TOKEN = process.env.APIFY_TOKEN;
+
+if (!APIFY_TOKEN) {
+    console.error('Missing APIFY_TOKEN!');
+    process.exit(1);
+}
+
+const client = new ApifyClient({ token: APIFY_TOKEN });
+
+const targetUrls = [
+    'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:3',
+    'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:4'
+];
+
+async function triggerScrape() {
+    console.log('Triggering one-off Sainsbury\'s scrape for:');
+    targetUrls.forEach(url => console.log(` - ${url}`));
+
+    try {
+        const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: targetUrls.map(url => ({ url })),
+            useChrome: true,
+            stealth: true,
+            maxPagesPerCrawl: 100, 
+            proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
+            pageFunction: `async function pageFunction(context) {
+                const { page, request, log, enqueueLinks } = context;
+                const url = request.url;
+                log.info('Processing: ' + url);
+
+                // If it's a listing page, enqueue products
+                if (url.includes('/features/')) {
+                    const selector = '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]';
+                    
+                    // Simple scroll
+                    for (let i = 0; i < 5; i++) {
+                        await page.evaluate(() => window.scrollBy(0, 1000));
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+
+                    await enqueueLinks({
+                        selector,
+                        baseUrl: 'https://www.sainsburys.co.uk',
+                        transformRequestFunction: (req) => {
+                            if (req.url.includes('/product/')) return req;
+                            return false;
+                        }
+                    });
+                    return;
+                }
+
+                // If it's a product page, extract info
+                if (url.includes('/product/')) {
+                    const name = await page.$eval('h1', el => el.innerText.trim()).catch(() => 'Unknown');
+                    const price = await page.$eval('[data-test-id="pd-retail-price"]', el => el.innerText.trim()).catch(() => '');
+                    const brand = await page.$eval('.pd__brand', el => el.innerText.trim()).catch(() => '');
+                    
+                    return {
+                        url,
+                        name,
+                        price,
+                        brand,
+                        retailer: 'Sainsburys',
+                        category: 'Drinks',
+                        scrape_timestamp: new Date().toISOString()
+                    };
+                }
+            }`
+        });
+
+        console.log(`Run started: ${run.id}`);
+        console.log(`View progress: https://console.apify.com/actors/apify/puppeteer-scraper/runs/${run.id}`);
+        
+    } catch (error) {
+        console.error('Trigger failed:', error);
+    }
+}
+
+triggerScrape();
