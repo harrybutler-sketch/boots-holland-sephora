@@ -69,8 +69,8 @@ export default async function handler(request, response) {
 
       if (inputUrls.length > 0) {
         console.log('Starting eCommerce Scraper...');
-        // Limit Tesco to 300 products as requested
-        const maxItems = ecommerceRetailersToScrape.some(r => r.toLowerCase().includes('tesco')) ? 300 : 1000;
+        // Limit Tesco to 300 products, others to 500 to save cost
+        const maxItems = ecommerceRetailersToScrape.some(r => r.toLowerCase().includes('tesco')) ? 300 : 500;
 
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
           listingUrls: inputUrls.map(url => ({ url })),
@@ -121,10 +121,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         const morrisonsUrls = [
-          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new',
-          'https://groceries.morrisons.com/categories/frozen-food/180331?boolean=new',
-          'https://groceries.morrisons.com/categories/food-cupboard/102705?boolean=new',
-          'https://groceries.morrisons.com/categories/drinks/103644?boolean=new'
+          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite'
         ];
         morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }
@@ -145,7 +142,7 @@ export default async function handler(request, response) {
 
       if (startUrls.length > 0) {
         console.log('Starting Puppeteer Scraper...');
-        const maxPages = 300; // Adjusted limit to 300 to balance cost and yield
+        const maxPages = 100; // Reduced from 300 to balance cost and yield
 
         const run = await client.actor('apify/puppeteer-scraper').start({
           startUrls,

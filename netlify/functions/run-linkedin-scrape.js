@@ -64,7 +64,7 @@ export default async (req, context) => {
                     "latest launch"
                 ],
                 targetUrls: targetUrls,
-                maxPosts: 100
+                maxPosts: 1000
             };
         } else {
             // Default Mode: Search mentions across all of LinkedIn
@@ -77,7 +77,7 @@ export default async (req, context) => {
                     `launching in ${retailer}`,
                     `hitting ${retailer} shelves`
                 ]),
-                maxPosts: 100
+                maxPosts: 1000
             };
         }
 

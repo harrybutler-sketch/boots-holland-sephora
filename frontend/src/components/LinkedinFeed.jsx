@@ -12,6 +12,7 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
 
     const [filterRetailer, setFilterRetailer] = useState('All');
     const [filterDate, setFilterDate] = useState('All');
+    const [filterDealt, setFilterDealt] = useState('Not Dealt With'); // Default to showing only non-dealt items
 
     // Fetch Logic
     const fetchLinkedinResults = async () => {
@@ -133,6 +134,9 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
             }
         }
 
+        if (filterDealt === 'Dealt With' && !item.dealtWith) return false;
+        if (filterDealt === 'Not Dealt With' && item.dealtWith) return false;
+
         return true;
     });
 
@@ -238,6 +242,19 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
                         <option value="7">Last 7 Days</option>
                         <option value="14">Last 14 Days</option>
                         <option value="30">Last 30 Days</option>
+                    </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Status</label>
+                    <select 
+                        value={filterDealt} 
+                        onChange={(e) => setFilterDealt(e.target.value)}
+                        className="select"
+                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)', minWidth: '150px' }}
+                    >
+                        <option value="All">All Status</option>
+                        <option value="Not Dealt With">Not Dealt With</option>
+                        <option value="Dealt With">Dealt With</option>
                     </select>
                 </div>
             </div>

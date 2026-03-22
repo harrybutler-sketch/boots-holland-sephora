@@ -71,8 +71,8 @@ export const handler = async (event, context) => {
 
       if (inputUrls.length > 0) {
         console.log('Starting eCommerce Scraper...');
-        // Limit Tesco to 300 products as requested
-        const maxItems = ecommerceRetailersToScrape.some(r => r.toLowerCase().includes('tesco')) ? 300 : 1000;
+        // Limit Tesco to 300 products, others to 500 to save cost
+        const maxItems = ecommerceRetailersToScrape.some(r => r.toLowerCase().includes('tesco')) ? 300 : 500;
 
         const run = await client.actor('apify/e-commerce-scraping-tool').start({
           listingUrls: inputUrls.map(url => ({ url })),
@@ -122,7 +122,10 @@ export const handler = async (event, context) => {
         startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new?srsltid=AfmBOorjNX_GLyjbbfrykWC7OqgShf3o0CYOM7VKzp9aU3DHE97vcGOn', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
-        startUrls.push({ url: 'https://groceries.morrisons.com/categories/new/all-new/192781', userData: { retailer: 'Morrisons', label: 'LISTING' } });
+        const morrisonsUrls = [
+          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite'
+        ];
+        morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         const ocadoUrls = [
@@ -145,7 +148,7 @@ export const handler = async (event, context) => {
           startUrls,
           useChrome: true,
           stealth: true,
-          maxPagesPerCrawl: pRetailers.some(r => r.includes('tesco')) ? 80 : 400, // ~50 items per category (4 categories = 200 items total)
+          maxPagesPerCrawl: 100, // Reduced from 400 to save costs
           proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
           pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;

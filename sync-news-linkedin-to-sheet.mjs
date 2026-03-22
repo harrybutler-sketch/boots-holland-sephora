@@ -150,7 +150,7 @@ async function syncNewsLinkedinToSheet() {
         
         if (linkedinRuns.items.length > 0) {
             const dataset = await client.run(linkedinRuns.items[0].id).dataset();
-            const { items } = await dataset.listItems();
+            const { items } = await dataset.listItems({ limit: 1000 });
             
             for (const item of items) {
                 const url = item.linkedinUrl || item.url;
@@ -167,6 +167,12 @@ async function syncNewsLinkedinToSheet() {
                 const isGenericAuthor = genericAuthors.some(ga => author.toLowerCase().includes(ga.toLowerCase()));
                 
                 if (isGenericAuthor && !text.toLowerCase().includes('new')) continue;
+                
+                // Extra relevance check: Must contain 'new' or a launch keyword
+                const launchKeywords = ['launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'available now', 'hitting', 'landed', 'introducing'];
+                const isRelevant = text.toLowerCase().includes('new') || launchKeywords.some(kw => text.toLowerCase().includes(kw));
+                
+                if (!isRelevant) continue;
 
                 const retailer = extractRetailer(text);
                 const isLaunch = isProductLaunchLinkedin(text, retailer);
