@@ -112,7 +112,10 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard'
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:1',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:3',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:4'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
