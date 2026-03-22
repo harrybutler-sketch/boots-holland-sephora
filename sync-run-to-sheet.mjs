@@ -47,6 +47,8 @@ async function syncRunToSheet(runId, force = false) {
 
         const newGroceryRows = [];
         const newBeautyRows = [];
+        let skippedOwnBrand = 0;
+        let skippedHighReviews = 0;
         let duplicateCount = 0;
 
         for (const item of items) {
@@ -63,8 +65,12 @@ async function syncRunToSheet(runId, force = false) {
 
             if (!name || name.toLowerCase().includes('choose a shade')) continue;
 
+            // LOGGING COUNTERS
             const reviewCount = parseInt(item.reviews || item.ratingCount || 0);
-            if (reviewCount > 5) continue;
+            if (reviewCount > 5) {
+                skippedHighReviews++;
+                continue;
+            }
 
             // Broadly identify retailer
             let retailer = item.retailer;
@@ -178,11 +184,21 @@ async function syncRunToSheet(runId, force = false) {
                 }
             }
 
+            // 6. FINAL SAFETY: Ensure brandName is a string (handles objects from Apify)
+            if (typeof brandName === 'object' && brandName !== null) {
+                brandName = brandName.name || brandName.slogan || brandName.title || brandName.label || JSON.stringify(brandName);
+            }
+            brandName = String(brandName || '').trim();
+
             let manufacturer = brandName ||
-                (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && item.manufacturer.name)) ||
+                (typeof item.manufacturer === 'string' ? item.manufacturer : (item.manufacturer && (item.manufacturer.name || item.manufacturer.slogan))) ||
                 item.vendor ||
                 item.merchant ||
                 '';
+
+            if (typeof manufacturer === 'object') {
+                manufacturer = JSON.stringify(manufacturer);
+            }
 
             if (manufacturer) {
                 manufacturer = manufacturer
@@ -214,7 +230,10 @@ async function syncRunToSheet(runId, force = false) {
                 return match || (lowercaseBrand === retailer.toLowerCase());
             });
 
-            if (isOwnBrand) continue;
+            if (isOwnBrand) {
+                skippedOwnBrand++;
+                continue;
+            }
 
             const rowData = {
                 'date_found': new Date().toISOString().split('T')[0],
@@ -236,6 +255,21 @@ async function syncRunToSheet(runId, force = false) {
             targetRows.push(rowData);
             targetUrls.add(url);
         }
+
+        const resultsSummary = {
+            totalFetched: items.length,
+            duplicatesSkipped: duplicateCount,
+            ownBrandSkipped: skippedOwnBrand,
+            highReviewsSkipped: skippedHighReviews,
+            totalAdded: targetRows.length
+        };
+
+        console.log(`\n=== Sync Results ===`);
+        console.log(`Total items fetched from Apify: ${items.length}`);
+        console.log(`Skipped (Already in sheet):    ${duplicateCount}`);
+        console.log(`Skipped (Supermarket Brand):   ${skippedOwnBrand}`);
+        console.log(`Skipped (> 5 Reviews):         ${skippedHighReviews}`);
+        console.log(`NEW items added to sheet:      ${targetRows.length}`);
 
         const updates = [
             { sheet: grocerySheet, rows: newGroceryRows, name: 'Grocery' },

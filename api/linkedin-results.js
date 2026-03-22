@@ -36,8 +36,8 @@ export default async function handler(req, res) {
             };
         });
 
-        const fourWeeksAgo = new Date();
-        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        const strictTwoWeeksAgo = new Date();
+        strictTwoWeeksAgo.setDate(strictTwoWeeksAgo.getDate() - 14);
 
         const filteredItems = mappedItems.filter(item => {
             if (!item.date || item.date === 'Unknown') return true;
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
             // Try parsing as actual date
             const dateObj = new Date(item.date);
             if (!isNaN(dateObj.getTime())) {
-                return dateObj >= fourWeeksAgo;
+                return dateObj >= strictTwoWeeksAgo;
             }
             
             // Handle relative strings (e.g., "3 days ago")
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
                 else if (lower.includes('w')) daysAgo = num * 7;
                 else if (lower.includes('m') && !lower.includes('min')) daysAgo = num * 30;
                 
-                return daysAgo <= 28;
+                return daysAgo <= 14;
             }
             
             return true; // Fallback to show if we can't parse
