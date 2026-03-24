@@ -204,7 +204,8 @@ function App() {
       retailer: 'All',
       days: '28',
       q: '',
-      max_reviews: ''
+      review_range: '',
+      hideDealt: true
     });
   };
 
