@@ -76,18 +76,18 @@ const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
                 />
             </div>
 
-            <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', paddingTop: '24px' }}>
-                <input
-                    type="checkbox"
+            <div className="form-group">
+                <label htmlFor="hideDealt">Status</label>
+                <select
                     id="hideDealt"
                     name="hideDealt"
-                    checked={filters.hideDealt}
-                    onChange={(e) => onFilterChange({ ...filters, hideDealt: e.target.checked })}
-                    style={{ cursor: 'pointer', width: '18px', height: '18px' }}
-                />
-                <label htmlFor="hideDealt" style={{ marginBottom: 0, cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600', color: 'var(--color-purple)' }}>
-                    Hide Dealt
-                </label>
+                    className="select"
+                    value={filters.hideDealt ? 'hide' : 'show'}
+                    onChange={(e) => onFilterChange({ ...filters, hideDealt: e.target.value === 'hide' })}
+                >
+                    <option value="hide">Hide Dealt</option>
+                    <option value="show">Show All</option>
+                </select>
             </div>
         </div>
     );
