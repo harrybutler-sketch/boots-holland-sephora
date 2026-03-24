@@ -75,6 +75,20 @@ const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
                     onChange={handleChange}
                 />
             </div>
+
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', paddingTop: '24px' }}>
+                <input
+                    type="checkbox"
+                    id="hideDealt"
+                    name="hideDealt"
+                    checked={filters.hideDealt}
+                    onChange={(e) => onFilterChange({ ...filters, hideDealt: e.target.checked })}
+                    style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                />
+                <label htmlFor="hideDealt" style={{ marginBottom: 0, cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600', color: 'var(--color-purple)' }}>
+                    Hide Dealt
+                </label>
+            </div>
         </div>
     );
 };

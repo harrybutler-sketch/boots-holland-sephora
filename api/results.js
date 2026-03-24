@@ -10,7 +10,7 @@ export default async function handler(request, response) {
     response.setHeader('Cache-Control', 'no-store, max-age=0');
 
     try {
-        const { limit = 5000, retailer, days, q, workspace = 'beauty' } = request.query;
+        const { limit = 5000, retailer, days, q, workspace = 'beauty', hide_dealt } = request.query;
 
         // Google Sheets Auth
         const serviceAccountAuth = getGoogleAuth();
@@ -30,6 +30,14 @@ export default async function handler(request, response) {
 
         // Filter Logic
         let filteredRows = rows;
+
+        // 0. Hide Dealt Filter
+        if (hide_dealt === 'true') {
+            filteredRows = filteredRows.filter(row => {
+                const status = row.get('Status') || row.get('status') || 'Pending';
+                return status !== 'Dealt With';
+            });
+        }
 
         // 1. Retailer Filter
         if (retailer && retailer !== 'All') {

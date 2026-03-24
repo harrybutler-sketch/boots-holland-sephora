@@ -17,7 +17,8 @@ function App() {
     retailer: 'All',
     days: '28',
     q: '',
-    review_range: ''
+    review_range: '',
+    hideDealt: true
   });
 
   // Persist State Changes
@@ -48,6 +49,7 @@ function App() {
         days: filters.days,
         q: filters.q,
         review_range: filters.review_range,
+        hide_dealt: filters.hideDealt ? 'true' : 'false',
         workspace: workspace
       });
 

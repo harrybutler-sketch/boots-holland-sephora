@@ -17,7 +17,7 @@ const targetUrls = [
 ];
 
 async function triggerScrape() {
-    console.log('Triggering one-off Sainsbury\'s scrape for:');
+    console.log('Triggering one-off Sainsbury\'s scrape for (Standard Proxy):');
     targetUrls.forEach(url => console.log(` - ${url}`));
 
     try {
@@ -26,10 +26,11 @@ async function triggerScrape() {
             useChrome: true,
             stealth: true,
             maxPagesPerCrawl: 100, 
-            proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
+            proxyConfiguration: { useApifyProxy: true }, // SIMPLIFIED PROXY
             pageFunction: `async function pageFunction(context) {
                 const { page, request, log, enqueueLinks } = context;
                 const url = request.url;
+                const retailer = 'Sainsburys';
                 log.info('Processing: ' + url);
 
                 // If it's a listing page, enqueue products
@@ -59,17 +60,36 @@ async function triggerScrape() {
                     const price = await page.$eval('[data-test-id="pd-retail-price"]', el => el.innerText.trim()).catch(() => '');
                     const brand = await page.$eval('.pd__brand', el => el.innerText.trim()).catch(() => '');
                     
-                    return {
+                    const results = {
                         url,
                         name,
                         price,
                         brand,
                         retailer: 'Sainsburys',
                         category: 'Drinks',
-                        scrape_timestamp: new Date().toISOString()
+                        scrape_timestamp: new Date().toISOString(),
+                        reviews: 0
                     };
+
+                    // Extract reviews
+                    const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+                    for (const s of scripts) {
+                        try {
+                            const json = JSON.parse(s.innerText);
+                            const product = Array.isArray(json) ? json.find(i => i['@type'] === 'Product') : (json['@type'] === 'Product' ? json : null);
+                            if (product && product.aggregateRating) {
+                                results.reviews = parseInt(product.aggregateRating.reviewCount || product.aggregateRating.numberOfReviews) || 0;
+                            }
+                        } catch(e) {}
+                    }
+
+                    return results;
                 }
-            }`
+            }`,
+            timeoutSecs: 1800,
+            pageFunctionTimeoutSecs: 180,
+            requestHandlerTimeoutSecs: 180,
+            navigationTimeoutSecs: 60
         });
 
         console.log(`Run started: ${run.id}`);
