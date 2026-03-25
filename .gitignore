@@ -8,6 +8,7 @@
 # Logs
 logs/
 *.log
+*.txt
 
 # Dependencies
 node_modules/
