@@ -159,17 +159,23 @@ export default async function handler(request, response) {
                 if (label === 'LISTING') {
                     log.info('Listing page (' + retailer + '): ' + request.url);
                     
-                    // 1. Handle Overlays (Cookie Banners) FIRST
+                    // 1. Handle Overlays (Cookie Banners)
                     try {
                         const cookieSelector = '#onetrust-accept-btn-handler, #onetrust-banner-sdk button, #truste-consent-button';
                         const cookieBtn = await page.$(cookieSelector);
                         if (cookieBtn) {
-                            log.info('Accepting cookie banner...');
-                            await cookieBtn.click();
-                            await new Promise(r => setTimeout(r, 4000));
+                            // EXTRA SAFETY: Don't click if products are already visible (might trigger a reload/blank)
+                            const productsVisible = await page.evaluate((sel) => document.querySelectorAll(sel).length > 0, selector);
+                            if (!productsVisible) {
+                                log.info('Accepting cookie banner to reveal content...');
+                                await cookieBtn.click();
+                                await new Promise(r => setTimeout(r, 4000));
+                            } else {
+                                log.info('Cookie banner present but products visible. Skipping click to avoid disruption.');
+                            }
                         }
                     } catch (e) {
-                        log.debug('No cookie banner or error clicking it');
+                        log.debug('No cookie banner or error handling it');
                     }
 
                     // 2. DETECT BLOCKS on Listing Page
@@ -308,10 +314,13 @@ export default async function handler(request, response) {
                         // Extra Waiter for stability (prevent React re-renders from hiding new elements)
                         if (retailer === 'Asda' || retailer === 'Sainsburys' || retailer === 'Morrisons') {
                             log.info('Waiting for product count to stabilize...');
-                            await new Promise(r => setTimeout(r, 12000));
+                            await new Promise(r => setTimeout(r, 15000));
                         }
                     } catch (e) {
                         log.warning('Timeout or limited results during wait for ' + selector + ' on ' + request.url);
+                        // Take a screenshot on failure to diagnose "blank page" issues
+                        const title = await page.title();
+                        log.info('Page title during timeout: ' + title);
                     }
 
                     // 5. Enqueue product links manually for better reliability
