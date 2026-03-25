@@ -103,21 +103,13 @@ export const handler = async (event, context) => {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/groceries/en-GB/shop/frozen-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/groceries/en-GB/shop/fresh-food/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-pet#new-pet',
           'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=4#top'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:1',
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:2',
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:3',
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:4'
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
