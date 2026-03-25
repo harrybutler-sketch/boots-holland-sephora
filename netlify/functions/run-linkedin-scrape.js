@@ -45,39 +45,35 @@ export default async (req, context) => {
 
         let config = {};
 
+        const SEARCH_QUERIES = (mode === 'grocer-pages') 
+            ? [
+                "new product", "launch", "listing", "available now", "shelf", "shelves", 
+                "hitting shelves", "now in stock", "new brand", "exclusive", "range",
+                "introducing", "latest launch"
+            ]
+            : retailers.flatMap(retailer => [
+                `new product launch at ${retailer}`,
+                `exclusive listing at ${retailer}`,
+                `brand new range at ${retailer}`,
+                `now on shelf at ${retailer}`,
+                `new flavor launch at ${retailer}`,
+                `new SKU at ${retailer}`
+            ]);
+
+        // USER REQUEST: Ensure we don't exceed 1000 items TOTAL across all queries
+        const totalLimit = 1000;
+        const maxPostsPerQuery = Math.max(1, Math.floor(totalLimit / SEARCH_QUERIES.length));
+
         if (mode === 'grocer-pages') {
-            // Mode: Scrape what the grocers/industry news pages are posting
             config = {
-                searchQueries: [
-                    "new product",
-                    "launch",
-                    "listing",
-                    "available now",
-                    "shelf",
-                    "shelves",
-                    "hitting shelves",
-                    "now in stock",
-                    "new brand",
-                    "exclusive",
-                    "range",
-                    "introducing",
-                    "latest launch"
-                ],
+                searchQueries: SEARCH_QUERIES,
                 targetUrls: targetUrls,
-                maxPosts: 1000
+                maxPosts: maxPostsPerQuery
             };
         } else {
-            // Default Mode: Search mentions across all of LinkedIn
             config = {
-                searchQueries: retailers.flatMap(retailer => [
-                    `launched in ${retailer}`,
-                    `new listing at ${retailer}`,
-                    `now available at ${retailer}`,
-                    `listed in ${retailer}`,
-                    `launching in ${retailer}`,
-                    `hitting ${retailer} shelves`
-                ]),
-                maxPosts: 1000
+                searchQueries: SEARCH_QUERIES,
+                maxPosts: maxPostsPerQuery
             };
         }
 

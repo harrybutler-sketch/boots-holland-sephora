@@ -168,9 +168,18 @@ async function syncNewsLinkedinToSheet() {
                 
                 if (isGenericAuthor && !text.toLowerCase().includes('new')) continue;
                 
-                // Extra relevance check: Must contain 'new' or a launch keyword
-                const launchKeywords = ['launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'available now', 'hitting', 'landed', 'introducing'];
-                const isRelevant = text.toLowerCase().includes('new') || launchKeywords.some(kw => text.toLowerCase().includes(kw));
+                // USER REQUEST: STRICTER RELEVANCE CHECK
+                // Focus on actual product arrivals/launches
+                const launchKeywords = [
+                    'launch', 'listing', 'shelf', 'shelves', 'stockist', 
+                    'range', 'available now', 'hitting', 'landed', 'introducing',
+                    'new SKU', 'new flavor', 'new flavour', 'new variant', 'new scent'
+                ];
+                
+                const lowerText = text.toLowerCase();
+                const isRelevant = lowerText.includes('new product') || 
+                                 lowerText.includes('new launch') ||
+                                 launchKeywords.some(kw => lowerText.includes(kw.toLowerCase()));
                 
                 if (!isRelevant) continue;
 
