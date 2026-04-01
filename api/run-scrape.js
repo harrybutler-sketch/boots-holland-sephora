@@ -391,9 +391,14 @@ export default async function handler(request, response) {
                     if (retailer === 'Tesco') {
                         // 1. Immediate Block/Oops check
                         const isBlocked = await page.evaluate(() => {
-                            const bodyText = document.body.innerText.toLowerCase();
                             const h1Text = document.querySelector('h1')?.innerText?.toLowerCase() || '';
-                            return h1Text.includes('oops') || h1Text.includes('something went wrong') || bodyText.includes('access denied') || h1Text.includes('back');
+                            const bodyText = document.body.innerText.toLowerCase();
+                            // Specific error indicators
+                            return h1Text.includes('oops') || 
+                                   h1Text.includes("it's not you, it's us") || 
+                                   h1Text.includes('something went wrong') || 
+                                   bodyText.includes('access denied') ||
+                                   bodyText.includes('not down this aisle'); // 404
                         });
                         
                         if (isBlocked) {
@@ -422,44 +427,47 @@ export default async function handler(request, response) {
                     }
                     
                     const extractionData = await page.evaluate((retailer) => {
-                         const mainContent = document.querySelector('main, #main, .product-details-page, [role="main"]');
-                          const tescoTitle = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title'); // Specific PDP H1
+                          const mainContent = document.querySelector('main, #main, .product-details-page, [role="main"]');
+                          const tescoTitle = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title, [data-testid="product-title"]'); // Specific PDP H1
                           const h1 = tescoTitle || (mainContent ? mainContent.querySelector('h1') : document.querySelector('h1'));
                           let name = h1 ? h1.innerText.trim() : document.title;
-                         
-                         // Priority 1: H1 from main content area
-                         if (h1 && h1.innerText && h1.innerText.length > 3 && !h1.innerText.toLowerCase().includes('oops')) {
-                             name = h1.innerText.trim();
-                         } 
-                         // Priority 2: Meta Tags
-                         else {
-                             const ogTitle = document.querySelector('meta[property="og:title"]');
-                             if (ogTitle && ogTitle.content) name = ogTitle.content;
-                         }
+                          
+                          // Priority 1: H1 from main content area
+                          if (h1 && h1.innerText && h1.innerText.length > 3 && !h1.innerText.toLowerCase().includes('oops')) {
+                              name = h1.innerText.trim();
+                          } 
+                          // Priority 2: Meta Tags
+                          else {
+                              const ogTitle = document.querySelector('meta[property="og:title"]');
+                              if (ogTitle && ogTitle.content) name = ogTitle.content;
+                          }
                         
-                         name = name.replace(/ - Tesco Groceries$/i, '')
-                                    .replace(/ \| Boots$/i, '')
-                                    .replace(/ \| Sephora/i, '')
-                                    .replace(/ - Asda Groceries$/i, '')
-                                    .replace(/^Back$/i, '') // Safety: ignore rogue "Back" buttons
-                                    .replace(/^New products at Tesco$/i, '') // Safety: ignore category headers
-                                    .trim();
+                          name = name.replace(/ - Tesco Groceries$/i, '')
+                                     .replace(/ \| Boots$/i, '')
+                                     .replace(/ \| Sephora/i, '')
+                                     .replace(/ - Asda Groceries$/i, '')
+                                     .replace(/^Back$/i, '') // Safety: ignore rogue "Back" buttons
+                                     .replace(/^New products at Tesco$/i, '') // Safety: ignore category headers
+                                     .trim();
 
-                         const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
-                         
-                         // MARKETPLACE DETECTION: Search for specific partner seller links
-                         if (retailer === 'Tesco') {
-                             const marketplaceLink = document.querySelector('a.marketplace-seller-link');
-                             if (marketplaceLink) {
-                                 results.status = 'Marketplace';
-                             }
-                         }
+                          const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
+                          
+                          // MARKETPLACE DETECTION: Search for specific partner seller links
+                          if (retailer === 'Tesco') {
+                              const marketplaceLink = document.querySelector('a.marketplace-seller-link');
+                              if (marketplaceLink) {
+                                  results.status = 'Marketplace';
+                              }
+                          }
 
-                          // BLANK PAGE OR BLOCK DETECTION: If price is missing after timeout, treat as block
-                          const hasPrice = !!document.querySelector('.price-per-quantity-weight, .price-details--unit-price, .value');
-                          if (!name || name.length < 2 || !hasPrice) {
-                             results.status = 'Blocked/Error';
-                         }
+                           // BLANK PAGE OR BLOCK DETECTION: If price is missing after timeout, treat as block
+                           const priceSelector = '.price-per-basket-unit, .price-details--unit-price, .value, [data-testid="product-price"], .price-per-quantity-weight';
+                           const priceEl = document.querySelector(priceSelector);
+                           const hasPrice = !!priceEl;
+
+                           if (!name || name.length < 2 || !hasPrice) {
+                              results.status = 'Blocked/Error';
+                          }
                         
                         if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found') || name.toLowerCase().includes('oops')) {
                             results.status = 'Blocked/Error';
