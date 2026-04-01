@@ -22,28 +22,35 @@ const runTescoTest = async () => {
             await page.setViewport({ width: 1920, height: 1080 });
 
             // 2. Immediate Block/Oops check
-            const isBlocked = await page.evaluate(() => {
+            const blockStatus = await page.evaluate(() => {
                 const h1Text = document.querySelector('h1')?.innerText?.toLowerCase() || '';
                 const bodyText = document.body.innerText.toLowerCase();
-                return h1Text.includes('oops') || h1Text.includes('something went wrong') || bodyText.includes('access denied');
+                if (h1Text.includes('oops') || h1Text.includes("it's not you, it's us") || h1Text.includes('something went wrong')) return 'BLOCK';
+                if (bodyText.includes('access denied')) return 'BLOCK';
+                if (bodyText.includes('not down this aisle')) return 'SKIP'; // 404
+                return 'OK';
             });
             
-            if (isBlocked) {
+            if (blockStatus === 'BLOCK') {
                 throw new Error('Tesco Blocked ("Oops" page detected). Retrying with fresh proxy...');
             }
 
-            // 3. Humanized delay
-            await new Promise(r => setTimeout(r, 5000));
+            // 3. IMMEDIATE Own Brand check
+            const isOwnBrand = await page.evaluate(() => {
+                const name = (document.querySelector('h1')?.innerText || document.title).toLowerCase();
+                return name.includes('tesco');
+            });
 
-            // 4. WAIT FOR HYDRATION
+            if (isOwnBrand) {
+                log.info('Skipping Own Brand early (Tesco): ' + request.url);
+                return { skipped: true, reason: 'Own Brand' };
+            }
+
+            // 4. Resilient Hydration
             try {
-                await page.waitForFunction(() => {
-                    const title = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title, h1, [data-testid="product-title"]');
-                    const price = document.querySelector('.price-per-basket-unit, .price-details--unit-price, .value, [data-testid="product-price"], .price-per-quantity-weight');
-                    return title && title.innerText.trim().length > 3 && price && price.innerText.trim().length > 0;
-                }, { timeout: 40000 });
+                await page.waitForSelector('h1', { timeout: 25000 });
             } catch (e) {
-                log.warning('Timed out waiting for hydration/price-gate.');
+                log.warning('Timed out waiting for H1 at ' + request.url);
             }
 
             const extractionData = await page.evaluate((retailer) => {
