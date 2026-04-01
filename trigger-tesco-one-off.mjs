@@ -207,23 +207,38 @@ const pageFunctionStr = `async function pageFunction(context) {
                             });
                         }
                     }
-                    // RANDOM DELAY on detail page to bypass Tesco/Security "Oops" redirects
-                    const randomWait = 4000 + (Math.random() * 6000);
-                    log.info('Humanized detail-page delay: ' + Math.round(randomWait) + 'ms');
-                    await new Promise(r => setTimeout(r, randomWait));
+                    if (retailer === 'Tesco') {
+                        // 1. Immediate Block/Oops check
+                        const isBlocked = await page.evaluate(() => {
+                            const bodyText = document.body.innerText.toLowerCase();
+                            const h1Text = document.querySelector('h1')?.innerText?.toLowerCase() || '';
+                            return h1Text.includes('oops') || h1Text.includes('something went wrong') || bodyText.includes('access denied') || h1Text.includes('back');
+                        });
+                        
+                        if (isBlocked) {
+                            throw new Error('Tesco Blocked ("Oops" page detected). Retrying with fresh proxy...');
+                        }
 
-                    // Wait for title or H1 to be populated
-                    try {
-                        if (retailer === 'Tesco') {
-                            // Wait for the specific product title class AND the price-per-quantity-weight to ensure hydration
+                        // 2. Humanized delay AFTER confirming we aren't immediately blocked
+                        const randomWait = 3000 + (Math.random() * 5000);
+                        log.info('Humanized detail-page delay: ' + Math.round(randomWait) + 'ms');
+                        await new Promise(r => setTimeout(r, randomWait));
+
+                        // 3. Hydration check with broad selectors
+                        try {
                             await page.waitForFunction(() => {
-                                const title = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title, h1');
-                                const price = document.querySelector('.price-per-quantity-weight, .price-details--unit-price, .value');
+                                const title = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title, h1, [data-testid="product-title"]');
+                                const price = document.querySelector('.price-per-basket-unit, .price-details--unit-price, .value, [data-testid="product-price"], .price-per-quantity-weight');
                                 return title && title.innerText.trim().length > 3 && price && price.innerText.trim().length > 0;
                             }, { timeout: 40000 });
+                        } catch (e) {
+                            throw new Error('Hydration Timeout on ' + request.url + ' - Price or Title not found. Retrying...');
                         }
-                    } catch (e) {
-                        throw new Error('Hydration Timeout on ' + request.url + ' - Price or Title not found. Retrying...');
+                    } else {
+                        // RANDOM DELAY on detail page to bypass Retailer Security redirects
+                        const randomWait = 4000 + (Math.random() * 6000);
+                        log.info('Humanized detail-page delay: ' + Math.round(randomWait) + 'ms');
+                        await new Promise(r => setTimeout(r, randomWait));
                     }
 
                     const extractionData = await page.evaluate((retailer) => {
