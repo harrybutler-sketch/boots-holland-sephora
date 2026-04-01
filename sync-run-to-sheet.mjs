@@ -261,7 +261,7 @@ async function syncRunToSheet(runId, force = false) {
             duplicatesSkipped: duplicateCount,
             ownBrandSkipped: skippedOwnBrand,
             highReviewsSkipped: skippedHighReviews,
-            totalAdded: targetRows.length
+            totalAdded: newGroceryRows.length + newBeautyRows.length
         };
 
         console.log(`\n=== Sync Results ===`);
@@ -269,7 +269,7 @@ async function syncRunToSheet(runId, force = false) {
         console.log(`Skipped (Already in sheet):    ${duplicateCount}`);
         console.log(`Skipped (Supermarket Brand):   ${skippedOwnBrand}`);
         console.log(`Skipped (> 5 Reviews):         ${skippedHighReviews}`);
-        console.log(`NEW items added to sheet:      ${targetRows.length}`);
+        console.log(`NEW items added to sheet:      ${newGroceryRows.length + newBeautyRows.length}`);
 
         const updates = [
             { sheet: grocerySheet, rows: newGroceryRows, name: 'Grocery' },

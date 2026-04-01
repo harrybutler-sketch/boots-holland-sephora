@@ -209,7 +209,11 @@ const pageFunctionStr = `async function pageFunction(context) {
                     }
                 } else {
                     log.info('Product page (' + retailer + '): ' + request.url);
-                    await new Promise(r => setTimeout(r, 8000));
+                    
+                    // RANDOM DELAY on detail page to bypass Tesco/Security "Oops" redirects
+                    const randomWait = 3000 + (Math.random() * 5000);
+                    log.info('Humanized detail-page delay: ' + Math.round(randomWait) + 'ms');
+                    await new Promise(r => setTimeout(r, randomWait));
                     
                     const extractionData = await page.evaluate((retailer) => {
                         let name = document.title;
@@ -380,6 +384,8 @@ const pageFunctionStr = `async function pageFunction(context) {
 
 async function triggerTescoScrape() {
     const startUrls = [
+        { url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=2#top', userData: { retailer: 'Tesco', label: 'LISTING' } },
+        { url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=3#top', userData: { retailer: 'Tesco', label: 'LISTING' } },
         { url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=4#top', userData: { retailer: 'Tesco', label: 'LISTING' } }
     ];
 
@@ -393,6 +399,7 @@ async function triggerTescoScrape() {
             stealth: true,
             maxPagesPerCrawl: 50,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
+            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             pageFunction: pageFunctionStr,
             timeoutSecs: 1800,
             pageFunctionTimeoutSecs: 180,

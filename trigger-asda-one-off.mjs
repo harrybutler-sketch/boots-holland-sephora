@@ -14,7 +14,10 @@ if (!APIFY_TOKEN) {
 }
 
 const client = new ApifyClient({ token: APIFY_TOKEN });
-const targetUrl = 'https://www.asda.com/groceries/event/new-food-cupboard';
+
+// Get target URL from command line or default to original
+const args = process.argv.slice(2);
+const targetUrl = args[0] || 'https://www.asda.com/groceries/event/new-food-cupboard';
 
 async function triggerScrape() {
     console.log(`Triggering one-off Asda scrape for: ${targetUrl}`);
@@ -160,7 +163,7 @@ async function triggerScrape() {
         
         if (finishedRun.status === 'SUCCEEDED') {
             console.log('\nScrape SUCCEEDED! Triggering sync to sheet...');
-            const { stdout, stderr } = await execPromise(`node sync-run-to-sheet.mjs ${run.id}`);
+            const { stdout, stderr } = await execPromise(`node sync-run-to-sheet.mjs ${run.id} --force`);
             console.log(stdout);
             if (stderr) console.error(stderr);
         } else {

@@ -21,10 +21,14 @@ async function checkLatestRuns() {
         const latestSuccessful = runs.items.find(r => r.status === 'SUCCEEDED');
         if (latestSuccessful) {
             console.log(`\nInspecting run: ${latestSuccessful.id}`);
-            const dataset = await client.run(latestSuccessful.id).dataset();
+            const dataset = await client.dataset(latestSuccessful.defaultDatasetId);
             const { items } = await dataset.listItems({ limit: 1 });
-            await fs.promises.writeFile('sample_item.json', JSON.stringify(items[0], null, 2));
-            console.log('Sample item written to sample_item.json');
+            if (items && items.length > 0) {
+                await fs.promises.writeFile('sample_item.json', JSON.stringify(items[0], null, 2));
+                console.log('Sample item written to sample_item.json');
+            } else {
+                console.log('No items found in dataset');
+            }
         }
 
         await fs.promises.writeFile('recent_runs.txt', output);
