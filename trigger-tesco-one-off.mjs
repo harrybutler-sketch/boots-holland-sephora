@@ -4,11 +4,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * Tesco Scraper v2.3.6 (The "Total Success" Sync)
- * - Fixed enqueueLinks context (Contextual Argument)
+ * Tesco Scraper v2.3.7 (The "Absolute Success" Sync)
+ * - Fixed response.status syntax (Property check)
+ * - Added Redundant Screen-Text Block Detection
  * - Strict UK Residential Proxy Lock
- * - Response Status 200 Verification (Forces retry on 403/404)
- * - Selector Sync (.ddsweb-price__value)
+ * - Standardized enqueueLinks context
  */
 
 const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
@@ -21,7 +21,7 @@ async function triggerTescoScrape() {
         }
     ];
 
-    console.log('Triggering Tesco 2.3.6 Scrape (UK Residential Lock) for:', startUrls[0].url);
+    console.log('Triggering Tesco 2.3.7 Scrape (Verified Syntax) for:', startUrls[0].url);
 
     try {
         const run = await client.actor('apify/puppeteer-scraper').start({
@@ -38,12 +38,22 @@ async function triggerTescoScrape() {
             pageFunction: `async ({ page, request, log, enqueueLinks, response }) => {
                 const retailer = request.userData.retailer || 'Tesco';
                 
-                // 1. Check for Blocks (403/404)
-                if (response && response.status() !== 200) {
-                    throw new Error('Tesco Blocked! Status ' + response.status() + ' at ' + request.url + '. Retrying with fresh UK proxy...');
+                // 1. Strict Block/Status Check (Property syntax)
+                if (response && response.status !== 200) {
+                    throw new Error('Tesco Blocked! Status ' + response.status + ' at ' + request.url + '. Retrying with fresh UK proxy...');
                 }
 
-                // 2. Listing Logic
+                // 2. Redundant Text Block Check (Screen-level)
+                const isPageBlocked = await page.evaluate(() => {
+                    const t = document.body.innerText.toLowerCase();
+                    return t.includes('access denied') || t.includes('oops') || t.includes("it's not you, it's us") || t.includes('something went wrong');
+                });
+                
+                if (isPageBlocked) {
+                    throw new Error('Tesco Stealth Block (Screen text detected). Retrying...');
+                }
+
+                // 3. Listing Logic (Verified Context)
                 if (request.userData.label === 'LISTING') {
                     await page.waitForSelector('h1', { timeout: 30000 });
                     const linksCount = await enqueueLinks({
@@ -53,7 +63,7 @@ async function triggerTescoScrape() {
                     log.info('Successfully enqueued ' + (linksCount.length || 0) + ' product links.');
                 } 
                 
-                // 3. Detail Page Logic (Extraction)
+                // 4. Detail Page Logic (Extraction)
                 else if (request.userData.label === 'DETAIL') {
                     await page.waitForSelector('h1', { timeout: 25000 });
                     

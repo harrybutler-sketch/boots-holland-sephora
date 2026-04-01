@@ -611,15 +611,25 @@ export default async function handler(request, response) {
                     return extractionData;
                 }
             }`,
-          pageFunction: `async ({ page, request, log, enqueueLinks, response }) => {
+            pageFunction: `async ({ page, request, log, enqueueLinks, response }) => {
                 const retailer = request.userData.retailer || 'Tesco';
                 
-                // 1. Strict Block/Status Check
-                if (response && response.status() !== 200) {
-                    throw new Error('Tesco Blocked! Status ' + response.status() + ' at ' + request.url + '. Retrying with fresh UK proxy...');
+                // 1. Strict Block/Status Check (Property syntax)
+                if (response && response.status !== 200) {
+                    throw new Error('Tesco Blocked! Status ' + response.status + ' at ' + request.url + '. Retrying with fresh UK proxy...');
                 }
 
-                // 2. Listing Logic
+                // 2. Redundant Text Block Check (Screen-level)
+                const isPageBlocked = await page.evaluate(() => {
+                    const t = document.body.innerText.toLowerCase();
+                    return t.includes('access denied') || t.includes('oops') || t.includes("it's not you, it's us") || t.includes('something went wrong');
+                });
+                
+                if (isPageBlocked) {
+                    throw new Error('Tesco Stealth Block (Screen text detected). Retrying...');
+                }
+
+                // 3. Listing Logic
                 if (request.userData.label === 'LISTING') {
                     await page.waitForSelector('h1', { timeout: 30000 });
                     const linksCount = await enqueueLinks({
@@ -629,7 +639,7 @@ export default async function handler(request, response) {
                     log.info('Successfully enqueued ' + (linksCount.length || 0) + ' product links.');
                 } 
                 
-                // 3. Detail Page Logic (Extraction)
+                // 4. Detail Page Logic (Extraction)
                 else if (request.userData.label === 'DETAIL') {
                     await page.waitForSelector('h1', { timeout: 25000 });
                     
