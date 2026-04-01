@@ -67,10 +67,6 @@ async function syncRunToSheet(runId, force = false) {
 
             // LOGGING COUNTERS
             const reviewCount = parseInt(item.reviews || item.ratingCount || 0);
-            if (reviewCount > 5) {
-                skippedHighReviews++;
-                continue;
-            }
 
             // Broadly identify retailer
             let retailer = item.retailer;
