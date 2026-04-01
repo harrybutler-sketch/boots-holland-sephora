@@ -207,34 +207,62 @@ const pageFunctionStr = `async function pageFunction(context) {
                             });
                         }
                     }
-                } else {
-                    log.info('Product page (' + retailer + '): ' + request.url);
-                    
                     // RANDOM DELAY on detail page to bypass Tesco/Security "Oops" redirects
-                    const randomWait = 3000 + (Math.random() * 5000);
+                    const randomWait = 4000 + (Math.random() * 6000);
                     log.info('Humanized detail-page delay: ' + Math.round(randomWait) + 'ms');
                     await new Promise(r => setTimeout(r, randomWait));
-                    
-                    const extractionData = await page.evaluate((retailer) => {
-                        let name = document.title;
-                        const h1 = document.querySelector('h1');
-                        if (h1 && h1.innerText && h1.innerText.length > 5 && h1.innerText.toLowerCase() !== 'error') {
-                            name = Array.from(h1.childNodes)
-                                .map(node => node.textContent.trim())
-                                .filter(t => t.length > 0)
-                                .join(' ');
-                        } else {
-                            const ogTitle = document.querySelector('meta[property="og:title"]');
-                            if (ogTitle && ogTitle.content) name = ogTitle.content;
-                        }
-                        
-                        name = name.replace(/ - Tesco Groceries$/i, '')
-                                   .replace(/ | Boots$/i, '')
-                                   .replace(/ | Sephora/i, '')
-                                   .replace(/ - Asda Groceries$/i, '')
-                                   .trim();
 
-                        const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
+                    // Wait for title or H1 to be populated
+                    try {
+                        if (retailer === 'Tesco') {
+                            await page.waitForFunction(() => {
+                                const h1 = document.querySelector('h1');
+                                return h1 && h1.innerText.trim().length > 0;
+                            }, { timeout: 15000 });
+                        }
+                    } catch (e) {
+                        log.warning('Timed out waiting for H1 to hydrate on ' + request.url);
+                    }
+
+                    const extractionData = await page.evaluate((retailer) => {
+                         const mainContent = document.querySelector('main, #main, .product-details-page, [role="main"]');
+                         const h1 = mainContent ? mainContent.querySelector('h1') : document.querySelector('h1');
+                         let name = document.title;
+                         
+                         // Priority 1: H1 from main content area
+                         if (h1 && h1.innerText && h1.innerText.length > 3 && !h1.innerText.toLowerCase().includes('oops')) {
+                             name = h1.innerText.trim();
+                         } 
+                         // Priority 2: Meta Tags
+                         else {
+                             const ogTitle = document.querySelector('meta[property="og:title"]');
+                             if (ogTitle && ogTitle.content) name = ogTitle.content;
+                         }
+                        
+                         name = name.replace(/ - Tesco Groceries$/i, '')
+                                    .replace(/ \| Boots$/i, '')
+                                    .replace(/ \| Sephora/i, '')
+                                    .replace(/ - Asda Groceries$/i, '')
+                                    .replace(/^Back$/i, '') // Safety: ignore rogue "Back" buttons picked up as H1
+                                    .trim();
+
+                         const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
+                         
+                         // REFINED MARKETPLACE DETECTION (look only in main content, not header)
+                         if (retailer === 'Tesco' && mainContent) {
+                             const marketplaceText = ['sold and shipped by', 'sold and dispatched by', 'tesco marketplace'];
+                             const hasMarketplaceLabel = Array.from(mainContent.querySelectorAll('span, p, div')).some(el => {
+                                 const t = el.innerText ? el.innerText.toLowerCase() : '';
+                                 return marketplaceText.some(phrase => t.includes(phrase));
+                             });
+                             if (hasMarketplaceLabel) results.status = 'Marketplace';
+                         }
+
+                         // BLANK PAGE OR BLOCK DETECTION
+                         const pageBodyText = document.body ? document.body.innerText.trim() : '';
+                         if (name === '' || name.length < 2 || pageBodyText.length < 300) {
+                             results.status = 'Blocked/Error';
+                         }
                         
                         if (name.toLowerCase() === 'error' || name.toLowerCase().includes('access denied') || name.toLowerCase().includes('page not found') || name.toLowerCase().includes('oops')) {
                             results.status = 'Blocked/Error';
