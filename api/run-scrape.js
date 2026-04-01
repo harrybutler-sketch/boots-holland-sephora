@@ -604,11 +604,6 @@ export default async function handler(request, response) {
                         log.info('Skipping Own Brand: ' + extractionData.name);
                         return null;
                     }
-                    if (extractionData.reviews > 5) {
-                        log.info('Skipping High Reviews (' + extractionData.reviews + '): ' + extractionData.name);
-                        return null;
-                    }
-
                     if (extractionData.status === 'Blocked/Error' || extractionData.name.toLowerCase().includes('oops') || extractionData.name.toLowerCase().includes('went wrong')) {
                         throw new Error('Tesco Blocked or Error Page detected: ' + extractionData.name + '. Retrying...');
                     }
@@ -623,7 +618,7 @@ export default async function handler(request, response) {
           navigationTimeoutSecs: 60,
           useStealth: true,
           fingerprinting: true,
-          proxyConfiguration: { useApifyProxy: true, groups: ['RESIDENTIAL'], countryCode: 'GB' }
+          proxyConfiguration: { useApifyProxy: true } // Removed countryCode: 'GB' for better rotation
         }, {
           webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
         });

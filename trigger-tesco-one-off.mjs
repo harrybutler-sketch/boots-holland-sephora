@@ -428,11 +428,6 @@ const pageFunctionStr = `async function pageFunction(context) {
                         log.info('Skipping Own Brand: ' + extractionData.name);
                         return null;
                     }
-                    if (extractionData.reviews > 5) {
-                        log.info('Skipping High Reviews (' + extractionData.reviews + '): ' + extractionData.name);
-                        return null;
-                    }
-
                     if (extractionData.status === 'Blocked/Error' || extractionData.name.toLowerCase().includes('oops') || extractionData.name.toLowerCase().includes('went wrong')) {
                         throw new Error('Tesco Blocked or Error Page detected: ' + extractionData.name + '. Retrying...');
                     }
@@ -443,9 +438,7 @@ const pageFunctionStr = `async function pageFunction(context) {
 
 async function triggerTescoScrape() {
     const startUrls = [
-        { url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=2#top', userData: { retailer: 'Tesco', label: 'LISTING' } },
-        { url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=3#top', userData: { retailer: 'Tesco', label: 'LISTING' } },
-        { url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=4#top', userData: { retailer: 'Tesco', label: 'LISTING' } }
+        { url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/plant-based-and-vegetarian#plant-based-and-vegetarian', userData: { retailer: 'Tesco', label: 'LISTING' } }
     ];
 
     console.log('Triggering Tesco scrape for:', startUrls[0].url);
@@ -454,7 +447,7 @@ async function triggerTescoScrape() {
         const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls,
             maxConcurrency: 1,
-            proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
+            proxyConfiguration: { useApifyProxy: true }, // Removed countryCode: 'GB' for cleaner rotation
             launchContext: { useChrome: true },
             useStealth: true,
             fingerprinting: true,
