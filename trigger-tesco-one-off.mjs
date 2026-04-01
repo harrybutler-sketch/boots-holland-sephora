@@ -215,18 +215,21 @@ const pageFunctionStr = `async function pageFunction(context) {
                     // Wait for title or H1 to be populated
                     try {
                         if (retailer === 'Tesco') {
+                            // Wait for the specific product title class AND the price-per-quantity-weight to ensure hydration
                             await page.waitForFunction(() => {
-                                const h1 = document.querySelector('h1');
-                                return h1 && h1.innerText.trim().length > 0;
-                            }, { timeout: 15000 });
+                                const title = document.querySelector('h1.product-details-tile__title');
+                                const price = document.querySelector('.price-per-quantity-weight');
+                                return title && title.innerText.trim().length > 0 && price && price.innerText.trim().length > 0;
+                            }, { timeout: 20000 });
                         }
                     } catch (e) {
-                        log.warning('Timed out waiting for H1 to hydrate on ' + request.url);
+                        log.warning('Timed out waiting for hydration on ' + request.url);
                     }
 
                     const extractionData = await page.evaluate((retailer) => {
                          const mainContent = document.querySelector('main, #main, .product-details-page, [role="main"]');
-                         const h1 = mainContent ? mainContent.querySelector('h1') : document.querySelector('h1');
+                         const tescoTitle = document.querySelector('h1.product-details-tile__title'); // Standard PDP H1
+                         const h1 = tescoTitle || (mainContent ? mainContent.querySelector('h1') : document.querySelector('h1'));
                          let name = document.title;
                          
                          // Priority 1: H1 from main content area
@@ -243,24 +246,23 @@ const pageFunctionStr = `async function pageFunction(context) {
                                     .replace(/ \| Boots$/i, '')
                                     .replace(/ \| Sephora/i, '')
                                     .replace(/ - Asda Groceries$/i, '')
-                                    .replace(/^Back$/i, '') // Safety: ignore rogue "Back" buttons picked up as H1
+                                    .replace(/^Back$/i, '') // Safety: ignore rogue "Back" buttons
+                                    .replace(/^New products at Tesco$/i, '') // Safety: ignore category headers
                                     .trim();
 
                          const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
                          
-                         // REFINED MARKETPLACE DETECTION (look only in main content, not header)
-                         if (retailer === 'Tesco' && mainContent) {
-                             const marketplaceText = ['sold and shipped by', 'sold and dispatched by', 'tesco marketplace'];
-                             const hasMarketplaceLabel = Array.from(mainContent.querySelectorAll('span, p, div')).some(el => {
-                                 const t = el.innerText ? el.innerText.toLowerCase() : '';
-                                 return marketplaceText.some(phrase => t.includes(phrase));
-                             });
-                             if (hasMarketplaceLabel) results.status = 'Marketplace';
+                         // MARKETPLACE DETECTION: Search for specific partner seller links
+                         if (retailer === 'Tesco') {
+                             const marketplaceLink = document.querySelector('a.marketplace-seller-link');
+                             if (marketplaceLink) {
+                                 results.status = 'Marketplace';
+                             }
                          }
 
-                         // BLANK PAGE OR BLOCK DETECTION
-                         const pageBodyText = document.body ? document.body.innerText.trim() : '';
-                         if (name === '' || name.length < 2 || pageBodyText.length < 300) {
+                         // BLANK PAGE OR BLOCK DETECTION: If price is missing after timeout, treat as block
+                         const hasPrice = !!document.querySelector('.price-per-quantity-weight');
+                         if (!name || name.length < 2 || !hasPrice) {
                              results.status = 'Blocked/Error';
                          }
                         
@@ -422,11 +424,11 @@ async function triggerTescoScrape() {
     try {
         const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls,
-            useChrome: true,
-            useStealth: true,
-            stealth: true,
             maxPagesPerCrawl: 50,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
+            launchContext: { useChrome: true },
+            useStealth: true,
+            fingerprinting: true,
             userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             pageFunction: pageFunctionStr,
             timeoutSecs: 1800,

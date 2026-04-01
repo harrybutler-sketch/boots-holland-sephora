@@ -396,18 +396,21 @@ export default async function handler(request, response) {
                     // Wait for title or H1 to be populated
                     try {
                         if (retailer === 'Tesco') {
+                            // Wait for the specific product title class AND the price-per-quantity-weight to ensure hydration
                             await page.waitForFunction(() => {
-                                const h1 = document.querySelector('h1');
-                                return h1 && h1.innerText.trim().length > 0;
-                            }, { timeout: 15000 });
+                                const title = document.querySelector('h1.product-details-tile__title');
+                                const price = document.querySelector('.price-per-quantity-weight');
+                                return title && title.innerText.trim().length > 0 && price && price.innerText.trim().length > 0;
+                            }, { timeout: 20000 });
                         }
                     } catch (e) {
-                        log.warning('Timed out waiting for H1 to hydrate on ' + request.url);
+                        log.warning('Timed out waiting for hydration on ' + request.url);
                     }
                     
                     const extractionData = await page.evaluate((retailer) => {
                          const mainContent = document.querySelector('main, #main, .product-details-page, [role="main"]');
-                         const h1 = mainContent ? mainContent.querySelector('h1') : document.querySelector('h1');
+                         const tescoTitle = document.querySelector('h1.product-details-tile__title'); // Standard PDP H1
+                         const h1 = tescoTitle || (mainContent ? mainContent.querySelector('h1') : document.querySelector('h1'));
                          let name = document.title;
                          
                          // Priority 1: H1 from main content area
@@ -424,24 +427,23 @@ export default async function handler(request, response) {
                                     .replace(/ \| Boots$/i, '')
                                     .replace(/ \| Sephora/i, '')
                                     .replace(/ - Asda Groceries$/i, '')
-                                    .replace(/^Back$/i, '') // Safety: ignore rogue "Back" buttons picked up as H1
+                                    .replace(/^Back$/i, '') // Safety: ignore rogue "Back" buttons
+                                    .replace(/^New products at Tesco$/i, '') // Safety: ignore category headers
                                     .trim();
 
                          const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
                          
-                         // REFINED MARKETPLACE DETECTION (look only in main content, not header)
-                         if (retailer === 'Tesco' && mainContent) {
-                             const marketplaceText = ['sold and shipped by', 'sold and dispatched by', 'tesco marketplace'];
-                             const hasMarketplaceLabel = Array.from(mainContent.querySelectorAll('span, p, div')).some(el => {
-                                 const t = el.innerText ? el.innerText.toLowerCase() : '';
-                                 return marketplaceText.some(phrase => t.includes(phrase));
-                             });
-                             if (hasMarketplaceLabel) results.status = 'Marketplace';
+                         // MARKETPLACE DETECTION: Search for specific partner seller links
+                         if (retailer === 'Tesco') {
+                             const marketplaceLink = document.querySelector('a.marketplace-seller-link');
+                             if (marketplaceLink) {
+                                 results.status = 'Marketplace';
+                             }
                          }
 
-                         // BLANK PAGE OR BLOCK DETECTION
-                         const pageBodyText = document.body ? document.body.innerText.trim() : '';
-                         if (name === '' || name.length < 2 || pageBodyText.length < 300) {
+                         // BLANK PAGE OR BLOCK DETECTION: If price is missing after timeout, treat as block
+                         const hasPrice = !!document.querySelector('.price-per-quantity-weight');
+                         if (!name || name.length < 2 || !hasPrice) {
                              results.status = 'Blocked/Error';
                          }
                         
@@ -456,28 +458,32 @@ export default async function handler(request, response) {
                             }
                         }
 
-                        const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-                        for (const s of scripts) {
-                            try {
-                                const json = JSON.parse(s.innerText);
-                                const products = Array.isArray(json) ? json : [json];
-                                const product = products.find(i => i['@type'] === 'Product' || (i['@graph'] && i['@graph'].find(g => g['@type'] === 'Product')));
-                                const p = product && product['@graph'] ? product['@graph'].find(g => g['@type'] === 'Product') : product;
-                                if (p) {
-                                    if (p.aggregateRating) {
-                                        results.reviews = parseInt(p.aggregateRating.reviewCount || p.aggregateRating.numberOfReviews) || 0;
-                                    }
-                                    if (p.image) {
-                                        results.image = typeof p.image === 'string' ? p.image : (p.image.url || (Array.isArray(p.image) ? p.image[0] : ''));
-                                    }
-                                }
-                            } catch(e) {}
-                        }
-                        
-                        if (!results.image) {
-                            const ogImage = document.querySelector('meta[property="og:image"]');
-                            if (ogImage) results.image = ogImage.getAttribute('content');
-                        }
+                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+                         for (const s of scripts) {
+                             try {
+                                 const json = JSON.parse(s.innerText);
+                                 const products = Array.isArray(json) ? json : [json];
+                                 const product = products.find(i => i['@type'] === 'Product' || (i['@graph'] && i['@graph'].find(g => g['@type'] === 'Product')));
+                                 const p = product && product['@graph'] ? product['@graph'].find(g => g['@type'] === 'Product') : product;
+                                 if (p) {
+                                     if (p.aggregateRating) {
+                                         results.reviews = parseInt(p.aggregateRating.reviewCount || p.aggregateRating.numberOfReviews) || 0;
+                                     }
+                                     if (p.image) {
+                                         results.image = typeof p.image === 'string' ? p.image : (p.image.url || (Array.isArray(p.image) ? p.image[0] : ''));
+                                     }
+                                 }
+                             } catch(e) {}
+                         }
+                         
+                         // Specific image selector to catch product-details-tile images
+                         if (!results.image) {
+                             const tescoImg = document.querySelector('.product-details-tile__image-container img');
+                             if (tescoImg) results.image = tescoImg.src || tescoImg.alt;
+                             
+                             const ogImage = document.querySelector('meta[property="og:image"]');
+                             if (!results.image && ogImage) results.image = ogImage.getAttribute('content');
+                         }
                         
                         if (!results.image) {
                             const imgSelectors = [
@@ -585,7 +591,9 @@ export default async function handler(request, response) {
           timeoutSecs: 1800,
           pageFunctionTimeoutSecs: 180,
           requestHandlerTimeoutSecs: 180,
-          navigationTimeoutSecs: 60
+          navigationTimeoutSecs: 60,
+          useStealth: true,
+          fingerprinting: true
         }, {
           webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer' }]
         });
