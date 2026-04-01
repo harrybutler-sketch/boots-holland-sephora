@@ -226,7 +226,7 @@ const pageFunctionStr = `async function pageFunction(context) {
                             return null;
                         }
 
-                        // 2. IMMEDIATE Own Brand check (to avoid wasting 40s on hydration for products we don't want)
+                        // 2. IMMEDIATE Own Brand check
                         const isOwnBrand = await page.evaluate(() => {
                             const name = (document.querySelector('h1')?.innerText || document.title).toLowerCase();
                             return name.includes('tesco');
@@ -237,21 +237,45 @@ const pageFunctionStr = `async function pageFunction(context) {
                             return null;
                         }
 
-                        // 3. Minimal delay (shorter is better for session stability)
+                        // 3. Resilient Hydration & Status Check
                         await new Promise(r => setTimeout(r, 1000));
-
-                        // 4. Resilient Hydration (Wait for H1 only, let price follow)
-                        try {
-                            await page.waitForSelector('h1', { timeout: 25000 });
-                        } catch (e) {
-                            throw new Error('Tesco Page Load Timeout: No Heading Found at ' + request.url);
+                        const response = await page.goto(request.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                        if (response && response.status() !== 200) {
+                            throw new Error(`Tesco Blocked: Received status ${response.status()} at ${request.url}`);
                         }
-                    } else {
-                        // Standard delay for other retailers
-                        const randomWait = 3000 + (Math.random() * 4000);
-                        log.info('Humanized detail-page delay: ' + Math.round(randomWait) + 'ms');
-                        await new Promise(r => setTimeout(r, randomWait));
-                    }
+
+                        try {
+                            await page.waitForSelector('h1', { timeout: 20000 });
+                        } catch (e) {
+                            throw new Error('Tesco Page Load Timeout: No Heading Found');
+                        }
+
+                        const extractionData = await page.evaluate((retailer) => {
+                            const h1 = document.querySelector('h1');
+                            const priceEl = document.querySelector('.ddsweb-price__value, [data-testid="price-per-sellable-unit"]');
+                            return {
+                                name: h1 ? h1.innerText.trim() : 'Unknown Product',
+                                price_display: priceEl ? priceEl.innerText.trim() : 'N/A',
+                                reviews: document.querySelector('[data-testid="reviews-count"], .reviews-count')?.innerText?.replace(/[()]/g, '') || '0',
+                                rating: document.querySelector('[data-testid="rating-value-count"], .rating-value')?.innerText || '0',
+                                manufacturer: '', 
+                                isOwnBrand: false,
+                                status: 'Success'
+                            };
+                        }, retailer);
+
+                        // Final Sanity Check: If name is still generic/empty, it's a fail
+                        if (!extractionData.name || extractionData.name.length < 5 || extractionData.name.toLowerCase().includes('oops')) {
+                            throw new Error('Tesco Extraction Failed: Generic or missing name detected.');
+                        }
+
+                        // Push to dataset immediately if in manual script, or return for crawler
+                        return extractionData;
+                    } 
+                    
+                    // Standard Logic for other retailers
+                    const randomWait = 3000 + (Math.random() * 4000);
+                    await new Promise(r => setTimeout(r, randomWait));
 
                     const extractionData = await page.evaluate((retailer) => {
                           const mainContent = document.querySelector('main, #main, .product-details-page, [role="main"]');
