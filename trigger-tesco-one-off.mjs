@@ -217,20 +217,20 @@ const pageFunctionStr = `async function pageFunction(context) {
                         if (retailer === 'Tesco') {
                             // Wait for the specific product title class AND the price-per-quantity-weight to ensure hydration
                             await page.waitForFunction(() => {
-                                const title = document.querySelector('h1.product-details-tile__title');
-                                const price = document.querySelector('.price-per-quantity-weight');
-                                return title && title.innerText.trim().length > 0 && price && price.innerText.trim().length > 0;
-                            }, { timeout: 20000 });
+                                const title = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title, h1');
+                                const price = document.querySelector('.price-per-quantity-weight, .price-details--unit-price, .value');
+                                return title && title.innerText.trim().length > 3 && price && price.innerText.trim().length > 0;
+                            }, { timeout: 40000 });
                         }
                     } catch (e) {
-                        log.warning('Timed out waiting for hydration on ' + request.url);
+                        throw new Error('Hydration Timeout on ' + request.url + ' - Price or Title not found. Retrying...');
                     }
 
                     const extractionData = await page.evaluate((retailer) => {
                          const mainContent = document.querySelector('main, #main, .product-details-page, [role="main"]');
-                         const tescoTitle = document.querySelector('h1.product-details-tile__title'); // Standard PDP H1
+                         const tescoTitle = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title'); // Specific PDP H1
                          const h1 = tescoTitle || (mainContent ? mainContent.querySelector('h1') : document.querySelector('h1'));
-                         let name = document.title;
+                         let name = h1 ? h1.innerText.trim() : document.title;
                          
                          // Priority 1: H1 from main content area
                          if (h1 && h1.innerText && h1.innerText.length > 3 && !h1.innerText.toLowerCase().includes('oops')) {
@@ -261,7 +261,7 @@ const pageFunctionStr = `async function pageFunction(context) {
                          }
 
                          // BLANK PAGE OR BLOCK DETECTION: If price is missing after timeout, treat as block
-                         const hasPrice = !!document.querySelector('.price-per-quantity-weight');
+                         const hasPrice = !!document.querySelector('.price-per-quantity-weight, .price-details--unit-price, .value');
                          if (!name || name.length < 2 || !hasPrice) {
                              results.status = 'Blocked/Error';
                          }
@@ -404,8 +404,7 @@ const pageFunctionStr = `async function pageFunction(context) {
                     }
 
                     if (extractionData.status === 'Blocked/Error' || extractionData.name.toLowerCase().includes('oops') || extractionData.name.toLowerCase().includes('went wrong')) {
-                        log.info('Skipping error page: ' + extractionData.name);
-                        return null;
+                        throw new Error('Tesco Blocked or Error Page detected: ' + extractionData.name + '. Retrying...');
                     }
                     
                     return extractionData;
@@ -424,7 +423,7 @@ async function triggerTescoScrape() {
     try {
         const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls,
-            maxPagesPerCrawl: 50,
+            maxConcurrency: 1,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             launchContext: { useChrome: true },
             useStealth: true,

@@ -7,10 +7,11 @@ const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 const TEST_URL = 'https://www.tesco.com/groceries/en-GB/products/250106411'; // Yeo Valley Whole Milk 1L - Stable product
 
 const runTescoTest = async () => {
-    console.log('Testing Tesco Scraper 2.0 on:', TEST_URL);
+    console.log('Testing Tesco Scraper 2.1 on:', TEST_URL);
     
     const run = await client.actor('apify/puppeteer-scraper').call({
         startUrls: [{ url: TEST_URL, userData: { label: 'DETAIL', retailer: 'Tesco' } }],
+        maxConcurrency: 1,
         pageFunction: async function pageFunction(context) {
             const { page, request, log } = context;
             const { retailer } = request.userData;
@@ -20,29 +21,19 @@ const runTescoTest = async () => {
             // 1. Force desktop viewport
             await page.setViewport({ width: 1920, height: 1080 });
 
-            // 2. Clear cookie banner
-            try {
-                const cookieSelector = '#onetrust-accept-btn-handler';
-                await page.waitForSelector(cookieSelector, { timeout: 5000 });
-                await page.click(cookieSelector);
-                await new Promise(r => setTimeout(r, 2000));
-            } catch (e) {
-                log.info('No cookie banner found or already accepted.');
-            }
-
-            // 3. WAIT FOR HYDRATION (Price-Gate)
+            // 2. WAIT FOR HYDRATION (Price-Gate)
             try {
                 await page.waitForFunction(() => {
-                    const title = document.querySelector('h1.product-details-tile__title');
-                    const price = document.querySelector('.price-per-quantity-weight');
-                    return title && title.innerText.trim().length > 0 && price && price.innerText.trim().length > 0;
-                }, { timeout: 20000 });
+                    const title = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title, h1');
+                    const price = document.querySelector('.price-per-quantity-weight, .price-details--unit-price, .value');
+                    return title && title.innerText.trim().length > 3 && price && price.innerText.trim().length > 0;
+                }, { timeout: 40000 });
             } catch (e) {
                 log.warning('Timed out waiting for hydration/price-gate.');
             }
 
             const extractionData = await page.evaluate((retailer) => {
-                const tescoTitle = document.querySelector('h1.product-details-tile__title');
+                const tescoTitle = document.querySelector('h1.product-details-tile__title, h1.product-details-page__title');
                 const h1 = tescoTitle || document.querySelector('h1');
                 let name = h1 ? h1.innerText.trim() : document.title;
 
@@ -55,11 +46,11 @@ const runTescoTest = async () => {
                     isMarketplace: !!document.querySelector('a.marketplace-seller-link')
                 };
 
-                const priceEl = document.querySelector('.price-per-quantity-weight');
+                const priceEl = document.querySelector('.price-per-quantity-weight, .price-details--unit-price, .value');
                 results.priceFound = !!priceEl;
                 if (priceEl) results.priceText = priceEl.innerText.trim();
 
-                const img = document.querySelector('.product-details-tile__image-container img');
+                const img = document.querySelector('.product-details-tile__image-container img, .product-image img');
                 if (img) results.image = img.src;
 
                 return results;
@@ -68,8 +59,10 @@ const runTescoTest = async () => {
             log.info('Extraction result: ' + JSON.stringify(extractionData));
             return extractionData;
         },
-        proxyConfiguration: { useApifyProxy: true, groups: ['RESIDENTIAL'] },
+        proxyConfiguration: { useApifyProxy: true, groups: ['RESIDENTIAL'], countryCode: 'GB' },
         launchContext: { useChrome: true },
+        useStealth: true,
+        fingerprinting: true,
     });
 
     console.log('Run completed! ID:', run.id);
