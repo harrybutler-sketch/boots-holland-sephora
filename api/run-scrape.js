@@ -496,27 +496,27 @@ export default async function handler(request, response) {
                                      if (p.image) {
                                          results.image = typeof p.image === 'string' ? p.image : (p.image.url || (Array.isArray(p.image) ? p.image[0] : ''));
                                      }
-                                 }
-                             } catch(e) {}
+                            } catch(e) {}
                          }
                          
                          // Specific image selector to catch product-details-tile images
-                         if (!results.image) {
-                             const tescoImg = document.querySelector('.product-details-tile__image-container img');
-                             if (tescoImg) results.image = tescoImg.src || tescoImg.alt;
-                             
-                             const ogImage = document.querySelector('meta[property="og:image"]');
-                             if (!results.image && ogImage) results.image = ogImage.getAttribute('content');
-                         }
-                        
+                         // Fallback Image Extraction
+                        if (!results.image) {
+                            const ogImage = document.querySelector('meta[property="og:image"]');
+                            if (ogImage) results.image = ogImage.getAttribute('content');
+                        }
+
                         if (!results.image) {
                             const imgSelectors = [
-                                '.pt-image__image', // Sainsbury's
+                                'img.product-image', // Tesco, Ocado, Morrisons
+                                'img.pd__image', // Sainsbury's
+                                '.pt-image__image', // Sainsbury's (legacy)
                                 'img[itemprop="image"]',
                                 '.product-image img',
+                                '.product-image__container img',
+                                'figure img', // Waitrose
                                 '.oct-teaser__image',
-                                '#main-product-image',
-                                '.co-product-image img'
+                                '#main-product-image'
                             ];
                             for (const sel of imgSelectors) {
                                 const img = document.querySelector(sel);
@@ -528,20 +528,48 @@ export default async function handler(request, response) {
                         }
 
                         if (results.reviews === 0) {
-                            const bvCount = document.querySelector('.bv_numReviews_text, #bvRContainer-Link, [data-bv-show="rating_summary"]');
-                            if (bvCount) results.reviews = parseInt(bvCount.innerText.replace(/[^0-9]/g, '')) || 0;
+                            const reviewSelectors = [
+                                '.review-summary__count', // Tesco
+                                '.star-rating-link span', // Sainsbury's
+                                'a[href="#reviews-title"] span', // Ocado/Morrisons
+                                '[class*="starRating"] span', // Waitrose
+                                '.bv_numReviews_text',
+                                '#bvRContainer-Link',
+                                '[data-bv-show="rating_summary"]'
+                            ];
+                            for (const sel of reviewSelectors) {
+                                const el = document.querySelector(sel);
+                                if (el) {
+                                    const match = el.innerText.match(/\d+/);
+                                    if (match) {
+                                        results.reviews = parseInt(match[0]) || 0;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                         if (results.reviews === 0 && retailer === 'Sainsburys') {
                             const ratingStars = document.querySelector('.ds-c-rating__stars, .star-rating-link');
                             if (ratingStars && ratingStars.getAttribute('aria-label')) {
-                                const match = ratingStars.getAttribute('aria-label').match(/from\\s+(\\d+)\\s+reviews/i) || ratingStars.getAttribute('aria-label').match(/(\\d+)\\s+reviews/i);
+                                const match = ratingStars.getAttribute('aria-label').match(/from\s+(\d+)\s+reviews/i) || ratingStars.getAttribute('aria-label').match(/(\d+)\s+reviews/i);
                                 if (match) results.reviews = parseInt(match[1]) || 0;
                             }
                         }
 
                         // Extract Manufacturer Address Block specifically for Sainsbury's, Tesco, & others
                         let addressText = '';
-                        const mfnHeaders = Array.from(document.querySelectorAll('h3, strong, span, div, summary'))
+                        const manufacturerSelectors = [
+                            '#brand-details-panel', // Tesco
+                            '[data-testid="product-details-manufacturer"]', // Waitrose
+                            '#product-information', // Ocado/Morrisons
+                            '#manufacturer-details' // Asda
+                        ];
+                        for (const sel of manufacturerSelectors) {
+                            const el = document.querySelector(sel);
+                            if (el) addressText += ' ' + el.innerText;
+                        }
+
+                        const mfnHeaders = Array.from(document.querySelectorAll('h3, strong, span, div, summary, h4'))
                             .filter(el => {
                                 const t = el.innerText ? el.innerText.toLowerCase().trim() : '';
                                 return t === 'manufacturer address' || t === 'manufacturer' || t === 'return to' || t === 'manufacturer details' || t === 'brand details';
@@ -575,12 +603,23 @@ export default async function handler(request, response) {
 
                         // Final logic checks
                         const ownBrandKeywords = [
-                            'Asda', 'Extra Special', 'Sainsburys', 'Sainsbury\\'s', 'Taste the Difference', 'By Sainsbury\\'s',
+                            'Asda', 'Extra Special', 'Sainsburys', 'Sainsbury\'s', 'Taste the Difference', 'By Sainsbury\'s',
                             'Waitrose', 'Essential Waitrose', 'Waitrose No.1', 'Tesco', 'Tesco Finest', 'Morrisons', 'The Best',
-                            'Ocado', 'Boots', 'Superdrug', 'H&B', 'Holland & Barrett', 'Sephora'
+                            'Ocado', 'Boots', 'Superdrug', 'H&B', 'Holland & Barrett', 'Sephora', 'Plant Menu', 'The Grocer\'s Kitchen',
+                            'John Lewis', 'M&S', 'Marks & Spencer'
                         ];
                         
                         results.isOwnBrand = ownBrandKeywords.some(kw => results.name.toLowerCase().includes(kw.toLowerCase()));
+                        
+                        if (results.isOwnBrand) {
+                            log.info('Skipping Own Brand: ' + results.name);
+                            return null;
+                        }
+                        
+                        if (results.reviews > 5) {
+                            log.info('Skipping High Reviews (' + results.reviews + '): ' + results.name);
+                            return null;
+                        }
                         
                         // Exclusion for Habitat at Sainsbury's
                         if (retailer === 'Sainsburys' && (results.name.toLowerCase().includes('habitat') || window.location.href.toLowerCase().includes('habitat'))) {
