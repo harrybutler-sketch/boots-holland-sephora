@@ -118,8 +118,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         const morrisonsUrls = [
-          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite',
-          'https://groceries.morrisons.com/categories/food-cupboard/102705?boolean=new&sortBy=favorite'
+          'https://groceries.morrisons.com/categories/dietary-lifestyle-foods/192319?boolean=new&sortBy=favorite'
         ];
         morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }

@@ -32,6 +32,8 @@ export const handler = async (event, context) => {
         let sheetName = 'New In'; // Default (Beauty)
         if (workspace === 'grocery') {
             sheetName = 'Grocery';
+        } else if (workspace === 'linkedin' || workspace === 'news') {
+            sheetName = 'LinkedIn';
         }
 
         const sheet = doc.sheetsByTitle[sheetName] || doc.sheetsByIndex[0];
@@ -41,8 +43,9 @@ export const handler = async (event, context) => {
         // Dynamic Header Detection
         const reviewsHeader = headersList.find(h => ['reviews', 'review_count', 'Review Count', 'Reviews', 'rating_count'].includes(h)) || 'reviews';
         const ratingHeader = headersList.find(h => ['rating_value', 'rating', 'Rating', 'stars'].includes(h)) || 'rating_value';
-        const productUrlHeader = headersList.find(h => ['product url', 'Product URL', 'url', 'URL'].includes(h)) || 'product url';
+        const productUrlHeader = headersList.find(h => ['product url', 'Product URL', 'url', 'URL', 'post url', 'Post URL'].includes(h)) || 'product url';
         const priceHeader = headersList.find(h => ['price', 'Price', 'price_display'].includes(h)) || 'price';
+        const dateHeader = headersList.find(h => ['date_found', 'date', 'Date'].includes(h)) || 'date_found';
 
         // Fetch rows (might need optimizations for very large sheets, but okay for start)
         const rows = await sheet.getRows();
@@ -60,9 +63,28 @@ export const handler = async (event, context) => {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
             filteredRows = filteredRows.filter(row => {
-                const dateVal = row.get('date_found');
-                if (!dateVal) return true; // Keep rows with no date (legacy/missing header)
+                const dateVal = row.get(dateHeader);
+                if (!dateVal || dateVal === 'Unknown' || dateVal === 'Recent') return true; 
+                
                 const rowDate = new Date(dateVal);
+                // Handle non-standard dates or strings like "4 days ago"
+                if (isNaN(rowDate.getTime())) {
+                    const lowerDate = dateVal.toLowerCase();
+                    if (lowerDate.includes('ago')) {
+                        const match = lowerDate.match(/(\d+)\s+(hour|day|week|month)/);
+                        if (match) {
+                            const num = parseInt(match[1]);
+                            const unit = match[2];
+                            let daysAgo = 0;
+                            if (unit === 'hour') daysAgo = num / 24;
+                            if (unit === 'day') daysAgo = num;
+                            if (unit === 'week') daysAgo = num * 7;
+                            if (unit === 'month') daysAgo = num * 30;
+                            return daysAgo <= parseInt(days);
+                        }
+                    }
+                    return true; // Keep if we can't parse but it's not clearly old
+                }
                 return rowDate >= cutoffDate;
             });
         }
@@ -102,11 +124,14 @@ export const handler = async (event, context) => {
             });
         }
 
-        // Sort by date_found descending (newest first)
-        // Assuming date_found is YYYY-MM-DD, string sort works for ISO format
+        // Sort by date descending (newest first)
         filteredRows.sort((a, b) => {
-            const dateA = a.get('date_found');
-            const dateB = b.get('date_found');
+            const dateA = a.get(dateHeader);
+            const dateB = b.get(dateHeader);
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            
+            // Basic ISO sort if they look like dates
             if (dateA < dateB) return 1;
             if (dateA > dateB) return -1;
             return 0;
@@ -117,20 +142,25 @@ export const handler = async (event, context) => {
         const slicedRows = filteredRows.slice(0, validLimit);
 
         // Map to JSON
-        const results = slicedRows.map(row => ({
-            date_found: row.get('date_found'),
-            retailer: row.get('retailer'),
-            manufacturer: row.get('manufacturer'), // Added manufacturer
-            product_name: row.get('product') || row.get('product_name'), // Fallback for old rows
-            brand: row.get('brand'),
-            category: row.get('category'),
-            product_url: row.get(productUrlHeader),
-            image_url: row.get('image_url') || '', // Added image_url
-            price_display: row.get(priceHeader),
-            reviews: row.get(reviewsHeader),
-            rating: row.get(ratingHeader),
-            status: 'Active' // Placeholder or derived
-        }));
+        const results = slicedRows.map(row => {
+            const dealtVal = row.get('dealtWith') || row.get('Status') || row.get('status');
+            const isDealtWith = dealtVal === 'TRUE' || dealtVal === 'Dealt With' || dealtVal === 'Done' || dealtVal === 'Finished';
+
+            return {
+                date_found: row.get(dateHeader),
+                retailer: row.get('retailer'),
+                manufacturer: row.get('manufacturer') || row.get('source'), 
+                product_name: row.get('product') || row.get('product_name') || row.get('headline'), 
+                brand: row.get('brand'),
+                category: row.get('category') || row.get('type') || (workspace === 'linkedin' ? 'LinkedIn' : 'New In'),
+                product_url: row.get(productUrlHeader),
+                image_url: row.get('image_url') || '',
+                price_display: row.get(priceHeader) || 'N/A',
+                reviews: row.get(reviewsHeader) || 0,
+                rating: row.get(ratingHeader) || 0,
+                status: isDealtWith ? 'Dealt With' : 'Pending'
+            };
+        });
 
         return {
             statusCode: 200,

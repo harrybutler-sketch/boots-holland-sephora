@@ -18,7 +18,13 @@ export const handler = async (event, context) => {
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
 
-        const sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
+        let sheetTitle = 'New In';
+        if (workspace === 'grocery') {
+            sheetTitle = 'Grocery';
+        } else if (workspace === 'linkedin' || workspace === 'news') {
+            sheetTitle = 'LinkedIn';
+        }
+
         const sheet = doc.sheetsByTitle[sheetTitle];
 
         if (!sheet) {
@@ -27,7 +33,7 @@ export const handler = async (event, context) => {
 
         const rows = await sheet.getRows();
         const row = rows.find(r => {
-            const u = r.get('Product URL') || r.get('product url') || r.get('url');
+            const u = r.get('Product URL') || r.get('product url') || r.get('url') || r.get('post url') || r.get('Post URL');
             return u === productUrl;
         });
 
@@ -38,8 +44,12 @@ export const handler = async (event, context) => {
             };
         }
 
-        const statusHeader = ['Status', 'status'].find(h => row.get(h) !== undefined) || 'Status';
-        row.set(statusHeader, status);
+        if (sheetTitle === 'LinkedIn') {
+            row.set('dealtWith', status === 'Dealt With' ? 'TRUE' : 'FALSE');
+        } else {
+            const statusHeader = ['Status', 'status'].find(h => row.get(h) !== undefined) || 'Status';
+            row.set(statusHeader, status);
+        }
         await row.save();
 
         return {

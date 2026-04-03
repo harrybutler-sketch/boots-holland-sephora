@@ -7,7 +7,7 @@ import NewsFeed from './components/NewsFeed';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'linkedin'
-  const [workspace, setWorkspace] = useState(() => localStorage.getItem('scraper_workspace') || 'beauty'); // 'beauty' or 'grocery'
+  const [workspace, setWorkspace] = useState(() => localStorage.getItem('scraper_workspace') || 'beauty'); // 'beauty', 'grocery', or 'linkedin'
   const [runStatus, setRunStatus] = useState(() => localStorage.getItem('scraper_runStatus') || 'Idle');
   const [runId, setRunId] = useState(() => localStorage.getItem('scraper_runId') || null);
   const [lastRunTime, setLastRunTime] = useState(null);
@@ -207,6 +207,8 @@ function App() {
       review_range: '',
       hideDealt: true
     });
+    // If we're in LinkedIn view, maybe switch back to dashboard or stay
+    if (currentView !== 'dashboard') setCurrentView('dashboard');
   };
 
   const handleExportCSV = () => {

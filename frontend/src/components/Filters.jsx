@@ -8,7 +8,9 @@ const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
 
     const retailers = workspace === 'beauty'
         ? ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug']
-        : ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
+        : workspace === 'grocery' 
+            ? ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose']
+            : ['Tesco', 'Sainsburys', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'The Grocer'];
 
     return (
         <div className="card filters">
@@ -45,23 +47,25 @@ const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
                 </select>
             </div>
 
-            <div className="form-group">
-                <label htmlFor="review_range">Review Count</label>
-                <select
-                    id="review_range"
-                    name="review_range"
-                    className="select"
-                    value={filters.review_range || ''}
-                    onChange={handleChange}
-                    style={{ width: '140px' }}
-                >
-                    <option value="">All Reviews</option>
-                    <option value="0-5">0 - 5 Reviews</option>
-                    <option value="5-10">5 - 10 Reviews</option>
-                    <option value="10-20">10 - 20 Reviews</option>
-                    <option value="20+">20+ Reviews</option>
-                </select>
-            </div>
+            {workspace !== 'linkedin' && (
+                <div className="form-group">
+                    <label htmlFor="review_range">Review Count</label>
+                    <select
+                        id="review_range"
+                        name="review_range"
+                        className="select"
+                        value={filters.review_range || ''}
+                        onChange={handleChange}
+                        style={{ width: '140px' }}
+                    >
+                        <option value="">All Reviews</option>
+                        <option value="0-5">0 - 5 Reviews</option>
+                        <option value="5-10">5 - 10 Reviews</option>
+                        <option value="10-20">10 - 20 Reviews</option>
+                        <option value="20+">20+ Reviews</option>
+                    </select>
+                </div>
+            )}
 
             <div className="form-group" style={{ flexGrow: 1 }}>
                 <label htmlFor="q">Search</label>

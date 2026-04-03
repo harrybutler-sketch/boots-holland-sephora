@@ -5,7 +5,9 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
     // Retailer sets
     const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug'];
     const groceryRetailers = ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
-    const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : groceryRetailers;
+    const linkedinRetailers = [...new Set([...beautyRetailers, ...groceryRetailers, 'The Grocer'])].sort();
+    
+    const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : (workspace === 'grocery' ? groceryRetailers : linkedinRetailers);
 
     return (
         <div className="card controls" style={{ padding: '2rem' }}>
@@ -52,6 +54,26 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                             }}
                         >
                             <span>🛒 Grocery</span>
+                        </button>
+                        <button
+                            onClick={() => onWorkspaceChange('linkedin')}
+                            style={{
+                                padding: '0.625rem 1.25rem',
+                                background: workspace === 'linkedin' ? 'white' : 'transparent',
+                                border: 'none',
+                                borderRadius: '9999px',
+                                color: workspace === 'linkedin' ? 'var(--color-indigo)' : 'var(--color-text-secondary)',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                boxShadow: workspace === 'linkedin' ? 'var(--shadow-sm)' : 'none',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            <span>🔗 LinkedIn</span>
                         </button>
                     </div>
                     <div style={{ flex: 1 }}></div>
