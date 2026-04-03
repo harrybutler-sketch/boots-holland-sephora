@@ -123,10 +123,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         const ocadoUrls = [
-          'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new',
-          'https://www.ocado.com/search?q=goodies&boolean=new',
-          'https://www.ocado.com/categories/food-cupboard/biscuits/8b50328c-ddf3-487a-9aef-957c07d2d0cc?boolean=new&sortBy=favorite',
-          'https://www.ocado.com/categories/soft-drinks-tea-coffee/513db630-94bc-4ed0-9b62-fe038f108bb7?boolean=new&sortBy=favorite'
+          'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=priceAscending'
         ];
         ocadoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Ocado', label: 'LISTING' } }));
       }
