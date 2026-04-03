@@ -96,8 +96,7 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.boots.com/new-to-boots', userData: { retailer: 'Boots', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('holland'))) {
-        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/health-wellness/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
-        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/natural-beauty/natural-beauty-shop-all/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/food-drink/?t=is_new%3Atrue&page=2#products-list', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
