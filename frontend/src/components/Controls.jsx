@@ -55,26 +55,6 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                         >
                             <span>🛒 Grocery</span>
                         </button>
-                        <button
-                            onClick={() => onWorkspaceChange('linkedin')}
-                            style={{
-                                padding: '0.625rem 1.25rem',
-                                background: workspace === 'linkedin' ? 'white' : 'transparent',
-                                border: 'none',
-                                borderRadius: '9999px',
-                                color: workspace === 'linkedin' ? 'var(--color-indigo)' : 'var(--color-text-secondary)',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                boxShadow: workspace === 'linkedin' ? 'var(--shadow-sm)' : 'none',
-                                transition: 'all 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                        >
-                            <span>🔗 LinkedIn</span>
-                        </button>
                     </div>
                     <div style={{ flex: 1 }}></div>
                     <button

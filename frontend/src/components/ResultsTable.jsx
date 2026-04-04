@@ -81,15 +81,42 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                             </td>
                             <td>
                                 {item.manufacturer ? (
-                                    <a
-                                        href={`https://duckduckgo.com/?q=%21ducky+${encodeURIComponent(item.manufacturer)}+brand+official+website`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{ color: 'var(--color-text-primary)', textDecoration: 'none', fontWeight: '600', fontSize: '0.95rem' }}
-                                        title={`Go to ${item.manufacturer} website`}
-                                    >
-                                        {item.manufacturer}
-                                    </a>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <a
+                                            href={`https://duckduckgo.com/?q=%21ducky+${encodeURIComponent(item.manufacturer)}+brand+official+website`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ color: 'var(--color-text-primary)', textDecoration: 'none', fontWeight: '600', fontSize: '0.95rem' }}
+                                            title={`Go to ${item.manufacturer} website`}
+                                        >
+                                            {item.manufacturer}
+                                        </a>
+                                        <a
+                                            href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(item.manufacturer)}%20Founder`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title={`Find ${item.manufacturer} Founder on LinkedIn`}
+                                            style={{
+                                                fontSize: '12px',
+                                                background: '#0a66c2',
+                                                color: 'white',
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '4px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                textDecoration: 'none',
+                                                opacity: '0.9',
+                                                transition: 'all 0.2s ease',
+                                                fontWeight: 'bold'
+                                            }}
+                                            onMouseEnter={(e) => { e.target.style.opacity = '1'; e.target.style.transform = 'scale(1.1)'; }}
+                                            onMouseLeave={(e) => { e.target.style.opacity = '0.9'; e.target.style.transform = 'scale(1)'; }}
+                                        >
+                                            👤
+                                        </a>
+                                    </div>
                                 ) : (
                                     <span style={{ color: '#94a3b8' }}>-</span>
                                 )}
