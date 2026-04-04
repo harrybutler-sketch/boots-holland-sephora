@@ -113,7 +113,7 @@ export default async function handler(request, response) {
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('waitrose'))) {
-        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOooKM98Ui8176ymqqxOJPFOQXSyUlzCwkxv5jd3yb4VseBO_bBKu', userData: { retailer: 'Waitrose', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOoq4inG-1EnHQW5sNrpntOLEleMCSVOoXoBNtkFJ7Y9HGQJh-dDJ', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         const morrisonsUrls = [
