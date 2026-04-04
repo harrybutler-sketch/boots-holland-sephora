@@ -273,11 +273,15 @@ export const handler = async (event, context) => {
             const { url, userData: { retailer, label } } = request;
             
             // Stealth: Cookie Acceptance
-            const cookieButton = await page.$('#onetrust-accept-btn-handler');
-            if (cookieButton) {
-                log.info('Clearing Tesco cookie banner...');
-                await cookieButton.click();
-                await new Promise(r => setTimeout(r, 1000));
+            try {
+                const cookieButton = await page.$('#onetrust-accept-btn-handler');
+                if (cookieButton) {
+                    log.info('Clearing Tesco cookie banner...');
+                    await page.evaluate((el) => el.click(), cookieButton);
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            } catch (e) {
+                log.info('Non-critical: Could not click cookie banner.');
             }
 
             // Stealth: Human Scroll & Wait for Network context
