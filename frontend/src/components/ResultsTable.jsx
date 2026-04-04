@@ -130,6 +130,11 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                     ) : (
                                         <span style={{ fontSize: '0.95rem' }}>{item.product_name}</span>
                                     )}
+                                    {(item.product_name?.toLowerCase().includes('launch') || 
+                                      item.product_name?.toLowerCase().includes('available at') || 
+                                      item.product_name?.toLowerCase().includes('coming soon')) && (
+                                        <span title="Launch Radar detected" style={{ fontSize: '1.2rem', marginLeft: '4px' }}>🚀</span>
+                                    )}
                                     {item.product_url && (
                                         <button
                                             className="btn-copy"
