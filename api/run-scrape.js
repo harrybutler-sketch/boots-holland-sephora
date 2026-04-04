@@ -268,6 +268,24 @@ export default async function handler(request, response) {
         const TESCO_AGGRESSIVE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
+            // Stealth: Cookie Acceptance
+            const cookieButton = await page.$('#onetrust-accept-btn-handler');
+            if (cookieButton) {
+                log.info('Clearing Tesco cookie banner...');
+                await cookieButton.click();
+                await new Promise(r => setTimeout(r, 1000));
+            }
+
+            // Stealth: Human Scroll & Wait for Network context
+            await page.evaluate(() => {
+                window.scrollBy(0, 800);
+            });
+            await new Promise(r => setTimeout(r, 500));
+            await page.evaluate(() => {
+                window.scrollBy(0, -300);
+            });
+            await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => {});
+            
             const h1Text = await page.evaluate(() => document.querySelector('h1')?.innerText || '');
             if (h1Text.toLowerCase().includes('oops') || h1Text.toLowerCase().includes('went wrong') || page.url().includes('status=403')) {
                 throw new Error('BLOCK_DETECTED: ' + url);
@@ -282,7 +300,7 @@ export default async function handler(request, response) {
                     await enqueueLinks({ selector: 'a.pagination--button--next', label: 'LISTING', userData: { retailer: 'Tesco' } });
                 }
             } else if (label === 'DETAIL') {
-                const delay = 2000 + (Math.random() * 3000);
+                const delay = 5000 + (Math.random() * 5000);
                 await new Promise(r => setTimeout(r, delay));
                 await page.waitForSelector('h1', { timeout: 15000 });
                 const results = await page.evaluate(() => {
