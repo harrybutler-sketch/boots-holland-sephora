@@ -272,23 +272,29 @@ export const handler = async (event, context) => {
         const TESCO_AGGRESSIVE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
+            // Stealth: Desktop Viewport
+            await page.setViewport({ width: 1920, height: 1080 });
+
             // Stealth: Cookie Acceptance
             try {
                 const cookieButton = await page.$('#onetrust-accept-btn-handler');
                 if (cookieButton) {
                     log.info('Clearing Tesco cookie banner...');
                     await page.evaluate((el) => el.click(), cookieButton);
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
                 }
             } catch (e) {
                 log.info('Non-critical: Could not click cookie banner.');
             }
 
+            // Stealth: Initial Random Mouse Move
+            await page.mouse.move(100 + Math.random() * 50, 100 + Math.random() * 50);
+
             // Stealth: Human Scroll & Wait for Network context
             await page.evaluate(() => {
                 window.scrollBy(0, 800);
             });
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 1000));
             await page.evaluate(() => {
                 window.scrollBy(0, -300);
             });
@@ -358,7 +364,7 @@ export const handler = async (event, context) => {
             startUrls: tescoStartUrls,
             pageFunction: TESCO_AGGRESSIVE_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
-            stealth: true,
+            useStealth: true,
             useChrome: true,
             maxConcurrency: 1
           }, {
@@ -372,7 +378,7 @@ export const handler = async (event, context) => {
             startUrls: normalStartUrls,
             pageFunction: STABLE_PAGE_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
-            stealth: true,
+            useStealth: true,
             useChrome: true
           }, {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-stable' }]
