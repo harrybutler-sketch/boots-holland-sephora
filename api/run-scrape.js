@@ -100,9 +100,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=2#top',
-          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=3#top',
-          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=4#top'
+          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-drinks-beer-wine-spirit#new-drinks'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
