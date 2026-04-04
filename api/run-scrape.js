@@ -96,7 +96,7 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.boots.com/new-to-boots', userData: { retailer: 'Boots', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('holland'))) {
-        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/food-drink/?t=is_new%3Atrue&page=2#products-list', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/food-drink/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
@@ -213,7 +213,8 @@ export default async function handler(request, response) {
                         'Waitrose': 'a[aria-label="Next page"]',
                         'Morrisons': 'a.next-page, a[aria-label*="Next"]',
                         'Ocado': 'a.next-page',
-                        'Asda': 'a[aria-label="Next page"], button[aria-label="Next page"], .co-pagination__next'
+                        'Asda': 'a[aria-label="Next page"], button[aria-label="Next page"], .co-pagination__next',
+                        'Holland & Barrett': 'a.PagingButtons-module_pagingLinkWrapper__kjUec'
                     };
                     
                     const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
@@ -496,27 +497,23 @@ export default async function handler(request, response) {
                                      if (p.image) {
                                          results.image = typeof p.image === 'string' ? p.image : (p.image.url || (Array.isArray(p.image) ? p.image[0] : ''));
                                      }
+                                 }
                             } catch(e) {}
                          }
                          
                          // Specific image selector to catch product-details-tile images
-                         // Fallback Image Extraction
-                        if (!results.image) {
-                            const ogImage = document.querySelector('meta[property="og:image"]');
-                            if (ogImage) results.image = ogImage.getAttribute('content');
-                        }
-
+                         // RESTORED STABLE IMAGE SELECTORS
                         if (!results.image) {
                             const imgSelectors = [
                                 'img.product-image', // Tesco, Ocado, Morrisons
                                 'img.pd__image', // Sainsbury's
                                 '.pt-image__image', // Sainsbury's (legacy)
+                                '.co-product-image img', // Asda
                                 'img[itemprop="image"]',
                                 '.product-image img',
                                 '.product-image__container img',
                                 'figure img', // Waitrose
-                                '.oct-teaser__image',
-                                '#main-product-image'
+                                'picture img' // Holland & Barrett
                             ];
                             for (const sel of imgSelectors) {
                                 const img = document.querySelector(sel);
@@ -527,15 +524,15 @@ export default async function handler(request, response) {
                             }
                         }
 
+                        // RESTORED STABLE REVIEW SELECTORS
                         if (results.reviews === 0) {
                             const reviewSelectors = [
                                 '.review-summary__count', // Tesco
                                 '.star-rating-link span', // Sainsbury's
                                 'a[href="#reviews-title"] span', // Ocado/Morrisons
                                 '[class*="starRating"] span', // Waitrose
-                                '.bv_numReviews_text',
-                                '#bvRContainer-Link',
-                                '[data-bv-show="rating_summary"]'
+                                '.ProductCard-module_reviewsCount__... span', // H&B
+                                '.bv_numReviews_text'
                             ];
                             for (const sel of reviewSelectors) {
                                 const el = document.querySelector(sel);
@@ -548,15 +545,8 @@ export default async function handler(request, response) {
                                 }
                             }
                         }
-                        if (results.reviews === 0 && retailer === 'Sainsburys') {
-                            const ratingStars = document.querySelector('.ds-c-rating__stars, .star-rating-link');
-                            if (ratingStars && ratingStars.getAttribute('aria-label')) {
-                                const match = ratingStars.getAttribute('aria-label').match(/from\s+(\d+)\s+reviews/i) || ratingStars.getAttribute('aria-label').match(/(\d+)\s+reviews/i);
-                                if (match) results.reviews = parseInt(match[1]) || 0;
-                            }
-                        }
 
-                        // Extract Manufacturer Address Block specifically for Sainsbury's, Tesco, & others
+                        // RESTORED STABLE MANUFACTURER EXTRACTION
                         let addressText = '';
                         const manufacturerSelectors = [
                             '#brand-details-panel', // Tesco
@@ -599,9 +589,9 @@ export default async function handler(request, response) {
                             }
                         }
 
-                        results.manufacturer_address = addressText.trim().replace(/\\n/g, ' ');
+                        results.manufacturer_address = addressText.trim().replace(/\n/g, ' ');
 
-                        // Final logic checks
+                        // FINAL DATA QUALITY FILTERS (Enforced at the end)
                         const ownBrandKeywords = [
                             'Asda', 'Extra Special', 'Sainsburys', 'Sainsbury\'s', 'Taste the Difference', 'By Sainsbury\'s',
                             'Waitrose', 'Essential Waitrose', 'Waitrose No.1', 'Tesco', 'Tesco Finest', 'Morrisons', 'The Best',
