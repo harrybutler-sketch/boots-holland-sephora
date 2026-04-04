@@ -249,7 +249,7 @@ export default async function handler(request, response) {
                 }, retailer);
 
                 // Quality Filters
-                const ownBrandKeywords = ['Asda', 'Extra Special', 'Sainsbury', 'Taste the Difference', 'Waitrose', 'Essential Waitrose', 'Tesco', 'Finest', 'Morrisons', 'The Best', 'Boots', 'H&B', 'Holland & Barrett', 'Plant Menu', 'The Grocer\'s Kitchen'];
+                const ownBrandKeywords = ["Asda", "Extra Special", "Sainsbury", "Taste the Difference", "Waitrose", "Essential Waitrose", "Tesco", "Finest", "Morrisons", "The Best", "Boots", "H&B", "Holland & Barrett", "Plant Menu", "The Grocer's Kitchen"];
                 const isOwnBrand = ownBrandKeywords.some(kw => results.product_name.toLowerCase().includes(kw.toLowerCase()));
                 
                 if (isOwnBrand) {
