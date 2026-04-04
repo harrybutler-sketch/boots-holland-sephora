@@ -283,17 +283,18 @@ export default async function handler(request, response) {
                 log.info('Non-critical: Could not click cookie banner.');
             }
 
-            // Wait for tiles to load
-            await page.waitForSelector('li.product-list--list-item', { timeout: 30000 });
+            // Wait for products to load (using a more resilient title-based selector)
+            await page.waitForSelector('a[class*="titleLink"], li.product-list--list-item', { timeout: 30000 });
             
             // Extract all products from this listing page
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('li.product-list--list-item'));
-                return tiles.map(tile => {
-                    const nameEl = tile.querySelector('a[class*="titleLink"]');
-                    const priceEl = tile.querySelector('[data-testid="unit-price"]');
-                    const imgEl = tile.querySelector('img[class*="product-image"]');
-                    const reviewEl = tile.querySelector('span[class*="review-count"]');
+                const titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"]'));
+                // Map from titles to their parent containers to ensure we get one result per product
+                return titleLinks.map(nameEl => {
+                    const tile = nameEl.closest('div[class*="ProductTile"], li, div');
+                    const priceEl = tile.querySelector('[data-testid="unit-price"], .price, [class*="price-details"]');
+                    const imgEl = tile.querySelector('img[class*="product-image"], img');
+                    const reviewEl = tile.querySelector('span[class*="review-count"], [class*="review-count"]');
                     
                     const name = nameEl?.innerText?.trim() || 'N/A';
                     const res = {
