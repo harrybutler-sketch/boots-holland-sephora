@@ -311,6 +311,10 @@ export const handler = async (event, context) => {
                     return res;
                 });
 
+                if (results.product_name.toLowerCase().includes('oops') || results.product_name.toLowerCase().includes('something is not right')) {
+                    throw new Error('TESCO_OOPS_DETECTED: ' + url);
+                }
+
                 if (results.reviews > 5 || results.product_name.toLowerCase().includes('tesco')) {
                     log.info('Skipping Tesco result: ' + results.product_name);
                     return null;
