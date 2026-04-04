@@ -281,78 +281,62 @@ export const handler = async (event, context) => {
                 if (cookieButton) {
                     log.info('Clearing Tesco cookie banner...');
                     await page.evaluate((el) => el.click(), cookieButton);
-                    await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+                    await new Promise(r => setTimeout(r, 1000));
                 }
             } catch (e) {
                 log.info('Non-critical: Could not click cookie banner.');
             }
 
-            // Stealth: Initial Random Mouse Move
-            await page.mouse.move(100 + Math.random() * 50, 100 + Math.random() * 50);
-
-            // Stealth: Human Scroll & Wait for Network context
-            await page.evaluate(() => {
-                window.scrollBy(0, 800);
-            });
-            await new Promise(r => setTimeout(r, 1000));
-            await page.evaluate(() => {
-                window.scrollBy(0, -300);
-            });
-            await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => {});
+            // Wait for tiles to load
+            await page.waitForSelector('li.product-list--list-item', { timeout: 30000 });
             
-            const h1Text = await page.evaluate(() => document.querySelector('h1')?.innerText || '');
-            if (h1Text.toLowerCase().includes('oops') || h1Text.toLowerCase().includes('went wrong') || page.url().includes('status=403')) {
-                throw new Error('BLOCK_DETECTED: ' + url);
-            }
-
-            if (label === 'LISTING') {
-                await page.waitForSelector('a[href*="/products/"]', { timeout: 30000 });
-                await enqueueLinks({ selector: 'a[href*="/products/"]', label: 'DETAIL', userData: { retailer: 'Tesco' } });
-                
-                const nextButton = await page.$('a.pagination--button--next, a[aria-label*="Go to next page"]');
-                if (nextButton) {
-                    await enqueueLinks({ selector: 'a.pagination--button--next', label: 'LISTING', userData: { retailer: 'Tesco' } });
-                }
-            } else if (label === 'DETAIL') {
-                const delay = 5000 + (Math.random() * 5000);
-                await new Promise(r => setTimeout(r, delay));
-                await page.waitForSelector('h1', { timeout: 15000 });
-                const results = await page.evaluate(() => {
+            // Extract all products from this listing page
+            const products = await page.evaluate(() => {
+                const tiles = Array.from(document.querySelectorAll('li.product-list--list-item'));
+                return tiles.map(tile => {
+                    const nameEl = tile.querySelector('a[class*="titleLink"]');
+                    const priceEl = tile.querySelector('[data-testid="unit-price"]');
+                    const imgEl = tile.querySelector('img[class*="product-image"]');
+                    const reviewEl = tile.querySelector('span[class*="review-count"]');
+                    
+                    const name = nameEl?.innerText?.trim() || 'N/A';
                     const res = {
-                        product_name: document.querySelector('h1')?.innerText?.trim() || 'N/A',
+                        product_name: name,
                         retailer: 'Tesco',
-                        price_display: document.querySelector('.product-details-tile__price')?.innerText?.trim() || 'N/A',
+                        price_display: priceEl?.innerText?.trim() || 'N/A',
                         reviews: 0,
                         rating: '0.0',
-                        image_url: '',
-                        manufacturer: '',
-                        manufacturer_address: '',
-                        product_url: window.location.href,
+                        image_url: imgEl?.src || '',
+                        product_url: nameEl?.href || window.location.href,
+                        manufacturer: name.split(' ')[0],
+                        manufacturer_address: 'N/A',
                         date_found: new Date().toISOString()
                     };
-                    const reviewSpan = document.querySelector('.review-summary__count');
-                    if (reviewSpan) {
-                        const match = reviewSpan.innerText.match(/\\d+/);
+                    
+                    if (reviewEl) {
+                        const rText = reviewEl.innerText;
+                        const match = rText.match(/\\d+/);
                         if (match) res.reviews = parseInt(match[0]) || 0;
+                        const ratingMatch = rText.match(/(\\d+\\.\\d+)/);
+                        if (ratingMatch) res.rating = ratingMatch[1];
                     }
-                    const img = document.querySelector('img.product-image') || document.querySelector('.product-details-tile__image-container img');
-                    if (img) res.image_url = img.src;
-                    const mfnPanel = document.querySelector('#brand-details-panel');
-                    if (mfnPanel) res.manufacturer_address = mfnPanel.innerText.trim();
-                    res.manufacturer = res.product_name.split(' ')[0];
                     return res;
                 });
+            });
 
-                if (results.product_name.toLowerCase().includes('oops') || results.product_name.toLowerCase().includes('something is not right')) {
-                    throw new Error('TESCO_OOPS_DETECTED: ' + url);
-                }
+            // Filtering: own-brand and max 5 reviews
+            const filtered = products.filter(p => {
+                const isOwnBrand = p.product_name.toLowerCase().includes('tesco');
+                return p.reviews <= 5 && !isOwnBrand;
+            });
 
-                if (results.reviews > 5 || results.product_name.toLowerCase().includes('tesco')) {
-                    log.info('Skipping Tesco result: ' + results.product_name);
-                    return null;
-                }
-                return results;
-            }
+            log.info(\`Extracted \${filtered.length} products from \${url}\`);
+            
+            // Pagination: only for LISTING
+            await enqueueLinks({ selector: 'a[aria-label*="next page"], a.pagination--button--next', label: 'LISTING', userData: { retailer: 'Tesco' } });
+
+            // Returning an array saves each element as a separate result
+            return filtered;
         }`;
 
         // Separate Start URLs: Tesco vs The Rest
