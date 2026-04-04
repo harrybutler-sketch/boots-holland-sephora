@@ -282,6 +282,8 @@ export default async function handler(request, response) {
                     await enqueueLinks({ selector: 'a.pagination--button--next', label: 'LISTING', userData: { retailer: 'Tesco' } });
                 }
             } else if (label === 'DETAIL') {
+                const delay = 2000 + (Math.random() * 3000);
+                await new Promise(r => setTimeout(r, delay));
                 await page.waitForSelector('h1', { timeout: 15000 });
                 const results = await page.evaluate(() => {
                     const res = {
@@ -331,7 +333,8 @@ export default async function handler(request, response) {
             pageFunction: TESCO_AGGRESSIVE_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             stealth: true,
-            useChrome: true
+            useChrome: true,
+            maxConcurrency: 1
           }, {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-tesco' }]
           });
