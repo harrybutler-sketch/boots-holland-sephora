@@ -12,9 +12,6 @@ if (!APIFY_TOKEN) {
 const client = new ApifyClient({ token: APIFY_TOKEN });
 
 const targetUrls = [
-    'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen',
-    'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:1',
-    'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:2',
     'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:3'
 ];
 
