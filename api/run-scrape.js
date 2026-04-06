@@ -270,7 +270,7 @@ export default async function handler(request, response) {
             }
         }`;
 
-        const TESCO_AGGRESSIVE_FUNCTION = \`async ({ page, request, log, enqueueLinks, response }) => {
+        const TESCO_AGGRESSIVE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
             // 1. Desktop Stealth Headers
@@ -407,7 +407,7 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }\`;
+        }`;
 
         // Separate Start URLs: Tesco vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');
