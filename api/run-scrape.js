@@ -27,9 +27,7 @@ export default async function handler(request, response) {
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
     // 1. Defined eCommerce Scraper Retailers ("The Big 4")
-    const ecommerceMap = {
-        'tesco': 'Tesco'
-    };
+    const ecommerceMap = {};
 
     const groceryUrls = {
       'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue\nhttps://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue',
@@ -272,55 +270,80 @@ export default async function handler(request, response) {
             }
         }`;
 
-        const TESCO_AGGRESSIVE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const TESCO_AGGRESSIVE_FUNCTION = \`async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
-            // 1. Initial Status Check
-            if (response && (response.status === 403 || response.status === 429)) {
-                throw new Error('Tesco Hardware Block (Status ' + response.status + '). Retrying with new proxy...');
-            }
-
-            // 2. Stealth & Viewport
+            // 1. Desktop Stealth Headers
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
             await page.setViewport({ width: 1920, height: 1080 });
 
-            // 3. Cookie Acceptance
-            try {
-                const cookieButton = await page.$('#onetrust-accept-btn-handler');
-                if (cookieButton) {
-                    log.info('Clearing Tesco cookie banner...');
-                    await page.evaluate((el) => el.click(), cookieButton);
-                    await new Promise(r => setTimeout(r, 1000));
-                }
-            } catch (e) {
-                log.info('Non-critical: Could not click cookie banner.');
+            // 2. Initial Block Check (Akamai/PerimeterX)
+            if (response && (response.status === 403 || response.status === 429)) {
+                log.error('Tesco Hardware Block (403/429). Rotating Proxy...');
+                throw new Error('Tesco Block (Status ' + response.status + '). Rotating proxy...');
             }
 
-            // 4. Robust Render & Block Detection
-            log.info('Waiting for listing or block markers...');
-            await page.waitForSelector('h1, .product-list--list-item, [data-testid="product-tile"], a[href*="/products/"]', { timeout: 20000 }).catch(() => {});
-            
+            // 3. Human Mimicry: Initial "Thinking" Delay
+            const thinkTime = Math.floor(Math.random() * 4000) + 3000;
+            log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
+            await new Promise(r => setTimeout(r, thinkTime));
+
+            // 4. Content Check & Stealth Block Detection
             const blockInfo = await page.evaluate(() => {
                 const h1 = document.querySelector('h1')?.innerText?.trim() || '';
                 const title = document.title || '';
                 const body = document.body.innerText || '';
-                const isBlocked = h1.toLowerCase().includes('oops') || 
-                       h1.toLowerCase().includes('not down this aisle') ||
-                       h1.toLowerCase().includes('not right') ||
-                       title.toLowerCase().includes('access denied') ||
-                       body.toLowerCase().includes('access denied') ||
-                       body.toLowerCase().includes("it's not you, it's us");
-                return { isBlocked, h1, title };
+                
+                const isOops = h1.toLowerCase().includes('oops') || 
+                               h1.toLowerCase().includes('not down this aisle') ||
+                               h1.toLowerCase().includes('not right') ||
+                               body.toLowerCase().includes("it's not you, it's us") ||
+                               title.toLowerCase().includes('access denied');
+                               
+                return { isOops, h1, title };
             });
 
-            if (blockInfo.isBlocked) {
-                log.error('Tesco Block Detected! H1: ' + blockInfo.h1 + ' | Title: ' + blockInfo.title);
-                throw new Error('Tesco Stealth Block (Error Page: ' + blockInfo.h1 + '). Rotating proxy...');
+            if (blockInfo.isOops) {
+                log.error('Tesco "Oops" Block Detected! H1: ' + blockInfo.h1);
+                throw new Error('Tesco Oops Block (Page: ' + blockInfo.h1 + '). Rotating proxy...');
             }
 
-            // 5. Product Extraction
-            log.info('Extracting products from listing...');
+            // 5. GDPR / Cookie Handling
+            try {
+                const cookieButton = await page.$('#onetrust-accept-btn-handler');
+                if (cookieButton) {
+                    log.info('Human Move: Clicking cookie banner...');
+                    await page.evaluate((el) => el.click(), cookieButton);
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            } catch (e) {
+                log.info('Cookie banner not found or already dismissed.');
+            }
+
+            // 6. Human Scroll
+            log.info('Human Move: Scrolling page for hydration...');
+            await page.evaluate(async () => {
+                window.scrollBy(0, 400 + Math.random() * 400);
+            });
+            await new Promise(r => setTimeout(r, 1500));
+
+            // 7. Wait for Products or Fail
+            log.info('Waiting for product list...');
+            await page.waitForSelector('.product-list--list-item, [data-testid="product-tile"], a[href*="/products/"]', { timeout: 15000 }).catch(() => {});
+            
+            // 8. Final Content Verification
+            const hasProducts = await page.evaluate(() => !!document.querySelector('.product-list--list-item, [data-testid="product-tile"], a[href*="/products/"]'));
+            if (!hasProducts) {
+                log.warning('No products found on page. Double checking for blocks...');
+                const body = await page.evaluate(() => document.body.innerText.slice(0, 500));
+                if (body.toLowerCase().includes('access denied')) {
+                     throw new Error('Tesco Access Denied (Silent). Rotating proxy...');
+                }
+                return []; // Truly empty category
+            }
+
+            // 9. Extraction Logic
             const products = await page.evaluate(() => {
-                // Redundant title link selectors
                 const nameSelectors = [
                     'a[class*="titleLink"]', 
                     '[data-testid="product-tile"] h2 a',
@@ -367,18 +390,16 @@ export default async function handler(request, response) {
                 }).filter(Boolean);
             });
 
-            // Filtering: own-brand and max 5 reviews
+            // 10. Filter & Save
             const filtered = products.filter(p => {
-                const lowerName = p.product_name.toLowerCase();
-                const isOwnBrand = lowerName.includes('tesco') || 
-                                   lowerName.includes('finest') || 
-                                   lowerName.includes('stockwell');
+                const ln = p.product_name.toLowerCase();
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('creamfields');
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
-            log.info(\`Extracted \${filtered.length} products (after filters) from \${url}\`);
+            log.info(\`Extracted \${filtered.length} products (at \${url})\`);
             
-            // Pagination
+            // 11. Pagination
             await enqueueLinks({ 
                 selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
                 label: 'LISTING', 
@@ -386,7 +407,7 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }`;
+        }\`;
 
         // Separate Start URLs: Tesco vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');
