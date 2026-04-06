@@ -100,7 +100,8 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-drinks-beer-wine-spirit#new-drinks'
+          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24#top',
+          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue&count=24#top'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }

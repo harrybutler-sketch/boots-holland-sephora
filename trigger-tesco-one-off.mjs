@@ -18,7 +18,11 @@ const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 async function triggerTescoScrape() {
     const startUrls = [
         { 
-            url: 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/plant-based-and-vegetarian#plant-based-and-vegetarian', 
+            url: 'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24#top', 
+            userData: { retailer: 'Tesco', label: 'LISTING' } 
+        },
+        { 
+            url: 'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue&count=24#top', 
             userData: { retailer: 'Tesco', label: 'LISTING' } 
         }
     ];
