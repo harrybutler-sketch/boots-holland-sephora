@@ -313,50 +313,56 @@ export default async function handler(request, response) {
             await page.evaluate(() => window.scrollBy(0, 500));
             await new Promise(r => setTimeout(r, 2000));
 
-            // 6. Extraction via Asparagus Data
-            log.info('Extracting from Asparagus Data...');
+            // 6. Extraction via DOM (Since Asparagus JSON is unreliable on some runs)
+            log.info('Extracting products from DOM...');
             const products = await page.evaluate(() => {
-                const script = document.querySelector('script[type="asparagus-data"]');
-                if (!script) return null;
-                try {
-                    const data = JSON.parse(script.textContent);
-                    // Standard PLP path
-                    const plp = data?.props?.['mfe-plp']?.props?.data;
-                    const items = plp?.category?.productItems || plp?.search?.productItems || [];
-                    
-                    if (!items.length && data?.props?.['mfe-product-list']?.props?.data) {
-                        // Alternative path
-                        return data.props['mfe-product-list'].props.data.productItems.map(item => ({
-                            product_name: item.title || 'N/A',
-                            retailer: 'Tesco',
-                            price_display: item.price?.actualPrice?.toString() || 'N/A',
-                            reviews: item.ratings?.numberOfReviews || 0,
-                            rating: item.ratings?.averageRating?.toString() || '0.0',
-                            image_url: item.image || '',
-                            product_url: item.id ? 'https://www.tesco.com/groceries/en-GB/products/' + item.id : window.location.href,
-                            manufacturer: (item.title || '').split(' ')[0],
-                            date_found: new Date().toISOString()
-                        }));
-                    }
-                    
-                    return items.map(item => ({
-                        product_name: item.title || 'N/A',
-                        retailer: 'Tesco',
-                        price_display: item.price?.actualPrice?.toString() || 'N/A',
-                        reviews: item.ratings?.numberOfReviews || 0,
-                        rating: item.ratings?.averageRating?.toString() || '0.0',
-                        image_url: item.image || '',
-                        product_url: item.id ? 'https://www.tesco.com/groceries/en-GB/products/' + item.id : window.location.href,
-                        manufacturer: (item.title || '').split(' ')[0],
-                        date_found: new Date().toISOString()
-                    }));
-                } catch (e) {
-                    return null;
+                const nameSelectors = [
+                    'a.gyT8MW_titleLink',
+                    'a[class*="titleLink"]', 
+                    '[data-testid="product-tile"] h2 a',
+                    'a[href*="/products/"]'
+                ];
+                
+                let titleLinks = [];
+                for (const sel of nameSelectors) {
+                    titleLinks = Array.from(document.querySelectorAll(sel));
+                    if (titleLinks.length > 0) break;
                 }
+
+                return titleLinks.map(nameEl => {
+                    const tile = nameEl.closest('div[class*="ProductTile"], li, [data-testid="product-tile"], div');
+                    const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, [class*="price-details"], .ddsweb-price__value');
+                    const imgEl = tile?.querySelector('img[class*="product-image"], img');
+                    const reviewEl = tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"], [class*="review-count"]');
+                    
+                    const name = nameEl?.innerText?.trim() || 'N/A';
+                    if (name === 'N/A' || name.length < 3) return null;
+
+                    const res = {
+                        product_name: name,
+                        retailer: 'Tesco',
+                        price_display: priceEl?.innerText?.trim() || 'N/A',
+                        reviews: 0,
+                        rating: '0.0',
+                        image_url: imgEl?.src || '',
+                        product_url: nameEl?.href || window.location.href,
+                        manufacturer: name.split(' ')[0],
+                        date_found: new Date().toISOString()
+                    };
+                    
+                    if (reviewEl) {
+                        const rText = reviewEl.innerText;
+                        const match = rText.match(/(\d+)/);
+                        if (match) res.reviews = parseInt(match[0]) || 0;
+                        const ratingMatch = rText.match(/(\d+\.\d+)/);
+                        if (ratingMatch) res.rating = ratingMatch[1];
+                    }
+                    return res;
+                }).filter(Boolean);
             });
 
             if (!products || products.length === 0) {
-                log.warning('No products found in Asparagus Data. Category might be truly empty or layout changed.');
+                log.warning('No products found on page. DOM might not have loaded or layout changed.');
                 return [];
             }
 
