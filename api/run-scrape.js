@@ -290,21 +290,26 @@ export default async function handler(request, response) {
 
             // 4. Content Check & Stealth Block Detection
             const blockInfo = await page.evaluate(() => {
-                const h1 = document.querySelector('h1')?.innerText?.trim() || '';
+                const h1El = document.querySelector('h1');
+                const h1 = h1El ? h1El.innerText.trim() : '';
                 const title = document.title || '';
-                const body = document.body.innerText || '';
+                const body = document.body ? document.body.innerText : '';
                 return {
-                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied'),
+                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied') || body.toLowerCase().includes("it's not you, it's us"),
                     h1, title
                 };
             });
 
-            if (blockInfo.isOops) {
-                log.error('Tesco "Oops" Block! H1: ' + blockInfo.h1);
-                throw new Error('Tesco Oops Block. Rotating proxy...');
+            // 5. Session Warming (Final resort bypass)
+            if (blockInfo.isOops || !url.includes('groceries')) {
+                log.info('Warming Session: Hitting homepage first to bypass Akamai...');
+                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(e => log.warning('Warming failed: ' + e.message));
+                await new Promise(r => setTimeout(r, 2000));
+                log.info('Session Warmed. Retrying category: ' + url);
+                await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
             }
 
-            // 5. Human Interaction: Scroll for hydration
+            // 6. Human Interaction: Scroll for hydration
             await page.evaluate(() => window.scrollBy(0, 500));
             await new Promise(r => setTimeout(r, 2000));
 
@@ -318,6 +323,21 @@ export default async function handler(request, response) {
                     // Standard PLP path
                     const plp = data?.props?.['mfe-plp']?.props?.data;
                     const items = plp?.category?.productItems || plp?.search?.productItems || [];
+                    
+                    if (!items.length && data?.props?.['mfe-product-list']?.props?.data) {
+                        // Alternative path
+                        return data.props['mfe-product-list'].props.data.productItems.map(item => ({
+                            product_name: item.title || 'N/A',
+                            retailer: 'Tesco',
+                            price_display: item.price?.actualPrice?.toString() || 'N/A',
+                            reviews: item.ratings?.numberOfReviews || 0,
+                            rating: item.ratings?.averageRating?.toString() || '0.0',
+                            image_url: item.image || '',
+                            product_url: item.id ? 'https://www.tesco.com/groceries/en-GB/products/' + item.id : window.location.href,
+                            manufacturer: (item.title || '').split(' ')[0],
+                            date_found: new Date().toISOString()
+                        }));
+                    }
                     
                     return items.map(item => ({
                         product_name: item.title || 'N/A',
