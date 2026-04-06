@@ -27,7 +27,7 @@ export default async function handler(request, response) {
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
     // 1. Defined eCommerce Scraper Retailers ("The Big 4")
-    const ecommerceMap = { 'tesco': 'Tesco' };
+    const ecommerceMap = {};
 
     const groceryUrls = {
       'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue\nhttps://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue',
@@ -103,7 +103,11 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/food-drink/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
-        // Now routed to eCommerce tool
+        const tescoUrls = [
+          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue',
+          'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue'
+        ];
+        tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
@@ -266,7 +270,7 @@ export default async function handler(request, response) {
             }
         }`;
 
-        const TESCO_AGGRESSIVE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const TESCO_ASPARAGUS_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
             // 1. Desktop Stealth Headers
@@ -279,7 +283,7 @@ export default async function handler(request, response) {
                 throw new Error('Tesco Block (Status ' + response.status + '). Rotating proxy...');
             }
 
-            // 3. Human Mimicry: Initial "Thinking" Delay
+            // 3. Human Mimicry: Initial Delay
             const thinkTime = Math.floor(Math.random() * 4000) + 3000;
             log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
             await new Promise(r => setTimeout(r, thinkTime));
@@ -289,114 +293,63 @@ export default async function handler(request, response) {
                 const h1 = document.querySelector('h1')?.innerText?.trim() || '';
                 const title = document.title || '';
                 const body = document.body.innerText || '';
-                
-                const isOops = h1.toLowerCase().includes('oops') || 
-                               h1.toLowerCase().includes('not down this aisle') ||
-                               h1.toLowerCase().includes('not right') ||
-                               body.toLowerCase().includes("it's not you, it's us") ||
-                               title.toLowerCase().includes('access denied');
-                               
-                return { isOops, h1, title };
+                return {
+                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied'),
+                    h1, title
+                };
             });
 
             if (blockInfo.isOops) {
-                log.error('Tesco "Oops" Block Detected! H1: ' + blockInfo.h1);
-                throw new Error('Tesco Oops Block (Page: ' + blockInfo.h1 + '). Rotating proxy...');
+                log.error('Tesco "Oops" Block! H1: ' + blockInfo.h1);
+                throw new Error('Tesco Oops Block. Rotating proxy...');
             }
 
-            // 5. GDPR / Cookie Handling
-            try {
-                const cookieButton = await page.$('#onetrust-accept-btn-handler');
-                if (cookieButton) {
-                    log.info('Human Move: Clicking cookie banner...');
-                    await page.evaluate((el) => el.click(), cookieButton);
-                    await new Promise(r => setTimeout(r, 2000));
-                }
-            } catch (e) {
-                log.info('Cookie banner not found or already dismissed.');
-            }
+            // 5. Human Interaction: Scroll for hydration
+            await page.evaluate(() => window.scrollBy(0, 500));
+            await new Promise(r => setTimeout(r, 2000));
 
-            // 6. Human Interaction: Mouse Move & Scroll
-            log.info('Human Move: Scrolling and moving cursor...');
-            await page.mouse.move(100 + Math.random() * 500, 100 + Math.random() * 500);
-            await page.evaluate(async () => {
-                window.scrollBy(0, 400 + Math.random() * 400);
-            });
-            await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
-
-            // 7. Wait for Products or Fail
-            log.info('Waiting for product list...');
-            await page.waitForSelector('.product-list--list-item, [data-testid="product-tile"], a.gyT8MW_titleLink, a[href*="/products/"]', { timeout: 15000 }).catch(() => {});
-            
-            // 8. Final Content Verification
-            const hasProducts = await page.evaluate(() => !!document.querySelector('.product-list--list-item, [data-testid="product-tile"], a[href*="/products/"]'));
-            if (!hasProducts) {
-                log.warning('No products found on page. Double checking for blocks...');
-                const body = await page.evaluate(() => document.body.innerText.slice(0, 500));
-                if (body.toLowerCase().includes('access denied')) {
-                     throw new Error('Tesco Access Denied (Silent). Rotating proxy...');
-                }
-                return []; // Truly empty category
-            }
-
-            // 9. Extraction Logic
+            // 6. Extraction via Asparagus Data
+            log.info('Extracting from Asparagus Data...');
             const products = await page.evaluate(() => {
-                const nameSelectors = [
-                    'a.gyT8MW_titleLink',
-                    'a[class*="titleLink"]', 
-                    '[data-testid="product-tile"] h2 a',
-                    'a[href*="/products/"]'
-                ];
-                
-                let titleLinks = [];
-                for (const sel of nameSelectors) {
-                    titleLinks = Array.from(document.querySelectorAll(sel));
-                    if (titleLinks.length > 0) break;
-                }
-
-                return titleLinks.map(nameEl => {
-                    const tile = nameEl.closest('div[class*="ProductTile"], li, div[data-testid="product-tile"], div');
-                    const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, [class*="price-details"], .ddsweb-price__value');
-                    const imgEl = tile?.querySelector('img[class*="product-image"], img');
-                    const reviewEl = tile?.querySelector('span[class*="review-count"], [class*="review-count"], [data-testid="reviews-count"]');
+                const script = document.querySelector('script[type="asparagus-data"]');
+                if (!script) return null;
+                try {
+                    const data = JSON.parse(script.textContent);
+                    // Standard PLP path
+                    const plp = data?.props?.['mfe-plp']?.props?.data;
+                    const items = plp?.category?.productItems || plp?.search?.productItems || [];
                     
-                    const name = nameEl?.innerText?.trim() || 'N/A';
-                    if (name === 'N/A' || name.length < 3) return null;
-
-                    const res = {
-                        product_name: name,
+                    return items.map(item => ({
+                        product_name: item.title || 'N/A',
                         retailer: 'Tesco',
-                        price_display: priceEl?.innerText?.trim() || 'N/A',
-                        reviews: 0,
-                        rating: '0.0',
-                        image_url: imgEl?.src || '',
-                        product_url: nameEl?.href || window.location.href,
-                        manufacturer: name.split(' ')[0],
-                        manufacturer_address: 'N/A',
+                        price_display: item.price?.actualPrice?.toString() || 'N/A',
+                        reviews: item.ratings?.numberOfReviews || 0,
+                        rating: item.ratings?.averageRating?.toString() || '0.0',
+                        image_url: item.image || '',
+                        product_url: item.id ? 'https://www.tesco.com/groceries/en-GB/products/' + item.id : window.location.href,
+                        manufacturer: (item.title || '').split(' ')[0],
                         date_found: new Date().toISOString()
-                    };
-                    
-                    if (reviewEl) {
-                        const rText = reviewEl.innerText;
-                        const match = rText.match(/\\d+/);
-                        if (match) res.reviews = parseInt(match[0]) || 0;
-                        const ratingMatch = rText.match(/(\\d+\\.\\d+)/);
-                        if (ratingMatch) res.rating = ratingMatch[1];
-                    }
-                    return res;
-                }).filter(Boolean);
+                    }));
+                } catch (e) {
+                    return null;
+                }
             });
 
-            // 10. Filter & Save
+            if (!products || products.length === 0) {
+                log.warning('No products found in Asparagus Data. Category might be truly empty or layout changed.');
+                return [];
+            }
+
+            // 7. Filter
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('creamfields');
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly');
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
-            log.info(\`Extracted \${filtered.length} products (at \${url})\`);
+            log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
             
-            // 11. Pagination
+            // 8. Pagination
             await enqueueLinks({ 
                 selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
                 label: 'LISTING', 
@@ -413,7 +366,7 @@ export default async function handler(request, response) {
         if (tescoStartUrls.length > 0) {
           const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls: tescoStartUrls,
-            pageFunction: TESCO_AGGRESSIVE_FUNCTION,
+            pageFunction: TESCO_ASPARAGUS_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             useStealth: true,
             useChrome: true,
