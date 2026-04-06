@@ -269,10 +269,15 @@ export default async function handler(request, response) {
         const TESCO_AGGRESSIVE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
-            // Stealth: Desktop Viewport
+            // 1. Initial Status Check
+            if (response && (response.status === 403 || response.status === 429)) {
+                throw new Error('Tesco Hardware Block (Status ' + response.status + '). Retrying with new proxy...');
+            }
+
+            // 2. Stealth & Viewport
             await page.setViewport({ width: 1920, height: 1080 });
 
-            // Stealth: Cookie Acceptance
+            // 3. Cookie Acceptance
             try {
                 const cookieButton = await page.$('#onetrust-accept-btn-handler');
                 if (cookieButton) {
@@ -284,20 +289,54 @@ export default async function handler(request, response) {
                 log.info('Non-critical: Could not click cookie banner.');
             }
 
-            // Wait for products to load (using a more resilient title-based selector)
-            await page.waitForSelector('a[class*="titleLink"], li.product-list--list-item', { timeout: 30000 });
+            // 4. Robust Render & Block Detection
+            log.info('Waiting for listing or block markers...');
+            await page.waitForSelector('h1, .product-list--list-item, [data-testid="product-tile"], a[href*="/products/"]', { timeout: 20000 }).catch(() => {});
             
-            // Extract all products from this listing page
+            const blockInfo = await page.evaluate(() => {
+                const h1 = document.querySelector('h1')?.innerText?.trim() || '';
+                const title = document.title || '';
+                const body = document.body.innerText || '';
+                const isBlocked = h1.toLowerCase().includes('oops') || 
+                       h1.toLowerCase().includes('not down this aisle') ||
+                       h1.toLowerCase().includes('not right') ||
+                       title.toLowerCase().includes('access denied') ||
+                       body.toLowerCase().includes('access denied') ||
+                       body.toLowerCase().includes("it's not you, it's us");
+                return { isBlocked, h1, title };
+            });
+
+            if (blockInfo.isBlocked) {
+                log.error('Tesco Block Detected! H1: ' + blockInfo.h1 + ' | Title: ' + blockInfo.title);
+                throw new Error('Tesco Stealth Block (Error Page: ' + blockInfo.h1 + '). Rotating proxy...');
+            }
+
+            // 5. Product Extraction
+            log.info('Extracting products from listing...');
             const products = await page.evaluate(() => {
-                const titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"]'));
-                // Map from titles to their parent containers to ensure we get one result per product
+                // Redundant title link selectors
+                const nameSelectors = [
+                    'a[class*="titleLink"]', 
+                    '[data-testid="product-tile"] h2 a',
+                    '.gyT8MW_titleLink',
+                    'a[href*="/products/"]'
+                ];
+                
+                let titleLinks = [];
+                for (const sel of nameSelectors) {
+                    titleLinks = Array.from(document.querySelectorAll(sel));
+                    if (titleLinks.length > 0) break;
+                }
+
                 return titleLinks.map(nameEl => {
-                    const tile = nameEl.closest('div[class*="ProductTile"], li, div');
-                    const priceEl = tile.querySelector('[data-testid="unit-price"], .price, [class*="price-details"]');
-                    const imgEl = tile.querySelector('img[class*="product-image"], img');
-                    const reviewEl = tile.querySelector('span[class*="review-count"], [class*="review-count"]');
+                    const tile = nameEl.closest('div[class*="ProductTile"], li, div[data-testid="product-tile"], div');
+                    const priceEl = tile?.querySelector('[data-testid="unit-price"], .price, [class*="price-details"], .ddsweb-price__value');
+                    const imgEl = tile?.querySelector('img[class*="product-image"], img');
+                    const reviewEl = tile?.querySelector('span[class*="review-count"], [class*="review-count"], [data-testid="reviews-count"]');
                     
                     const name = nameEl?.innerText?.trim() || 'N/A';
+                    if (name === 'N/A' || name.length < 3) return null;
+
                     const res = {
                         product_name: name,
                         retailer: 'Tesco',
@@ -319,21 +358,27 @@ export default async function handler(request, response) {
                         if (ratingMatch) res.rating = ratingMatch[1];
                     }
                     return res;
-                });
+                }).filter(Boolean);
             });
 
             // Filtering: own-brand and max 5 reviews
             const filtered = products.filter(p => {
-                const isOwnBrand = p.product_name.toLowerCase().includes('tesco');
+                const lowerName = p.product_name.toLowerCase();
+                const isOwnBrand = lowerName.includes('tesco') || 
+                                   lowerName.includes('finest') || 
+                                   lowerName.includes('stockwell');
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
-            log.info(\`Extracted \${filtered.length} products from \${url}\`);
+            log.info(\`Extracted \${filtered.length} products (after filters) from \${url}\`);
             
-            // Pagination: only for LISTING
-            await enqueueLinks({ selector: 'a[aria-label*="next page"], a.pagination--button--next', label: 'LISTING', userData: { retailer: 'Tesco' } });
+            // Pagination
+            await enqueueLinks({ 
+                selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
+                label: 'LISTING', 
+                userData: { retailer: 'Tesco' } 
+            }).catch(() => {});
 
-            // Returning an array saves each element as a separate result
             return filtered;
         }`;
 
