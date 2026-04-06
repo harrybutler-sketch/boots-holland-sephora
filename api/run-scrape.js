@@ -104,8 +104,8 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24#top',
-          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue&count=24#top'
+          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue',
+          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
@@ -320,12 +320,13 @@ export default async function handler(request, response) {
                 log.info('Cookie banner not found or already dismissed.');
             }
 
-            // 6. Human Scroll
-            log.info('Human Move: Scrolling page for hydration...');
+            // 6. Human Interaction: Mouse Move & Scroll
+            log.info('Human Move: Scrolling and moving cursor...');
+            await page.mouse.move(100 + Math.random() * 500, 100 + Math.random() * 500);
             await page.evaluate(async () => {
                 window.scrollBy(0, 400 + Math.random() * 400);
             });
-            await new Promise(r => setTimeout(r, 1500));
+            await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
 
             // 7. Wait for Products or Fail
             log.info('Waiting for product list...');

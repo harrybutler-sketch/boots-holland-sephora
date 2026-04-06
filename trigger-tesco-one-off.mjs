@@ -79,10 +79,11 @@ async function triggerTescoScrape() {
                     throw new Error('Tesco Oops Block. Rotating proxy...');
                 }
 
-                // 5. Human Scroll
-                log.info('Human Move: Scrolling for hydration...');
+                // 5. Human Interaction: Mouse Move & Scroll
+                log.info('Human Move: Scrolling and moving cursor...');
+                await page.mouse.move(100 + Math.random() * 500, 100 + Math.random() * 500);
                 await page.evaluate(() => window.scrollBy(0, 400 + Math.random() * 400));
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
 
                 // 6. Extraction Logic (Listing)
                 if (request.userData.label === 'LISTING') {
