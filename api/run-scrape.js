@@ -27,10 +27,10 @@ export default async function handler(request, response) {
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
     // 1. Defined eCommerce Scraper Retailers ("The Big 4")
-    const ecommerceMap = {};
+    const ecommerceMap = { 'tesco': 'Tesco' };
 
     const groceryUrls = {
-      'Tesco': 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-snacks-and-treats',
+      'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue\nhttps://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue',
       'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554'
     };
 
@@ -103,10 +103,7 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/food-drink/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
-        const tescoUrls = [
-          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-snacks-and-treats'
-        ];
-        tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
+        // Now routed to eCommerce tool
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
