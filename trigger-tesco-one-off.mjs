@@ -10,7 +10,7 @@ async function triggerTescoScrape() {
         { url: 'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue', userData: { retailer: 'Tesco', label: 'LISTING' } }
     ];
 
-    console.log('Triggering Tesco Finalized Scraper (Warming + DOM)...');
+    console.log('Triggering Tesco RESILIENT Scraper (Warming + Hydrated DOM)...');
 
     try {
         const run = await client.actor('apify/puppeteer-scraper').start({
@@ -50,7 +50,13 @@ async function triggerTescoScrape() {
                     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
                 }
 
-                // 4. Extraction via DOM
+                // 4. MFE HYDRATION
+                log.info('Waiting for product grid hydration...');
+                await page.evaluate(() => window.scrollBy(0, 800));
+                await page.waitForSelector('.product-list--list-item, [class*="ProductTile"], .gyT8MW_titleLink', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
+                await new Promise(r => setTimeout(r, 3000));
+
+                // 5. Extraction via DOM
                 log.info('Extracting products from DOM...');
                 const products = await page.evaluate(() => {
                     const nameSelectors = [
@@ -67,13 +73,21 @@ async function triggerTescoScrape() {
                     }
 
                     return titleLinks.map(nameEl => {
-                        const tile = nameEl.closest('div[class*="ProductTile"], li, [data-testid="product-tile"], div');
-                        const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, [class*="price-details"], .ddsweb-price__value');
+                        const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], div');
+                        const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
                         const name = nameEl?.innerText?.trim() || 'N/A';
                         
+                        // Price extraction fallback
+                        let price = priceEl?.innerText?.trim() || 'N/A';
+                        if (price === 'N/A' && tile) {
+                           const allP = Array.from(tile.querySelectorAll('p, span'));
+                           const pMatch = allP.find(p => p.innerText.includes('£'));
+                           if (pMatch) price = pMatch.innerText.trim();
+                        }
+
                         return {
                             name,
-                            price_display: priceEl?.innerText?.trim() || 'N/A',
+                            price_display: price,
                             reviews: tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"]')?.innerText?.match(/\\d+/)?.[0] || '0',
                             product_url: nameEl?.href,
                             isOwnBrand: name.toLowerCase().includes('tesco') || name.toLowerCase().includes('finest')

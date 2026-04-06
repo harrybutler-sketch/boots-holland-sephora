@@ -270,7 +270,7 @@ export default async function handler(request, response) {
             }
         }`;
 
-        const TESCO_ASPARAGUS_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
             // 1. Desktop Stealth Headers
@@ -302,18 +302,20 @@ export default async function handler(request, response) {
 
             // 5. Session Warming (Final resort bypass)
             if (blockInfo.isOops || !url.includes('groceries')) {
-                log.info('Warming Session: Hitting homepage first to bypass Akamai...');
+                log.info('Warming Session: Hitting homepage first...');
                 await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(e => log.warning('Warming failed: ' + e.message));
                 await new Promise(r => setTimeout(r, 2000));
                 log.info('Session Warmed. Retrying category: ' + url);
                 await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
             }
 
-            // 6. Human Interaction: Scroll for hydration
-            await page.evaluate(() => window.scrollBy(0, 500));
-            await new Promise(r => setTimeout(r, 2000));
+            // 6. Explicit MFE Hydration
+            log.info('Waiting for product grid hydration...');
+            await page.evaluate(() => window.scrollBy(0, 800));
+            await page.waitForSelector('.product-list--list-item, [class*="ProductTile"], .gyT8MW_titleLink', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
+            await new Promise(r => setTimeout(r, 3000));
 
-            // 6. Extraction via DOM (Since Asparagus JSON is unreliable on some runs)
+            // 7. Extraction via DOM
             log.info('Extracting products from DOM...');
             const products = await page.evaluate(() => {
                 const nameSelectors = [
@@ -330,18 +332,26 @@ export default async function handler(request, response) {
                 }
 
                 return titleLinks.map(nameEl => {
-                    const tile = nameEl.closest('div[class*="ProductTile"], li, [data-testid="product-tile"], div');
-                    const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, [class*="price-details"], .ddsweb-price__value');
-                    const imgEl = tile?.querySelector('img[class*="product-image"], img');
+                    const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], div');
+                    const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
+                    const imgEl = tile?.querySelector('img[class*="product-image"], a[class*="imageContainer"] img, img');
                     const reviewEl = tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"], [class*="review-count"]');
                     
                     const name = nameEl?.innerText?.trim() || 'N/A';
                     if (name === 'N/A' || name.length < 3) return null;
 
+                    // Improved price extraction
+                    let price = priceEl?.innerText?.trim() || 'N/A';
+                    if (price === 'N/A' && tile) {
+                        const allP = Array.from(tile.querySelectorAll('p, span'));
+                        const pMatch = allP.find(p => p.innerText.includes('£'));
+                        if (pMatch) price = pMatch.innerText.trim();
+                    }
+
                     const res = {
                         product_name: name,
                         retailer: 'Tesco',
-                        price_display: priceEl?.innerText?.trim() || 'N/A',
+                        price_display: price,
                         reviews: 0,
                         rating: '0.0',
                         image_url: imgEl?.src || '',
@@ -392,7 +402,7 @@ export default async function handler(request, response) {
         if (tescoStartUrls.length > 0) {
           const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls: tescoStartUrls,
-            pageFunction: TESCO_ASPARAGUS_FUNCTION,
+            pageFunction: TESCO_RESILIENT_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             useStealth: true,
             useChrome: true,
