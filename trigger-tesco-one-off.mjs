@@ -17,8 +17,8 @@ const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
 async function triggerTescoScrape() {
     const listingUrls = [
-        'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
-        'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue&count=24'
+        'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue',
+        'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue'
     ];
 
     console.log('Triggering Tesco STABLE Scrape (eCommerce Tool) for Snack Categories...');
