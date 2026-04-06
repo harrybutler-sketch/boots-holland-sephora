@@ -30,7 +30,7 @@ export default async function handler(request, response) {
     const ecommerceMap = {};
 
     const groceryUrls = {
-      'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue\nhttps://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue',
+      'Tesco': 'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-snacks-and-treats',
       'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554'
     };
 
@@ -104,8 +104,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue',
-          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&page=2&facetsArgs=new%3Atrue'
+          'https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-snacks-and-treats'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
@@ -330,7 +329,7 @@ export default async function handler(request, response) {
 
             // 7. Wait for Products or Fail
             log.info('Waiting for product list...');
-            await page.waitForSelector('.product-list--list-item, [data-testid="product-tile"], a[href*="/products/"]', { timeout: 15000 }).catch(() => {});
+            await page.waitForSelector('.product-list--list-item, [data-testid="product-tile"], a.gyT8MW_titleLink, a[href*="/products/"]', { timeout: 15000 }).catch(() => {});
             
             // 8. Final Content Verification
             const hasProducts = await page.evaluate(() => !!document.querySelector('.product-list--list-item, [data-testid="product-tile"], a[href*="/products/"]'));
@@ -346,9 +345,9 @@ export default async function handler(request, response) {
             // 9. Extraction Logic
             const products = await page.evaluate(() => {
                 const nameSelectors = [
+                    'a.gyT8MW_titleLink',
                     'a[class*="titleLink"]', 
                     '[data-testid="product-tile"] h2 a',
-                    '.gyT8MW_titleLink',
                     'a[href*="/products/"]'
                 ];
                 
@@ -360,7 +359,7 @@ export default async function handler(request, response) {
 
                 return titleLinks.map(nameEl => {
                     const tile = nameEl.closest('div[class*="ProductTile"], li, div[data-testid="product-tile"], div');
-                    const priceEl = tile?.querySelector('[data-testid="unit-price"], .price, [class*="price-details"], .ddsweb-price__value');
+                    const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, [class*="price-details"], .ddsweb-price__value');
                     const imgEl = tile?.querySelector('img[class*="product-image"], img');
                     const reviewEl = tile?.querySelector('span[class*="review-count"], [class*="review-count"], [data-testid="reviews-count"]');
                     
