@@ -10,7 +10,7 @@ async function testSainsburys() {
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
 
-    const url = 'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard';
+    const url = 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new/opt/page:2/sort:price';
     console.log(`Navigating to: ${url}`);
 
     try {
