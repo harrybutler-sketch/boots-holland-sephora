@@ -3,21 +3,21 @@ Getting input for run 6ktY1LtRkjWp8h5TF...
 Run Input: {
   "startUrls": [
     {
-      "url": "https://www.tesco.com/shop/en-GB/buylists/new-ranges/new-frozen-and-fresh-food?count=24&page=4#top",
+      "url": "https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new&new=new",
       "userData": {
         "retailer": "Tesco",
         "label": "LISTING"
       }
     },
     {
-      "url": "https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new/opt/page:2/sort:price",
+      "url": "https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/other:new",
       "userData": {
         "retailer": "Sainsburys",
         "label": "LISTING"
       }
     },
     {
-      "url": "https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOooKM98Ui8176ymqqxOJPFOQXSyUlzCwkxv5jd3yb4VseBO_bBKu",
+      "url": "https://www.waitrose.com/ecom/shop/browse/groceries/new/food_cupboard?srsltid=AfmBOooUAwOW7wXkUHchXKjjmAIjgKfBr6fCmfdR9jXjAnAVBsaF-GqN",
       "userData": {
         "retailer": "Waitrose",
         "label": "LISTING"
@@ -38,7 +38,7 @@ Run Input: {
       }
     },
     {
-      "url": "https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new",
+      "url": "https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=favorite",
       "userData": {
         "retailer": "Ocado",
         "label": "LISTING"
@@ -66,7 +66,7 @@ Run Input: {
       }
     },
     {
-      "url": "https://groceries.asda.com/search/New%20in",
+      "url": "https://www.asda.com/groceries/event/new-chilled-food",
       "userData": {
         "retailer": "Asda",
         "label": "LISTING"

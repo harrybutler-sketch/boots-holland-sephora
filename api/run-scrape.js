@@ -30,8 +30,8 @@ export default async function handler(request, response) {
     const ecommerceMap = {};
 
     const groceryUrls = {
-      'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue\nhttps://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue',
-      'Asda': 'https://groceries.asda.com/search/new%20in\nhttps://groceries.asda.com/shelf/new-in/1215685911554'
+      'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new&new=new',
+      'Asda': 'https://www.asda.com/groceries/event/new-chilled-food'
     };
 
     // 2. Categorize
@@ -104,34 +104,33 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/groceries/en-GB/shop/treats-and-snacks/all?sortBy=relevance&facetsArgs=new%3Atrue',
-          'https://www.tesco.com/groceries/en-GB/shop/food-cupboard/all?sortBy=relevance&facetsArgs=new%3Atrue'
+          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new&new=new'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new/opt/page:2/sort:price'
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/other:new'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('waitrose'))) {
-        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOoq4inG-1EnHQW5sNrpntOLEleMCSVOoXoBNtkFJ7Y9HGQJh-dDJ', userData: { retailer: 'Waitrose', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/food_cupboard?srsltid=AfmBOooUAwOW7wXkUHchXKjjmAIjgKfBr6fCmfdR9jXjAnAVBsaF-GqN', userData: { retailer: 'Waitrose', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         const morrisonsUrls = [
-          'https://groceries.morrisons.com/categories/dietary-lifestyle-foods/192319?boolean=new&sortBy=favorite'
+          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite'
         ];
         morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         const ocadoUrls = [
-          'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=priceAscending'
+          'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=favorite'
         ];
         ocadoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Ocado', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('asda'))) {
-        startUrls.push({ url: 'https://groceries.asda.com/search/New%20in', userData: { retailer: 'Asda', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.asda.com/groceries/event/new-chilled-food', userData: { retailer: 'Asda', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('superdrug'))) {
         startUrls.push({ url: 'https://www.superdrug.com/new-in/c/new', userData: { retailer: 'Superdrug', label: 'LISTING' } });
