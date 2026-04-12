@@ -35,17 +35,7 @@ export default async (req, context) => {
             };
         });
 
-        const fourWeeksAgo = new Date();
-        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-
-        const filteredItems = mappedItems.filter(item => {
-            if (item.date && item.date !== 'Unknown' && new Date(item.date) < fourWeeksAgo) {
-                return false;
-            }
-            return true;
-        });
-
-        return new Response(JSON.stringify(filteredItems), {
+        return new Response(JSON.stringify(mappedItems), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
