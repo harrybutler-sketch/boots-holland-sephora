@@ -147,7 +147,7 @@ export const handler = async (event, context) => {
                     'Waitrose': 'a[href*="/ecom/products/"]',
                     'Morrisons': 'a[href*="/products/"]',
                     'Ocado': 'a[href*="/products/"]',
-                    'Asda': 'a[href*="/product/"], a.chakra-link',
+                    'Asda': 'a[href*="/product/"]',
                     'Boots': 'a[href*="/product/"], a[href*="/p/"]',
                     'Superdrug': 'a[href*="/p/"]',
                     'Sephora': 'a[href*="/p/"]',
