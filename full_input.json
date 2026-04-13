@@ -3,7 +3,7 @@ Getting input for run 6ktY1LtRkjWp8h5TF...
 Run Input: {
   "startUrls": [
     {
-      "url": "https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new",
+      "url": "https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24",
       "userData": {
         "retailer": "Tesco",
         "label": "LISTING"

@@ -10,7 +10,7 @@ async function run() {
     await page.setViewport({ width: 1920, height: 1080 });
     
     // Tesco -> New In -> All items
-    const url = 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new';
+    const url = 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24';
     console.log(`Navigating to ${url}`);
     
     await page.goto(url, { waitUntil: 'networkidle2' });
