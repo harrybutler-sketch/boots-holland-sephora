@@ -181,6 +181,7 @@ export const handler = async (event, context) => {
                     }
                 }
             } else if (label === 'DETAIL') {
+                console.log('Processing product: ' + url + ' (' + retailer + ')');
                 const delay = 2000 + (Math.random() * 3000);
                 await new Promise(r => setTimeout(r, delay));
                 await page.waitForSelector('h1', { timeout: 15000 }).catch(() => {});
