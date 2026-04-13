@@ -92,13 +92,13 @@ export const handler = async (event, context) => {
       const pRetailers = puppeteerRetailersToScrape.map(r => r.toLowerCase().trim());
 
       if (pRetailers.some(r => r.includes('sephora'))) {
-        startUrls.push({ url: 'https://www.sephora.co.uk/new-at-sephora', userData: { retailer: 'Sephora', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.sephora.co.uk/new-at-sephora?filter=fh_location=//c1/en_GB/in_stock%3E{in}/new_in=1/!exclude_countries%3E{gb}/!site_exclude%3E{79}/!brand=a70/%26fh_view_size=40%26date_time=20260413T104639%26site_area=cms%26device=desktop%26fh_sort_by=-%24rc_new_in#inline-facets', userData: { retailer: 'Sephora', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('boots'))) {
         startUrls.push({ url: 'https://www.boots.com/new-to-boots', userData: { retailer: 'Boots', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('holland'))) {
-        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/food-drink/?t=is_new%3Atrue', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/highlights/new-in/?category=8939&page=2#products-list', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
