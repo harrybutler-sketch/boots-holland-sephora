@@ -29,14 +29,16 @@ export const handler = async (event, context) => {
         await doc.loadInfo();
 
         // Dynamic Sheet Selection
-        let sheetName = 'New In'; // Default (Beauty)
+        let sheetName = 'New In'; 
         if (workspace === 'grocery') {
             sheetName = 'Grocery';
         } else if (workspace === 'linkedin' || workspace === 'news') {
             sheetName = 'LinkedIn';
+        } else if (workspace === 'beauty') {
+            sheetName = 'Beauty';
         }
 
-        const sheet = doc.sheetsByTitle[sheetName] || doc.sheetsByIndex[0];
+        const sheet = doc.sheetsByTitle[sheetName] || doc.sheetsByTitle['New In'] || doc.sheetsByIndex[0];
         await sheet.loadHeaderRow();
         const headersList = sheet.headerValues;
 

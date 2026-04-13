@@ -23,9 +23,11 @@ export const handler = async (event, context) => {
             sheetTitle = 'Grocery';
         } else if (workspace === 'linkedin' || workspace === 'news') {
             sheetTitle = 'LinkedIn';
+        } else if (workspace === 'beauty') {
+            sheetTitle = 'Beauty';
         }
 
-        const sheet = doc.sheetsByTitle[sheetTitle];
+        const sheet = doc.sheetsByTitle[sheetTitle] || doc.sheetsByTitle['New In'];
 
         if (!sheet) {
             return { statusCode: 404, body: JSON.stringify({ error: `Sheet tab '${sheetTitle}' not found` }) };
