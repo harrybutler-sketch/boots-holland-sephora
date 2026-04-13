@@ -307,63 +307,40 @@ export default async function handler(request, response) {
             // Go straight to target
             await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-            // 6. Explicit MFE Hydration
-            console.log('Waiting for product grid hydration (up to 40s)...');
-            await page.evaluate(() => window.scrollBy(0, 800));
-            // Use broader set of selectors for the grid
-            await page.waitForSelector('.product-list--list-item, [class*="ProductTile"], [data-testid="product-tile"], a[href*="/products/"]', { timeout: 40000 }).catch(() => console.warn('Product grid timed out. Check if "No Results" or still blocked.'));
-            await new Promise(r => setTimeout(r, 4000));
-
-            // 7. Extraction via DOM
-            console.log('Extracting products from DOM...');
+            // 3. Fast Extraction (Static HTML first)
+            console.log("Extracting links from page...");
             const products = await page.evaluate(() => {
-                let titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"], [data-testid="product-tile"] h2 a, [data-testid="product-tile"] h3 a'));
-                
-                // Fallback if generic links are used
-                if (titleLinks.length === 0) {
-                    titleLinks = Array.from(document.querySelectorAll('a[href*="/products/"]'))
-                        .filter(a => a.innerText.trim().length > 5);
-                }
-
-                return titleLinks.map(nameEl => {
-                    const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], article, div[class*="tile"], div.product-details');
-                    const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
-                    const imgEl = tile?.querySelector('img[class*="product-image"], a[class*="imageContainer"] img, img');
-                    const reviewEl = tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"], [class*="review-count"], span[class*="Rating"]');
-                    
-                    const name = nameEl?.innerText?.trim() || 'N/A';
-                    if (name === 'N/A' || name.length < 3) return null;
-
-                    // Improved price extraction
-                    let price = priceEl?.innerText?.trim() || 'N/A';
-                    if (price === 'N/A' && tile) {
-                        const allP = Array.from(tile.querySelectorAll('p, span, div'));
-                        const pMatch = allP.find(p => p.innerText.includes('£'));
-                        if (pMatch) price = pMatch.innerText.trim();
-                    }
-
-                    const res = {
+                const links = Array.from(document.querySelectorAll('a[href*="/products/"]'));
+                return links.map(link => {
+                    const name = link.innerText.trim();
+                    if (!name || name.length < 5) return null;
+                    return {
                         product_name: name,
                         retailer: 'Tesco',
-                        price_display: price,
+                        price_display: 'See Site',
                         reviews: 0,
                         rating: '0.0',
-                        image_url: imgEl?.src || '',
-                        product_url: nameEl?.href || window.location.href,
+                        product_url: link.href,
                         manufacturer: name.split(' ')[0],
                         date_found: new Date().toISOString()
                     };
-                    
-                    if (reviewEl) {
-                        const rText = reviewEl.innerText;
-                        const match = rText.match(/(\d+)/);
-                        if (match) res.reviews = parseInt(match[0]) || 0;
-                        const ratingMatch = rText.match(/(\d+\.\d+)/);
-                        if (ratingMatch) res.rating = ratingMatch[1];
-                    }
-                    return res;
                 }).filter(Boolean);
             });
+
+            if (products.length === 0) {
+                console.warn("No links found yet. Waiting 10s for dynamic load as fallback...");
+                await new Promise(r => setTimeout(r, 10000));
+                // Retry extraction once
+                const retryProducts = await page.evaluate(() => {
+                    const links = Array.from(document.querySelectorAll('a[href*="/products/"]'));
+                    return links.map(link => {
+                        const name = link.innerText.trim();
+                        if (!name || name.length < 5) return null;
+                        return { product_name: name, retailer: 'Tesco', price_display: 'See Site', reviews: 0, rating: '0.0', product_url: link.href, manufacturer: name.split(' ')[0], date_found: new Date().toISOString() };
+                    }).filter(Boolean);
+                });
+                if (retryProducts.length > 0) products.push(...retryProducts);
+            }
 
             if (!products || products.length === 0) {
                 console.warn('No products found on page. DOM might not have loaded or layout changed.');
