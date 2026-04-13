@@ -374,17 +374,23 @@ export const handler = async (event, context) => {
     }
 
     if (runs.length === 0) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'No scrapers triggered.', debug: { retailers } }) };
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'No scrapers triggered.', debug: { retailers } })
+      };
     }
+
+    // Prioritize tracking the 'normal' run for the dashboard status
+    const primaryRun = runs.find(r => r.actor === 'puppeteer-scraper-stable') || runs[0];
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         message: `Triggered ${runs.length} runs`,
-        runId: runs[0].id,
+        runId: primaryRun.id,
         runs,
         debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }
-      }),
+      })
     };
   } catch (error) {
     console.error('Fatal Error:', error);

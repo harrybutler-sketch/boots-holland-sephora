@@ -138,7 +138,7 @@ export default async (req, context) => {
         await doc.loadInfo();
 
         // Select tab based on workspace/actor
-        let sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
+        let sheetTitle = workspace === 'grocery' ? 'Grocery' : 'Beauty';
         if (isLinkedInContext) sheetTitle = 'LinkedIn';
 
         let sheet = doc.sheetsByTitle[sheetTitle];

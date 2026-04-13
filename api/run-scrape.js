@@ -427,9 +427,12 @@ export default async function handler(request, response) {
       return response.status(400).json({ error: 'No scrapers triggered.', debug: { retailers } });
     }
 
+    // Prioritize tracking the 'normal' run for the dashboard status
+    const primaryRun = runs.find(r => r.actor === 'puppeteer-scraper-stable') || runs[0];
+
     return response.status(200).json({
       message: `Triggered ${runs.length} runs`,
-      runId: runs[0].id,
+      runId: primaryRun.id,
       runs,
       debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }
     });
