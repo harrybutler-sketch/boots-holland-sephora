@@ -137,7 +137,8 @@ export const handler = async (event, context) => {
       if (startUrls.length > 0) {
         console.log('Starting Puppeteer Scraper...');
         
-        const STABLE_PAGE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const STABLE_PAGE_FUNCTION = `async (context) => {
+            const { page, request, log, enqueueLinks, response } = context;
             const { url, userData: { retailer, label } } = request;
             
             if (label === 'LISTING') {
@@ -269,7 +270,8 @@ export const handler = async (event, context) => {
             }
         }`;
 
-        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const TESCO_RESILIENT_FUNCTION = `async (context) => {
+            const { page, request, log, enqueueLinks, response } = context;
             const { url, userData: { retailer, label } } = request;
             
             // 1. Desktop Stealth Headers
