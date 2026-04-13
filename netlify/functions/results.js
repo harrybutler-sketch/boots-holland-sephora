@@ -56,7 +56,7 @@ export const handler = async (event, context) => {
         let filteredRows = rows;
 
         // 1. Retailer Filter
-        if (retailer && retailer !== 'All') {
+        if (retailer && retailer !== 'All' && retailer !== 'All Retailers') {
             filteredRows = filteredRows.filter(row => row.get('retailer') === retailer);
         }
 
