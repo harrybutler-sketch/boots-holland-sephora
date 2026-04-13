@@ -290,9 +290,12 @@ export const handler = async (event, context) => {
                 'referer': 'https://www.google.com/'
             });
 
-            // 2. Initial Block Check (Akamai/PerimeterX)
+            // 2. Cookie Consent & Block Check
+            console.log("Handling cookie consent and block checks...");
+            await page.click('#ons-cookie-banner-accept').catch(() => {}); // Attempt to click Tesco cookie banner
+            
             if (response && (response.status === 403 || response.status === 429)) {
-                console.error('Tesco Hardware Block (403/429). Attempting advanced session warming...');
+                console.error('Tesco Block (403/429). Attempting advanced session warming...');
                 await page.goto('https://www.tesco.com/', { waitUntil: 'networkidle2' }).catch(() => {});
                 await new Promise(r => setTimeout(r, 5000));
             }
@@ -378,7 +381,9 @@ export const handler = async (event, context) => {
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             useStealth: true,
             useChrome: true,
-            maxConcurrency: 1
+            maxConcurrency: 1,
+            requestHandlerTimeoutSecs: 180,
+            navigationTimeoutSecs: 60
           }, {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-tesco' }]
           });
