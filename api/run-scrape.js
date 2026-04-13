@@ -30,7 +30,7 @@ export default async function handler(request, response) {
     const ecommerceMap = {};
 
     const groceryUrls = {
-      'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new&new=new',
+      'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new',
       'Asda': 'https://www.asda.com/groceries/event/new-chilled-food'
     };
 
@@ -104,7 +104,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new&new=new'
+          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
