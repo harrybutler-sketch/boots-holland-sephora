@@ -311,30 +311,26 @@ export default async function handler(request, response) {
             // 6. Explicit MFE Hydration
             log.info('Waiting for product grid hydration...');
             await page.evaluate(() => window.scrollBy(0, 800));
-            await page.waitForSelector('.product-list--list-item, [class*="ProductTile"], .gyT8MW_titleLink', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
+            // Use stable generic classes to wait for the grid
+            await page.waitForSelector('a[class*="titleLink"], a[href*="/products/"]', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
             await new Promise(r => setTimeout(r, 3000));
 
             // 7. Extraction via DOM
             log.info('Extracting products from DOM...');
             const products = await page.evaluate(() => {
-                const nameSelectors = [
-                    'a.gyT8MW_titleLink',
-                    'a[class*="titleLink"]', 
-                    '[data-testid="product-tile"] h2 a',
-                    'a[href*="/products/"]'
-                ];
+                let titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"]'));
                 
-                let titleLinks = [];
-                for (const sel of nameSelectors) {
-                    titleLinks = Array.from(document.querySelectorAll(sel));
-                    if (titleLinks.length > 0) break;
+                // Fallback if titleLink class is entirely changed
+                if (titleLinks.length === 0) {
+                    titleLinks = Array.from(document.querySelectorAll('a[href*="/products/"]'))
+                        .filter(a => a.innerText.trim().length > 5);
                 }
 
                 return titleLinks.map(nameEl => {
-                    const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], div');
+                    const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], article, div[class*="tile"], div.product-details');
                     const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
                     const imgEl = tile?.querySelector('img[class*="product-image"], a[class*="imageContainer"] img, img');
-                    const reviewEl = tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"], [class*="review-count"]');
+                    const reviewEl = tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"], [class*="review-count"], span[class*="Rating"]');
                     
                     const name = nameEl?.innerText?.trim() || 'N/A';
                     if (name === 'N/A' || name.length < 3) return null;
@@ -342,7 +338,7 @@ export default async function handler(request, response) {
                     // Improved price extraction
                     let price = priceEl?.innerText?.trim() || 'N/A';
                     if (price === 'N/A' && tile) {
-                        const allP = Array.from(tile.querySelectorAll('p, span'));
+                        const allP = Array.from(tile.querySelectorAll('p, span, div'));
                         const pMatch = allP.find(p => p.innerText.includes('£'));
                         if (pMatch) price = pMatch.innerText.trim();
                     }
@@ -378,7 +374,7 @@ export default async function handler(request, response) {
             // 7. Filter
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly');
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('hearty food') || ln.includes('grower');
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
