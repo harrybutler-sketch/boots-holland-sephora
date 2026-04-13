@@ -275,15 +275,23 @@ export default async function handler(request, response) {
             // 1. Desktop Stealth Headers
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
             await page.setViewport({ width: 1920, height: 1080 });
+            await page.setExtraHTTPHeaders({
+                'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                'referer': 'https://www.google.com/'
+            });
 
             // 2. Initial Block Check (Akamai/PerimeterX)
             if (response && (response.status === 403 || response.status === 429)) {
-                log.error('Tesco Hardware Block (403/429). Rotating Proxy...');
-                throw new Error('Tesco Block (Status ' + response.status + '). Rotating proxy...');
+                log.error('Tesco Hardware Block (403/429). Attempting advanced session warming...');
+                await page.goto('https://www.tesco.com/', { waitUntil: 'networkidle2' }).catch(() => {});
+                await new Promise(r => setTimeout(r, 5000));
             }
 
             // 3. Human Mimicry: Initial Delay
-            const thinkTime = Math.floor(Math.random() * 4000) + 3000;
+            const thinkTime = Math.floor(Math.random() * 5000) + 5000;
             log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
             await new Promise(r => setTimeout(r, thinkTime));
 
@@ -294,18 +302,18 @@ export default async function handler(request, response) {
                 const title = document.title || '';
                 const body = document.body ? document.body.innerText : '';
                 return {
-                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied') || body.toLowerCase().includes("it's not you, it's us"),
+                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied') || body.toLowerCase().includes("it's not you, it's us") || body.includes("Please enable JS and disable any ad blocker"),
                     h1, title
                 };
             });
 
             // 5. Session Warming (Final resort bypass)
             if (blockInfo.isOops || !url.includes('groceries')) {
-                log.info('Warming Session: Hitting homepage first...');
-                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(e => log.warning('Warming failed: ' + e.message));
-                await new Promise(r => setTimeout(r, 2000));
+                log.info('Warming Session: Hitting primary entry point first...');
+                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 40000 }).catch(e => log.warning('Warming failed: ' + e.message));
+                await new Promise(r => setTimeout(r, 4000));
                 log.info('Session Warmed. Retrying category: ' + url);
-                await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+                await page.goto(url, { waitUntil: 'networkidle2', timeout: 40000 });
             }
 
             // 6. Explicit MFE Hydration

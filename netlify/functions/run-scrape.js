@@ -269,37 +269,68 @@ export const handler = async (event, context) => {
             }
         }`;
 
-        const TESCO_AGGRESSIVE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
-            // Stealth: Desktop Viewport
+            // 1. Desktop Stealth Headers
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
             await page.setViewport({ width: 1920, height: 1080 });
+            await page.setExtraHTTPHeaders({
+                'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                'referer': 'https://www.google.com/'
+            });
 
-            // Stealth: Cookie Acceptance
-            try {
-                const cookieButton = await page.$('#onetrust-accept-btn-handler');
-                if (cookieButton) {
-                    log.info('Clearing Tesco cookie banner...');
-                    await page.evaluate((el) => el.click(), cookieButton);
-                    await new Promise(r => setTimeout(r, 1000));
-                }
-            } catch (e) {
-                log.info('Non-critical: Could not click cookie banner.');
+            // 2. Initial Block Check (Akamai/PerimeterX)
+            if (response && (response.status === 403 || response.status === 429)) {
+                log.error('Tesco Hardware Block (403/429). Attempting advanced session warming...');
+                await page.goto('https://www.tesco.com/', { waitUntil: 'networkidle2' }).catch(() => {});
+                await new Promise(r => setTimeout(r, 5000));
             }
 
-            // Wait for products to load (using a more resilient title-based selector)
-            await page.waitForSelector('a[class*="titleLink"], li.product-list--list-item', { timeout: 30000 });
-            
-            // Extract all products from this listing page
-            const products = await page.evaluate(() => {
+            // 3. Human Mimicry: Initial Delay
+            const thinkTime = Math.floor(Math.random() * 5000) + 5000;
+            log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
+            await new Promise(r => setTimeout(r, thinkTime));
+
+            // 4. Content Check & Stealth Block Detection
+            const blockInfo = await page.evaluate(() => {
+                const h1El = document.querySelector('h1');
+                const h1 = h1El ? h1El.innerText.trim() : '';
+                const title = document.title || '';
+                const body = document.body ? document.body.innerText : '';
+                return {
+                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied') || body.toLowerCase().includes("it's not you, it's us") || body.includes("Please enable JS and disable any ad blocker"),
+                    h1, title
+                };
+            });
+
+            // 5. Session Warming (Final resort bypass)
+            if (blockInfo.isOops || !url.includes('groceries')) {
+                log.info('Warming Session: Hitting primary entry point first...');
+                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 40000 }).catch(e => log.warning('Warming failed: ' + e.message));
+                await new Promise(r => setTimeout(r, 4000));
+                log.info('Session Warmed. Retrying category: ' + url);
+                await page.goto(url, { waitUntil: 'networkidle2', timeout: 40000 });
+            }
+
+            // 6. Explicit MFE Hydration
+            log.info('Waiting for product grid hydration...');
+            await page.evaluate(() => window.scrollBy(0, 800));
+            await page.waitForSelector('a[class*="titleLink"], a[href*="/products/"]', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
+            await new Promise(r => setTimeout(r, 3000));
+
+            // 7. Extraction via DOM
+            log.info('Extracting products from DOM...');
+            const results = await page.evaluate(() => {
                 const titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"]'));
-                // Map from titles to their parent containers to ensure we get one result per product
                 return titleLinks.map(nameEl => {
                     const tile = nameEl.closest('div[class*="ProductTile"], li, div');
                     const priceEl = tile.querySelector('[data-testid="unit-price"], .price, [class*="price-details"]');
                     const imgEl = tile.querySelector('img[class*="product-image"], img');
                     const reviewEl = tile.querySelector('span[class*="review-count"], [class*="review-count"]');
-                    
                     const name = nameEl?.innerText?.trim() || 'N/A';
                     const res = {
                         product_name: name,
@@ -310,35 +341,24 @@ export const handler = async (event, context) => {
                         image_url: imgEl?.src || '',
                         product_url: nameEl?.href || window.location.href,
                         manufacturer: name.split(' ')[0],
-                        manufacturer_address: 'N/A',
                         date_found: new Date().toISOString()
                     };
-                    
                     if (reviewEl) {
-                        const rText = reviewEl.innerText;
-                        const match = rText.match(/\\d+/);
+                        const match = reviewEl.innerText.match(/\\d+/);
                         if (match) res.reviews = parseInt(match[0]) || 0;
-                        const ratingMatch = rText.match(/(\\d+\\.\\d+)/);
-                        if (ratingMatch) res.rating = ratingMatch[1];
                     }
                     return res;
                 });
             });
 
-            // Filtering: own-brand and max 5 reviews
-            const filtered = products.filter(p => {
+            const filtered = results.filter(p => {
                 const isOwnBrand = p.product_name.toLowerCase().includes('tesco');
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
             log.info(\`Extracted \${filtered.length} products from \${url}\`);
-            
-            // Pagination: only for LISTING
-            await enqueueLinks({ selector: 'a[aria-label*="next page"], a.pagination--button--next', label: 'LISTING', userData: { retailer: 'Tesco' } });
-
-            // Returning an array saves each element as a separate result
             return filtered;
-        }`;
+        }\`;
 
         // Separate Start URLs: Tesco vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');
@@ -347,7 +367,7 @@ export const handler = async (event, context) => {
         if (tescoStartUrls.length > 0) {
           const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls: tescoStartUrls,
-            pageFunction: TESCO_AGGRESSIVE_FUNCTION,
+            pageFunction: TESCO_RESILIENT_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             useStealth: true,
             useChrome: true,
