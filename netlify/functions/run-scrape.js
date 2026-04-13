@@ -368,14 +368,19 @@ export const handler = async (event, context) => {
                     return res;
                 });
             });
+            console.log("Extracted " + products.length + " products total (Unfiltered)");
+            
+            await enqueueLinks({ 
+                selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
+                label: 'LISTING', 
+                userData: { retailer: 'Tesco' } 
+            }).catch(() => {});
 
-            const filtered = results.filter(p => {
-                const isOwnBrand = p.product_name.toLowerCase().includes('tesco');
-                return p.reviews <= 5 && !isOwnBrand;
-            });
-
-            console.log("Extracted " + filtered.length + " products from " + url);
-            return filtered;
+            if (products.length > 0) {
+                console.log("Saving " + products.length + " products to dataset...");
+                await context.pushData(products);
+            }
+            return products;
         }`;
 
         // Separate Start URLs: Tesco vs The Rest

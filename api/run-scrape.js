@@ -388,14 +388,7 @@ export default async function handler(request, response) {
                 return [];
             }
 
-            // 7. Filter
-            const filtered = products.filter(p => {
-                const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('hearty food') || ln.includes('grower');
-                return p.reviews <= 5 && !isOwnBrand;
-            });
-
-            console.log("Extracted " + filtered.length + " products (found " + products.length + " total)");
+            console.log("Extracted " + products.length + " products total (Unfiltered)");
             
             await enqueueLinks({ 
                 selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
@@ -403,11 +396,11 @@ export default async function handler(request, response) {
                 userData: { retailer: 'Tesco' } 
             }).catch(() => {});
 
-            if (filtered.length > 0) {
-                console.log("Saving " + filtered.length + " products to dataset...");
-                await context.pushData(filtered);
+            if (products.length > 0) {
+                console.log("Saving " + products.length + " products to dataset...");
+                await context.pushData(products);
             }
-            return filtered;
+            return products;
         }`;
 
         // Separate Start URLs: Tesco vs The Rest
