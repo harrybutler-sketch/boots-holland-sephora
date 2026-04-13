@@ -138,11 +138,11 @@ export const handler = async (event, context) => {
         console.log('Starting Puppeteer Scraper...');
         
         const STABLE_PAGE_FUNCTION = `async (context) => {
-            const { page, request, log, enqueueLinks, response } = context;
+            const { page, request, enqueueLinks, response } = context;
             const { url, userData: { retailer, label } } = request;
             
             if (label === 'LISTING') {
-                log.info('Scraping listing: ' + url + ' (' + retailer + ')');
+                console.log('Scraping listing: ' + url + ' (' + retailer + ')');
                 const selectors = {
                     'Sainsburys': '.pt__link, a[href*="/gol-ui/product/"], a[href*="/product/"]',
                     'Waitrose': 'a[href*="/ecom/products/"]',
@@ -156,7 +156,7 @@ export const handler = async (event, context) => {
                 };
                 const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
                 
-                await page.waitForSelector(selector, { timeout: 30000 }).catch(e => log.info('Timeout of selector: ' + selector));
+                await page.waitForSelector(selector, { timeout: 30000 }).catch(e => console.log('Timeout of selector: ' + selector));
                 
                 const nextSelectors = {
                     'Sainsburys': 'a[aria-label="Next page"]',
@@ -255,14 +255,18 @@ export const handler = async (event, context) => {
 
                 // Quality Filters
                 const ownBrandKeywords = ["Asda", "Extra Special", "Sainsbury", "Taste the Difference", "Waitrose", "Essential Waitrose", "Tesco", "Finest", "Morrisons", "The Best", "Boots", "H&B", "Holland & Barrett", "Plant Menu", "The Grocer's Kitchen"];
-                const isOwnBrand = ownBrandKeywords.some(kw => results.product_name.toLowerCase().includes(kw.toLowerCase()));
+                const isOwnBrand = ownBrandKeywords.some(kw => {
+                    const match = results.product_name.toLowerCase().includes(kw.toLowerCase());
+                    const isCurrentRetailer = retailer.toLowerCase().includes(kw.toLowerCase()) || kw.toLowerCase().includes(retailer.toLowerCase().split(' ')[0]);
+                    return match && !isCurrentRetailer;
+                });
                 
                 if (isOwnBrand) {
-                    log.info('Skipping Own Brand: ' + results.product_name);
+                    console.log('Skipping Own Brand: ' + results.product_name);
                     return null;
                 }
                 if (results.reviews > 5) {
-                    log.info('Skipping High Reviews (' + results.reviews + '): ' + results.product_name);
+                    console.log('Skipping High Reviews (' + results.reviews + '): ' + results.product_name);
                     return null;
                 }
 
@@ -271,7 +275,7 @@ export const handler = async (event, context) => {
         }`;
 
         const TESCO_RESILIENT_FUNCTION = `async (context) => {
-            const { page, request, log, enqueueLinks, response } = context;
+            const { page, request, enqueueLinks, response } = context;
             const { url, userData: { retailer, label } } = request;
             
             // 1. Desktop Stealth Headers
@@ -287,14 +291,14 @@ export const handler = async (event, context) => {
 
             // 2. Initial Block Check (Akamai/PerimeterX)
             if (response && (response.status === 403 || response.status === 429)) {
-                log.error('Tesco Hardware Block (403/429). Attempting advanced session warming...');
+                console.error('Tesco Hardware Block (403/429). Attempting advanced session warming...');
                 await page.goto('https://www.tesco.com/', { waitUntil: 'networkidle2' }).catch(() => {});
                 await new Promise(r => setTimeout(r, 5000));
             }
 
             // 3. Human Mimicry: Initial Delay
             const thinkTime = Math.floor(Math.random() * 5000) + 5000;
-            log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
+            console.log(`Mimicking human thinking for ${thinkTime}ms...`);
             await new Promise(r => setTimeout(r, thinkTime));
 
             // 4. Content Check & Stealth Block Detection
@@ -311,21 +315,21 @@ export const handler = async (event, context) => {
 
             // 5. Session Warming (Final resort bypass)
             if (blockInfo.isOops || !url.includes('groceries')) {
-                log.info('Warming Session: Hitting primary entry point first...');
-                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 40000 }).catch(e => log.warning('Warming failed: ' + e.message));
+                console.log('Warming Session: Hitting primary entry point first...');
+                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 40000 }).catch(e => console.warn('Warming failed: ' + e.message));
                 await new Promise(r => setTimeout(r, 4000));
-                log.info('Session Warmed. Retrying category: ' + url);
+                console.log('Session Warmed. Retrying category: ' + url);
                 await page.goto(url, { waitUntil: 'networkidle2', timeout: 40000 });
             }
 
             // 6. Explicit MFE Hydration
-            log.info('Waiting for product grid hydration...');
+            console.log('Waiting for product grid hydration...');
             await page.evaluate(() => window.scrollBy(0, 800));
-            await page.waitForSelector('a[class*="titleLink"], a[href*="/products/"]', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
+            await page.waitForSelector('a[class*="titleLink"], a[href*="/products/"]', { timeout: 20000 }).catch(() => console.warn('Product grid timed out.'));
             await new Promise(r => setTimeout(r, 3000));
 
             // 7. Extraction via DOM
-            log.info('Extracting products from DOM...');
+            console.log('Extracting products from DOM...');
             const results = await page.evaluate(() => {
                 const titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"]'));
                 return titleLinks.map(nameEl => {
@@ -358,7 +362,7 @@ export const handler = async (event, context) => {
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
-            log.info(\`Extracted \${filtered.length} products from \${url}\`);
+            console.log(`Extracted ${filtered.length} products from ${url}`);
             return filtered;
         }\`;
 
