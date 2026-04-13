@@ -327,15 +327,23 @@ export const handler = async (event, context) => {
             }
 
             // 6. Explicit MFE Hydration
-            console.log('Waiting for product grid hydration...');
+            console.log('Waiting for product grid hydration (up to 40s)...');
             await page.evaluate(() => window.scrollBy(0, 800));
-            await page.waitForSelector('a[class*="titleLink"], a[href*="/products/"]', { timeout: 20000 }).catch(() => console.warn('Product grid timed out.'));
-            await new Promise(r => setTimeout(r, 3000));
+            // Use broader set of selectors for the grid
+            await page.waitForSelector('.product-list--list-item, [class*="ProductTile"], [data-testid="product-tile"], a[href*="/products/"]', { timeout: 40000 }).catch(() => console.warn('Product grid timed out. Check if "No Results" or still blocked.'));
+            await new Promise(r => setTimeout(r, 4000));
 
             // 7. Extraction via DOM
             console.log('Extracting products from DOM...');
             const results = await page.evaluate(() => {
-                const titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"]'));
+                let titleLinks = Array.from(document.querySelectorAll('a[class*="titleLink"], [data-testid="product-tile"] h2 a, [data-testid="product-tile"] h3 a'));
+                
+                // Fallback if generic links are used
+                if (titleLinks.length === 0) {
+                    titleLinks = Array.from(document.querySelectorAll('a[href*="/products/"]'))
+                        .filter(a => a.innerText.trim().length > 5);
+                }
+                
                 return titleLinks.map(nameEl => {
                     const tile = nameEl.closest('div[class*="ProductTile"], li, div');
                     const priceEl = tile.querySelector('[data-testid="unit-price"], .price, [class*="price-details"]');
