@@ -298,7 +298,7 @@ export default async function handler(request, response) {
 
             // 3. Human Mimicry: Initial Delay
             const thinkTime = Math.floor(Math.random() * 5000) + 5000;
-            console.log(\`Mimicking human thinking for \${thinkTime}ms...\`);
+            console.log("Mimicking human thinking for " + thinkTime + "ms...");
             await new Promise(r => setTimeout(r, thinkTime));
 
             // 4. Content Check & Stealth Block Detection
@@ -392,7 +392,7 @@ export default async function handler(request, response) {
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
-            console.log(`Extracted ${filtered.length} products (found ${products.length} total)`);
+            console.log("Extracted " + filtered.length + " products (found " + products.length + " total)");
             
             // 8. Pagination
             await enqueueLinks({ 
@@ -442,10 +442,14 @@ export default async function handler(request, response) {
     }
 
     // Prioritize tracking the 'normal' run for the dashboard status
-    const primaryRun = runs.find(r => r.actor === 'puppeteer-scraper-stable') || runs[0];
+    const primaryRun = runs.length > 0 ? (runs.find(r => r.actor === 'puppeteer-scraper-stable') || runs[0]) : null;
+
+    if (!primaryRun) {
+        return response.status(400).json({ error: 'No scrapers could be started.', debug: { retailers, runs } });
+    }
 
     return response.status(200).json({
-      message: `Triggered ${runs.length} runs`,
+      message: "Triggered " + runs.length + " runs",
       runId: primaryRun.id,
       runs,
       debug: { ecommerceRetailersToScrape, puppeteerRetailersToScrape }

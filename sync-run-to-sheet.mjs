@@ -40,7 +40,7 @@ async function syncRunToSheet(runId, force = false) {
         await doc.loadInfo();
 
         const grocerySheet = doc.sheetsByTitle['Grocery'];
-        const beautySheet = doc.sheetsByTitle['New In'];
+        const beautySheet = doc.sheetsByTitle['Beauty'];
 
         const existingGroceryUrls = grocerySheet ? new Set((await grocerySheet.getRows()).map(r => r.get('product url') || r.get('Product URL'))) : new Set();
         const existingBeautyUrls = beautySheet ? new Set((await beautySheet.getRows()).map(r => r.get('product url') || r.get('Product URL'))) : new Set();

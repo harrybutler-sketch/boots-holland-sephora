@@ -299,7 +299,7 @@ export const handler = async (event, context) => {
 
             // 3. Human Mimicry: Initial Delay
             const thinkTime = Math.floor(Math.random() * 5000) + 5000;
-            console.log(`Mimicking human thinking for ${thinkTime}ms...`);
+            console.log("Mimicking human thinking for " + thinkTime + "ms...");
             await new Promise(r => setTimeout(r, thinkTime));
 
             // 4. Content Check & Stealth Block Detection
@@ -363,9 +363,9 @@ export const handler = async (event, context) => {
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
-            console.log(`Extracted ${filtered.length} products from ${url}`);
+            console.log("Extracted " + filtered.length + " products from " + url);
             return filtered;
-        }\`;
+        }`;
 
         // Separate Start URLs: Tesco vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');

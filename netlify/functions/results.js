@@ -32,10 +32,10 @@ export const handler = async (event, context) => {
         let sheetName = 'New In'; 
         if (workspace === 'grocery') {
             sheetName = 'Grocery';
-        } else if (workspace === 'linkedin' || workspace === 'news') {
-            sheetName = 'LinkedIn';
         } else if (workspace === 'beauty') {
             sheetName = 'Beauty';
+        } else if (workspace === 'linkedin' || workspace === 'news') {
+            sheetName = 'LinkedIn';
         }
 
         const sheet = doc.sheetsByTitle[sheetName] || doc.sheetsByTitle['New In'] || doc.sheetsByIndex[0];
@@ -47,7 +47,7 @@ export const handler = async (event, context) => {
         const ratingHeader = headersList.find(h => ['rating_value', 'rating', 'Rating', 'stars'].includes(h)) || 'rating_value';
         const productUrlHeader = headersList.find(h => ['product url', 'Product URL', 'url', 'URL', 'post url', 'Post URL'].includes(h)) || 'product url';
         const priceHeader = headersList.find(h => ['price', 'Price', 'price_display'].includes(h)) || 'price';
-        const dateHeader = headersList.find(h => ['date_found', 'date', 'Date'].includes(h)) || 'date_found';
+        const dateHeader = headersList.find(h => ['date_found', 'date', 'Date', 'Date Found'].includes(h)) || 'date_found';
 
         // Fetch rows (might need optimizations for very large sheets, but okay for start)
         const rows = await sheet.getRows();
@@ -57,7 +57,13 @@ export const handler = async (event, context) => {
 
         // 1. Retailer Filter
         if (retailer && retailer !== 'All' && retailer !== 'All Retailers') {
-            filteredRows = filteredRows.filter(row => row.get('retailer') === retailer);
+            const rLower = retailer.toLowerCase();
+            filteredRows = filteredRows.filter(row => {
+                const rowRetailer = (row.get('retailer') || row.get('Retailer') || '').toString().toLowerCase();
+                if (rLower.includes('holland') && rowRetailer.includes('holland')) return true;
+                if (rLower.includes('sephora') && rowRetailer.includes('sepho')) return true;
+                return rowRetailer === rLower;
+            });
         }
 
         // 2. Days Filter (Last X Days)

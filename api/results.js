@@ -18,12 +18,18 @@ export default async function handler(request, response) {
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
 
-        const sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
-        const sheet = doc.sheetsByTitle[sheetTitle];
-
-        if (!sheet) {
-            return response.status(200).json([]); // No data yet for this workspace
+        // Dynamic Sheet Selection
+        let sheetTitle = 'New In';
+        if (workspace === 'grocery') {
+            sheetTitle = 'Grocery';
+        } else if (workspace === 'beauty') {
+            sheetTitle = 'Beauty';
+        } else if (workspace === 'linkedin' || workspace === 'news') {
+            sheetTitle = 'LinkedIn';
         }
+
+        const sheet = doc.sheetsByTitle[sheetTitle] || doc.sheetsByTitle['New In'];
+        if (!sheet) return response.status(200).json([]);
 
         // Fetch rows
         const rows = await sheet.getRows();
@@ -34,16 +40,19 @@ export default async function handler(request, response) {
         // 0. Hide Dealt Filter
         if (hide_dealt === 'true') {
             filteredRows = filteredRows.filter(row => {
-                const status = row.get('Status') || row.get('status') || 'Pending';
-                return status !== 'Dealt With';
+                const status = (row.get('Status') || row.get('status') || '').toString().toLowerCase();
+                return status !== 'dealt with' && status !== 'done' && status !== 'finished';
             });
         }
 
         // 1. Retailer Filter
-        if (retailer && retailer !== 'All') {
+        if (retailer && retailer !== 'All' && retailer !== 'All Retailers') {
+            const rLower = retailer.toLowerCase();
             filteredRows = filteredRows.filter(row => {
-                const rowRetailer = row.get('Retailer') || row.get('retailer');
-                return rowRetailer === retailer;
+                const rowRetailer = (row.get('Retailer') || row.get('retailer') || '').toString().toLowerCase();
+                if (rLower.includes('holland') && rowRetailer.includes('holland')) return true;
+                if (rLower.includes('sephora') && rowRetailer.includes('sepho')) return true;
+                return rowRetailer === rLower;
             });
         }
 
@@ -52,8 +61,8 @@ export default async function handler(request, response) {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
             filteredRows = filteredRows.filter(row => {
-                const dateVal = row.get('Date Found') || row.get('date_found');
-                if (!dateVal) return true;
+                const dateVal = row.get('Date Found') || row.get('date_found') || row.get('date');
+                if (!dateVal || dateVal === 'Unknown' || dateVal === 'Recent') return true;
                 const rowDate = new Date(dateVal);
                 return rowDate >= cutoffDate;
             });

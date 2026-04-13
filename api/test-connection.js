@@ -9,11 +9,12 @@ export default async function handler(request, response) {
         const hasEmail = !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
         const hasKey = !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
         const hasSheetId = !!process.env.GOOGLE_SHEET_ID;
+        const hasApifyToken = !!process.env.APIFY_TOKEN;
 
-        if (!hasEmail || !hasKey || !hasSheetId) {
+        if (!hasEmail || !hasKey || !hasSheetId || !hasApifyToken) {
             return response.status(500).json({
                 error: 'Missing Environment Variables',
-                details: { hasEmail, hasKey, hasSheetId }
+                details: { hasEmail, hasKey, hasSheetId, hasApifyToken }
             });
         }
 
