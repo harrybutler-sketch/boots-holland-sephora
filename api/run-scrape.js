@@ -299,31 +299,13 @@ export default async function handler(request, response) {
                 await new Promise(r => setTimeout(r, 5000));
             }
 
-            // 3. Human Mimicry: Initial Delay
-            const thinkTime = Math.floor(Math.random() * 5000) + 5000;
-            console.log("Mimicking human thinking for " + thinkTime + "ms...");
+            // 3. Human Mimicry & Navigation
+            const thinkTime = Math.floor(Math.random() * 3000) + 2000;
+            console.log("Navigating to category with " + thinkTime + "ms delay...");
             await new Promise(r => setTimeout(r, thinkTime));
-
-            // 4. Content Check & Stealth Block Detection
-            const blockInfo = await page.evaluate(() => {
-                const h1El = document.querySelector('h1');
-                const h1 = h1El ? h1El.innerText.trim() : '';
-                const title = document.title || '';
-                const body = document.body ? document.body.innerText : '';
-                return {
-                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied') || body.toLowerCase().includes("it's not you, it's us") || body.includes("Please enable JS and disable any ad blocker"),
-                    h1, title
-                };
-            });
-
-            // 5. Session Warming (Final resort bypass)
-            if (blockInfo.isOops || !url.includes('groceries')) {
-                console.log('Warming Session: Hitting primary entry point first...');
-                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 40000 }).catch(e => console.warn('Warming failed: ' + e.message));
-                await new Promise(r => setTimeout(r, 4000));
-                console.log('Session Warmed. Retrying category: ' + url);
-                await page.goto(url, { waitUntil: 'networkidle2', timeout: 40000 });
-            }
+            
+            // Go straight to target
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
             // 6. Explicit MFE Hydration
             console.log('Waiting for product grid hydration (up to 40s)...');
@@ -415,8 +397,8 @@ export default async function handler(request, response) {
             useStealth: true,
             useChrome: true,
             maxConcurrency: 1,
-            requestHandlerTimeoutSecs: 180,
-            navigationTimeoutSecs: 60
+            requestHandlerTimeoutSecs: 300,
+            navigationTimeoutSecs: 90
           }, {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-tesco' }]
           });
