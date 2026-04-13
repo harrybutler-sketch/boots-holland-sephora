@@ -1,6 +1,4 @@
-[dotenv@17.2.4] injecting env (6) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
-Getting input for run 6ktY1LtRkjWp8h5TF...
-Run Input: {
+{
   "startUrls": [
     {
       "url": "https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24",
