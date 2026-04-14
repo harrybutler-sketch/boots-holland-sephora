@@ -107,9 +107,9 @@ export const handler = async (event, context) => {
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:2',
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:3'
+          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks',
+          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks/opt/page:3'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
@@ -248,9 +248,14 @@ export const handler = async (event, context) => {
 
                     if (retailer === 'Sainsburys') {
                         const breadcrumbItems = document.querySelectorAll('.ds-c-breadcrumb__item');
-                        if (breadcrumbItems.length > 2) res.manufacturer = breadcrumbItems[breadcrumbItems.length - 2].innerText.trim();
+                        if (breadcrumbItems.length > 2) {
+                            res.manufacturer = breadcrumbItems[breadcrumbItems.length - 2].innerText.trim();
+                            res.category = breadcrumbItems[breadcrumbItems.length - 3] ? breadcrumbItems[breadcrumbItems.length - 3].innerText.trim() : 'Grocery';
+                        }
                     }
                     if (!res.manufacturer) res.manufacturer = res.product_name.split(' ')[0];
+                    if (!res.category && url.includes('newforsnacks')) res.category = 'Snacks';
+                    if (!res.category) res.category = 'Grocery';
 
                     return res;
                 }, retailer);
