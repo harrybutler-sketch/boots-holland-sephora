@@ -129,7 +129,7 @@ export const handler = async (event, context) => {
         ocadoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Ocado', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('asda'))) {
-        startUrls.push({ url: 'https://www.asda.com/groceries/event/new-chilled-food', userData: { retailer: 'Asda', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.asda.com/groceries/event/new-drinks', userData: { retailer: 'Asda', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('superdrug'))) {
         startUrls.push({ url: 'https://www.superdrug.com/new-in/c/new', userData: { retailer: 'Superdrug', label: 'LISTING' } });
