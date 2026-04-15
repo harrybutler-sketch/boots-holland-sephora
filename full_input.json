@@ -1,7 +1,7 @@
 {
   "startUrls": [
     {
-      "url": "https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24",
+      "url": "https://www.tesco.com/groceries/en-GB/shop/drinks/all?viewAll=new&new=new",
       "userData": {
         "retailer": "Tesco",
         "label": "LISTING"
