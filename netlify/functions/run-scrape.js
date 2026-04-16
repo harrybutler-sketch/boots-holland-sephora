@@ -106,6 +106,7 @@ export const handler = async (event, context) => {
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
+      if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
           'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks/opt/page:2',
           'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks',
