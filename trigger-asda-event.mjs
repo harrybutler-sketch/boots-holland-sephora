@@ -14,7 +14,7 @@ if (!APIFY_TOKEN) {
 }
 
 const client = new ApifyClient({ token: APIFY_TOKEN });
-const targetUrl = 'https://www.asda.com/groceries/event/new-food-cupboard';
+const targetUrl = 'https://www.asda.com/groceries/event/new-beer-wine-spirits';
 
 async function triggerScrape() {
     console.log(`Triggering one-off Asda scrape for: ${targetUrl}`);

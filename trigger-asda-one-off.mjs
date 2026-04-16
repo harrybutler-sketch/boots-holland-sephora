@@ -17,7 +17,7 @@ const client = new ApifyClient({ token: APIFY_TOKEN });
 
 // Get target URL from command line or default to original
 const args = process.argv.slice(2);
-const targetUrl = args[0] || 'https://www.asda.com/groceries/event/new-food-cupboard';
+const targetUrl = args[0] || 'https://www.asda.com/groceries/event/new-beer-wine-spirits';
 
 async function triggerScrape() {
     console.log(`Triggering one-off Asda scrape for: ${targetUrl}`);
