@@ -12,7 +12,7 @@ if (!APIFY_TOKEN) {
 const client = new ApifyClient({ token: APIFY_TOKEN });
 
 const startUrls = [
-    { url: 'https://www.ocado.com/categories/food-cupboard/tinned-canned/3b3c1620-f2ed-4518-8f92-75c3c3e3954d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } }
+    { url: 'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=favorite', userData: { retailer: 'Ocado', label: 'LISTING' } }
 ];
 
 async function triggerScrape() {
