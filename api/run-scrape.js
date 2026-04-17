@@ -265,7 +265,7 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }\`;
+        }`;
 
         console.log('Starting Puppeteer Scraper...');
         
