@@ -159,7 +159,15 @@ function App() {
     } catch (error) {
       console.error('Error starting scrape:', error);
       setRunStatus('FAILED');
-      alert('Error starting scrape. Check console.');
+      
+      let errorMsg = 'Unknown error';
+      if (error && typeof error === 'object') {
+        errorMsg = error.message || JSON.stringify(error);
+      } else if (typeof error === 'string') {
+        errorMsg = error;
+      }
+      
+      alert(`Error starting scrape: ${errorMsg}\n\nCheck browser console for full details.`);
     }
   };
 

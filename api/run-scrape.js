@@ -76,9 +76,7 @@ export default async function handler(request, response) {
           listingUrls: inputUrls.map(url => ({ url })),
           maxItems: maxItems,
           proxyConfiguration: { 
-            useApifyProxy: true, 
-            apifyProxyGroups: ['RESIDENTIAL'], 
-            countryCode: 'GB' 
+            useApifyProxy: true
           },
           timeoutSecs: 1200
         }, {
@@ -444,7 +442,7 @@ export default async function handler(request, response) {
           const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls: normalStartUrls,
             pageFunction: STABLE_PAGE_FUNCTION,
-            proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
+            proxyConfiguration: { useApifyProxy: true },
             useStealth: true,
             useChrome: true
           }, {
