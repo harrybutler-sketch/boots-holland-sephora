@@ -10,7 +10,7 @@ async function testSainsburys() {
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
 
-    const url = 'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks';
+    const url = 'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled';
     console.log(`Navigating to: ${url}`);
 
     try {
