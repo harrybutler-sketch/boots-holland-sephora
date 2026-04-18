@@ -7,7 +7,7 @@ const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 async function triggerTask() {
     console.log('Triggering Sainsbury\'s Task (ExvM2md70ITCHEHci) with URL overrides...');
     const targetUrls = [
-        'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new/opt/page:2/sort:price'
+        'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:2'
     ];
 
     try {

@@ -160,11 +160,15 @@ function App() {
       console.error('Error starting scrape:', error);
       setRunStatus('FAILED');
       
-      let errorMsg = 'Unknown error';
-      if (error && typeof error === 'object') {
-        errorMsg = error.message || JSON.stringify(error);
-      } else if (typeof error === 'string') {
-        errorMsg = error;
+      let errorMsg = error.message || 'Unknown error';
+      
+      // Try to get more info from the response if it failed during JSON parsing
+      if (errorMsg.includes('is not valid JSON')) {
+        try {
+          // Note: We can't easily re-read the body here if it was already consumed, 
+          // but usually this happens at the .json() call.
+          errorMsg = `Server returned invalid JSON. This usually indicates a 500 Global Error or Vercel Timeout.`;
+        } catch (e) {}
       }
       
       alert(`Error starting scrape: ${errorMsg}\n\nCheck browser console for full details.`);
