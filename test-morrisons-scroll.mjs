@@ -5,7 +5,7 @@ async function testMorrisonsScroll() {
     const page = await browser.newPage();
     
     console.log('Navigating...');
-    await page.goto('https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOoo-ONo2qwBeZl3L-4y-TYaHWAQRonE7GE-fBZHExT7sQvai2YZT', { waitUntil: 'networkidle2' });
+    await page.goto('https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite', { waitUntil: 'networkidle2' });
     
     console.log('Scrolling down...');
     await page.evaluate(async () => {

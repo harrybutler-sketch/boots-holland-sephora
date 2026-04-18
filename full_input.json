@@ -29,13 +29,6 @@
       }
     },
     {
-      "url": "https://groceries.morrisons.com/categories/food-cupboard/102705?boolean=new&sortBy=favorite",
-      "userData": {
-        "retailer": "Morrisons",
-        "label": "LISTING"
-      }
-    },
-    {
       "url": "https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=favorite",
       "userData": {
         "retailer": "Ocado",

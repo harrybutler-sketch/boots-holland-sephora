@@ -48,7 +48,7 @@ async function testMorrisonsFullScrape() {
         }
     });
 
-    await crawler.run(['https://groceries.morrisons.com/categories/new/all-new/192781?srsltid=AfmBOoo-ONo2qwBeZl3L-4y-TYaHWAQRonE7GE-fBZHExT7sQvai2YZT']);
+    await crawler.run(['https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite
 }
 
 testMorrisonsFullScrape();

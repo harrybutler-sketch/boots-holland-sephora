@@ -5,7 +5,7 @@ async function testMorrisons() {
     const page = await browser.newPage();
     
     console.log('Navigating...');
-    await page.goto('https://groceries.morrisons.com/categories/new/192077?boolean=new&brands=Applied%20Nutrition&sortBy=favorite', { waitUntil: 'networkidle2' });
+    await page.goto('https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite', { waitUntil: 'networkidle2' });
     
     console.log('Waiting for products...');
     await new Promise(r => setTimeout(r, 5000));
