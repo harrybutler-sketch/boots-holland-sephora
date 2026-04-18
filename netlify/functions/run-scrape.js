@@ -108,9 +108,9 @@ export const handler = async (event, context) => {
       }
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
-          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:2'
+          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks',
+          'https://www.sainsburys.co.uk/gol-ui/features/newforsnacks/opt/page:3'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }

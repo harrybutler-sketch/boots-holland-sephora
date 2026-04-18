@@ -12,7 +12,7 @@ if (!APIFY_TOKEN) {
 const client = new ApifyClient({ token: APIFY_TOKEN });
 
 const startUrls = [
-    { url: 'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:2', userData: { retailer: 'Sainsburys', label: 'LISTING' } },
+    { url: 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new/opt/page:2/sort:price', userData: { retailer: 'Sainsburys', label: 'LISTING' } },
     { url: 'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite', userData: { retailer: 'Morrisons', label: 'LISTING' } }
 ];
 
