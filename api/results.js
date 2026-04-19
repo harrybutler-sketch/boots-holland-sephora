@@ -106,8 +106,9 @@ export default async function handler(request, response) {
             const manufacturer = data.Manufacturer || data.manufacturer || brand || '';
 
             return {
-                date_found: data['Date Found'] || data.date_found,
-                retailer: data.Retailer || data.retailer,
+                id: data.id || '',
+                date_found: data['Date Found'] || data.date_found || data.date || '',
+                retailer: data.Retailer || data.retailer || '',
                 product_name: productName,
                 brand: brand,
                 manufacturer: manufacturer,

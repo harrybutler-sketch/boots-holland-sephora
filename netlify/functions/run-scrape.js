@@ -114,11 +114,16 @@ export const handler = async (event, context) => {
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('waitrose'))) {
-        startUrls.push({ url: 'https://www.waitrose.com/ecom/shop/browse/groceries/new/food_cupboard?srsltid=AfmBOooUAwOW7wXkUHchXKjjmAIjgKfBr6fCmfdR9jXjAnAVBsaF-GqN', userData: { retailer: 'Waitrose', label: 'LISTING' } });
+        const waitroseUrls = [
+          'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks',
+          'https://www.waitrose.com/ecom/shop/browse/groceries/new/food_cupboard'
+        ];
+        waitroseUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Waitrose', label: 'LISTING' } }));
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         const morrisonsUrls = [
-          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite'
+          'https://groceries.morrisons.com/categories/fresh-chilled-foods/176739?boolean=new&sortBy=favorite',
+          'https://groceries.morrisons.com/categories/food-cupboard/102705?boolean=new&sortBy=favorite'
         ];
         morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }
@@ -299,7 +304,77 @@ export const handler = async (event, context) => {
                     });
                 }
 
-                await page.waitForSelector(selector, { timeout: 30000 }).catch(e => console.log('Timeout of selector: ' + selector));
+                // Scrolling for hydration (Robust logic for infinite grids)
+                await page.evaluate(async (ret) => {
+                    const isMorrisons = ret === 'Morrisons';
+                    const isAsda = ret === 'Asda';
+                    const isSainsburys = ret === 'Sainsburys';
+                    
+                    if (isMorrisons) {
+                        if (document.body) {
+                            document.body.style.minWidth = '1920px';
+                            document.body.style.width = '1920px';
+                        }
+                    }
+
+                    const waitForProducts = async () => {
+                        const sel = isMorrisons ? 'a[href*="/products/"]' : (isSainsburys ? '.pt__link' : 'a[href*="/product/"]');
+                        for (let i = 0; i < 20; i++) {
+                            if (document.querySelectorAll(sel).length > 2) return true;
+                            await new Promise(r => setTimeout(r, 500));
+                        }
+                        return false;
+                    };
+
+                    if (isSainsburys) {
+                        const scrolls = 15;
+                        for (let i = 0; i < scrolls; i++) {
+                            window.scrollBy(0, 800);
+                            const waitTime = (1000 + Math.random() * 1000);
+                            await new Promise(r => setTimeout(r, waitTime));
+                        }
+                        return;
+                    }
+
+                    await waitForProducts();
+
+                    await new Promise((resolve) => {
+                        let totalHeight = 0;
+                        let distance = 400;
+                        let totalScrolls = 0;
+                        let lastHeight = document.body.scrollHeight;
+                        let noChangeCount = 0;
+
+                        const timer = setInterval(async () => {
+                            const scrollHeight = document.body.scrollHeight;
+                            window.scrollBy(0, distance);
+                            totalHeight += distance;
+                            totalScrolls++;
+
+                            if (scrollHeight === lastHeight) {
+                                noChangeCount++;
+                            } else {
+                                noChangeCount = 0;
+                                lastHeight = scrollHeight;
+                            }
+
+                            if (noChangeCount > 60 || totalScrolls > 500) {
+                                clearInterval(timer);
+                                resolve();
+                            }
+                        }, 250);
+                    });
+                }, retailer);
+
+                // SAINSBURYS OPTIMIZATION: Quick check if page is empty before the long wait
+                const hasProducts = await page.evaluate((sel) => document.querySelectorAll(sel).length > 0, selector);
+                
+                if (hasProducts || retailer !== 'Sainsburys') {
+                    const waitTimeout = retailer === 'Sainsburys' ? 60000 : 30000;
+                    await page.waitForSelector(selector, { timeout: waitTimeout }).catch(e => console.log('Timeout of selector: ' + selector));
+                } else {
+                    console.log('No products found initially on ' + retailer + '. Likely empty category.');
+                }
                 
                 const nextSelectors = {
                     'Sainsburys': 'a[aria-label="Next page"]',

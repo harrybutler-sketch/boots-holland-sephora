@@ -18,5 +18,8 @@ frontend/node_modules/
 dist/
 frontend/dist/
 
+# Scratch & Local Tools
+scratch/
+
 # OS
 .DS_Store

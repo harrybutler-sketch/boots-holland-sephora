@@ -2,6 +2,65 @@ import { ApifyClient } from 'apify-client';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { getGoogleAuth } from '../lib/google-auth.js';
 
+// LinkedIn Parsing Helpers
+function extractRetailer(text) {
+    if (!text) return 'Unknown';
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('tesco')) return 'Tesco';
+    if (lowerText.includes("sainsbury")) return "Sainsbury's";
+    if (lowerText.includes('boots')) return 'Boots';
+    if (lowerText.includes('asda')) return 'Asda';
+    if (lowerText.includes('morrisons')) return 'Morrisons';
+    if (lowerText.includes('waitrose')) return 'Waitrose';
+    if (lowerText.includes('ocado')) return 'Ocado';
+    if (lowerText.includes('holland') || lowerText.includes('barrett')) return 'Holland & Barrett';
+    if (lowerText.includes('superdrug')) return 'Superdrug';
+    if (lowerText.includes('sephora')) return 'Sephora';
+    if (lowerText.includes('the grocer')) return 'The Grocer';
+    return 'Unknown';
+}
+
+function extractBrandLinkedin(text, authorName) {
+    const genericAuthors = [
+        'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
+        'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
+    ];
+    if (authorName && !genericAuthors.some(ga => authorName.toLowerCase().includes(ga.toLowerCase()))) return authorName;
+    const brandMatch = text.match(/(?:Brand|Manufacturer):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
+    if (brandMatch) return brandMatch[1].trim();
+    const hashtagMatch = text.match(/#([A-Z][a-zA-Z0-9]+)/);
+    if (hashtagMatch) return hashtagMatch[1].replace(/([A-Z])/g, ' $1').trim();
+    const launchMatch = text.match(/([A-Z][a-zA-Z0-9&]+(?:\s+[A-Z][a-zA-Z0-9&]+)?)\s+(?:has\s+)?(?:launched|unveiled|introduced)/);
+    if (launchMatch) return launchMatch[1].trim();
+    return 'Unknown Brand';
+}
+
+function extractProductLinkedin(text) {
+    const patterns = [
+        /(?:launched|introducing|announcing|unveiling|bringing you)\s+(?:our\s+|the\s+|a\s+|new\s+)?([A-Z][a-zA-Z0-9\s&']{3,40})(?:\.|!|\n|with|at|in)/i,
+        /new\s+([A-Z][a-zA-Z0-9\s&']{3,40})\s+(?:range|listing|launch)/i,
+        /^([A-Z][a-zA-Z0-9\s&']{3,50})(?:\s+has\s+launched|\s+arrives|\s+hits)/m
+    ];
+    for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+            const val = match[1].trim();
+            const ignored = ['new', 'range', 'products', 'collection', 'collaboration', 'partnership', 'brand', 'launch'];
+            if (!ignored.includes(val.toLowerCase())) return val;
+        }
+    }
+    return text.toLowerCase().includes('new ') && text.toLowerCase().includes('range') ? 'New Range' : 'New Launch';
+}
+
+function isProductLaunchLinkedin(text, retailer) {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    const negativeKeywords = ['hiring', 'vacancy', 'job', 'recruit', 'career', 'opportunity', 'report', 'whitepaper', 'webinar', 'seminar', 'conference', 'new store', 'new shop', 'new branch', 'managed store', 'convenience store', 'store opening', 'opened', 'opening', 'expansion', 'refurbishment', 'refit', 'franchise', 'ai agent', 'software', 'platform', 'app', 'update'];
+    if (negativeKeywords.some(kw => lower.includes(kw))) return false;
+    const positiveKeywords = ['launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'flavour', 'flavor', 'sku', 'available now', 'buy now', 'grab yours', 'find us', 'roll out', 'rolling out', 'landed', 'hitting', 'arrived', 'introducing'];
+    return positiveKeywords.some(kw => lower.includes(kw));
+}
+
 export default async function handler(request, response) {
     // Allow GET (for dashboard polling) and POST (for Apify webhooks)
     if (request.method !== 'GET' && request.method !== 'POST') {
@@ -36,28 +95,97 @@ export default async function handler(request, response) {
             return response.status(404).json({ error: 'Run not found' });
         }
 
+        const actor = await client.actor(run.actId).get().catch(() => ({ name: 'Unknown' }));
+        const isLinkedinActor = actor.name.toLowerCase().includes('linkedin');
+
         const terminalStatuses = ['SUCCEEDED', 'ABORTED', 'TIMED-OUT', 'FAILED'];
         if (!terminalStatuses.includes(run.status)) {
             return response.status(200).json({
                 status: run.status,
                 datasetId: run.defaultDatasetId,
+                isLinkedin: isLinkedinActor
             });
         }
 
         // Run has finished (either succeeded or aborted with partial data), process data
-        const dataset = await client.dataset(run.defaultDatasetId).listItems();
-        const items = dataset.items;
+        const datasetId = run.defaultDatasetId;
+        const items = (await client.dataset(datasetId).listItems()).items;
 
         console.log(`Fetched ${items.length} items from Apify dataset.`);
-        if (items.length > 0) {
-            console.log('First item structure:', JSON.stringify(items[0], null, 2));
-        }
-
+        
         // Google Sheets Auth
         const serviceAccountAuth = getGoogleAuth();
-
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
+
+        // Branch 1: LinkedIn Workspace
+        if (workspace === 'linkedin' || isLinkedinActor) {
+            console.log('Detected LinkedIn run, starting sync to LinkedIn sheet...');
+            const linkedinSheet = doc.sheetsByTitle['LinkedIn'];
+            if (!linkedinSheet) return response.status(404).json({ error: 'LinkedIn sheet not found' });
+
+            const existingRows = await linkedinSheet.getRows();
+            const existingUrls = new Set(existingRows.map(r => r.get('post url') || r.get('Post URL')));
+            const batchRows = [];
+
+            for (const item of items) {
+                const url = item.linkedinUrl || item.url;
+                if (!url || existingUrls.has(url)) continue;
+
+                const text = item.content || item.text || '';
+                const author = (item.author && item.author.name) || item.authorName || 'Unknown Author';
+                const lowerText = text.toLowerCase();
+
+                // Relevance Check
+                const genericAuthors = [
+                    'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
+                    'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
+                ];
+                const isGenericAuthor = genericAuthors.some(ga => author.toLowerCase().includes(ga.toLowerCase()));
+                if (isGenericAuthor && !lowerText.includes('new')) continue;
+
+                const launchKeywords = ['launch', 'listing', 'shelf', 'shelves', 'stockist', 'range', 'available now', 'hitting', 'landed', 'introducing', 'new SKU', 'new flavor', 'new flavour', 'new variant', 'new scent'];
+                const isRelevant = lowerText.includes('new product') || lowerText.includes('new launch') || launchKeywords.some(kw => lowerText.includes(kw.toLowerCase()));
+                if (!isRelevant) continue;
+
+                const retailer = extractRetailer(text);
+                const isLaunch = isProductLaunchLinkedin(text, retailer);
+                const finalRetailer = (retailer === 'Unknown' && author.toLowerCase().includes('the grocer')) ? 'The Grocer' : retailer;
+
+                // Use a simple hash of URL + Author to create a unique ID if Apify doesn't provide one
+                const rawId = item.id || url;
+                const shortId = Buffer.from(rawId).toString('base64').substring(0, 12).replace(/\//g, '_');
+                const finalId = `linkedin-${shortId}`;
+
+                batchRows.push({
+                    'id': finalId,
+                    'brand': extractBrandLinkedin(text, author) || 'Unknown Brand',
+                    'product': extractProductLinkedin(text) || 'Unknown Product',
+                    'manufacturer': author,
+                    'manufacturer url': (item.author && item.author.linkedinUrl) || item.authorUrl || '',
+                    'date': item.postedAt?.date || item.postedAt?.text || item.date || item.timeRange || 'Unknown',
+                    'retailer': finalRetailer,
+                    'type': isLaunch ? 'launch' : 'other',
+                    'post snippet': text ? text.substring(0, 200).replace(/\n/g, ' ') + '...' : '',
+                    'dealtWith': 'FALSE',
+                    'post url': url,
+                    'scrape_timestamp': new Date().toISOString()
+                });
+                existingUrls.add(url);
+            }
+
+            if (batchRows.length > 0) {
+                await linkedinSheet.addRows(batchRows);
+                console.log(`Synced ${batchRows.length} LinkedIn posts.`);
+            }
+
+            return response.status(200).json({
+                status: 'SUCCEEDED',
+                itemCount: items.length,
+                appendedCount: batchRows.length,
+                isLinkedin: true
+            });
+        }
 
         // Select tab based on workspace
         const sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
