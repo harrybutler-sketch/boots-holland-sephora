@@ -122,7 +122,7 @@ export const handler = async (event, context) => {
       }
       if (pRetailers.some(r => r.includes('morrisons'))) {
         const morrisonsUrls = [
-          'https://groceries.morrisons.com/categories/frozen-food/180331?boolean=new&sortBy=favorite'
+          'https://groceries.morrisons.com/categories/beer-wines-spirits/103120?boolean=new&sortBy=favorite'
         ];
         morrisonsUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Morrisons', label: 'LISTING' } }));
       }

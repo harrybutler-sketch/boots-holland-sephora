@@ -13,7 +13,7 @@ const client = new ApifyClient({ token: APIFY_TOKEN });
 
 const startUrls = [
     { url: 'https://www.sainsburys.co.uk/gol-ui/features/new-in/other:new/opt/page:2/sort:price', userData: { retailer: 'Sainsburys', label: 'LISTING' } },
-    { url: 'https://groceries.morrisons.com/categories/frozen-food/180331?boolean=new&sortBy=favorite', userData: { retailer: 'Morrisons', label: 'LISTING' } }
+    { url: 'https://groceries.morrisons.com/categories/beer-wines-spirits/103120?boolean=new&sortBy=favorite', userData: { retailer: 'Morrisons', label: 'LISTING' } }
 ];
 
 async function triggerScrape() {
