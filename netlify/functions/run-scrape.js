@@ -115,8 +115,8 @@ export const handler = async (event, context) => {
       }
       if (pRetailers.some(r => r.includes('waitrose'))) {
         const waitroseUrls = [
-          'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks',
-          'https://www.waitrose.com/ecom/shop/browse/groceries/new/food_cupboard'
+          'https://www.waitrose.com/ecom/shop/browse/groceries/new/toiletries_health_and_beauty?srsltid=AfmBOoo4qUQyJ3BJhzKG2Uo3hgUJVh76roqA5LLJBuTTcQVEJuFPN67c',
+          'https://www.waitrose.com/ecom/shop/browse/groceries/new/drinks?srsltid=AfmBOoo4qUQyJ3BJhzKG2Uo3hgUJVh76roqA5LLJBuTTcQVEJuFPN67c'
         ];
         waitroseUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Waitrose', label: 'LISTING' } }));
       }
