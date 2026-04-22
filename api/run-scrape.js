@@ -490,10 +490,128 @@ export default async function handler(request, response) {
             }
         }`;
 
+        const BEAUTY_STABLE_PAGE_FUNCTION = `async (context) => {
+            const { page, request, enqueueLinks, response, log } = context;
+            const { url, userData: { retailer, label } } = request;
+            
+            if (label === 'LISTING') {
+                log.info('Scraping listing: ' + url + ' (' + retailer + ')');
+                const selectors = {
+                    'Boots': 'a[href*="/product/"], a[href*="/p/"]',
+                    'Superdrug': 'a[href*="/p/"]',
+                    'Sephora': 'a[href*="/p/"]',
+                    'Holland & Barrett': 'a[href*="/shop/product/"]'
+                };
+                const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
+                
+                // Scrolling for hydration
+                await page.evaluate(async () => {
+                    await new Promise((resolve) => {
+                        let totalHeight = 0;
+                        let distance = 400;
+                        const timer = setInterval(() => {
+                            const scrollHeight = document.body.scrollHeight;
+                            window.scrollBy(0, distance);
+                            totalHeight += distance;
+                            if (totalHeight >= scrollHeight || totalHeight > 10000) {
+                                clearInterval(timer);
+                                resolve();
+                            }
+                        }, 200);
+                    });
+                });
 
-        // Separate Start URLs: Tesco vs The Rest
+                await page.waitForSelector(selector, { timeout: 30000 }).catch(e => log.warning('Timeout of selector: ' + selector));
+                
+                const nextSelectors = {
+                    'Holland & Barrett': 'a.PagingButtons-module_pagingLinkWrapper__kjUec'
+                };
+                
+                await enqueueLinks({
+                    selector,
+                    label: 'DETAIL',
+                    userData: { retailer }
+                });
+
+                const nextSelector = nextSelectors[retailer];
+                if (nextSelector) {
+                    const nextButton = await page.$(nextSelector);
+                    if (nextButton) {
+                        await enqueueLinks({ selector: nextSelector, label: 'LISTING', userData: { retailer } });
+                    }
+                }
+            } else if (label === 'DETAIL') {
+                await page.waitForSelector('h1', { timeout: 15000 }).catch(() => {});
+                const results = await page.evaluate((retailer) => {
+                    const res = {
+                        product_name: document.querySelector('h1')?.innerText?.trim() || 'N/A',
+                        retailer: retailer,
+                        price_display: 'N/A',
+                        reviews: 0,
+                        rating: '0.0',
+                        image_url: '',
+                        manufacturer: '',
+                        manufacturer_address: '',
+                        product_url: window.location.href,
+                        date_found: new Date().toISOString()
+                    };
+
+                    const priceSelectors = ['.pd__cost', '.product-details-tile__price', '.product-price', '.price', '[class*="price"]'];
+                    for (const sel of priceSelectors) {
+                        const el = document.querySelector(sel);
+                        if (el && el.innerText) { res.price_display = el.innerText.trim(); break; }
+                    }
+
+                    const imgSelectors = ['img.pd__image', '.pt-image__image', '.co-product-image img', 'figure img', 'picture img', 'img[itemprop="image"]'];
+                    for (const sel of imgSelectors) {
+                        const img = document.querySelector(sel);
+                        if (img && img.src) { res.image_url = img.src; break; }
+                    }
+
+                    const reviewSelectors = ['.review-summary__count', '.star-rating-link span', 'a[href="#reviews-title"] span', '[class*="starRating"] span', '.bv_numReviews_text'];
+                    for (const sel of reviewSelectors) {
+                        const el = document.querySelector(sel);
+                        if (el) {
+                            const match = el.innerText.match(/\\d+/);
+                            if (match) { res.reviews = parseInt(match[0]) || 0; break; }
+                        }
+                    }
+
+                    let addressText = '';
+                    const mfnSelectors = ['#brand-details-panel', '[data-testid="product-details-manufacturer"]', '#product-information'];
+                    for (const sel of mfnSelectors) {
+                        const el = document.querySelector(sel);
+                        if (el) addressText += ' ' + el.innerText;
+                    }
+                    res.manufacturer_address = addressText.trim().replace(/\\n/g, ' ');
+                    res.manufacturer = res.product_name.split(' ')[0];
+
+                    return res;
+                }, retailer);
+
+                // Quality Filters (April 13th Version)
+                const ownBrandKeywords = ["Boots", "H&B", "Holland & Barrett", "Sephora", "Sephora Collection"];
+                const isOwnBrand = ownBrandKeywords.some(kw => results.product_name.toLowerCase().includes(kw.toLowerCase()));
+                
+                if (isOwnBrand) {
+                    log.info('Skipping Own Brand: ' + results.product_name);
+                    return null;
+                }
+                if (results.reviews > 5) {
+                    log.info('Skipping High Reviews (' + results.reviews + '): ' + results.product_name);
+                    return null;
+                }
+
+                return results;
+            }
+        }`;
+
+
+        // Separate Start URLs: Tesco vs Beauty vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');
-        const normalStartUrls = startUrls.filter(u => u.userData.retailer !== 'Tesco');
+        const beautyRetailers = ['Sephora', 'Holland & Barrett'];
+        const beautyStartUrls = startUrls.filter(u => beautyRetailers.includes(u.userData.retailer));
+        const normalStartUrls = startUrls.filter(u => u.userData.retailer !== 'Tesco' && !beautyRetailers.includes(u.userData.retailer));
 
         if (tescoStartUrls.length > 0) {
           const run = await client.actor('apify/puppeteer-scraper').start({
@@ -509,6 +627,24 @@ export default async function handler(request, response) {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-tesco' }]
           });
           runs.push({ id: run.id, actor: 'puppeteer-scraper-tesco', retailers: ['Tesco'] });
+        }
+
+        if (beautyStartUrls.length > 0) {
+          console.log('Starting Beauty Puppeteer Scraper (April 13th Stable Logic)...');
+          const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: beautyStartUrls,
+            pageFunction: BEAUTY_STABLE_PAGE_FUNCTION,
+            proxyConfiguration: { 
+              useApifyProxy: true, 
+              apifyProxyGroups: ['RESIDENTIAL'], 
+              countryCode: 'GB' 
+            },
+            useStealth: true,
+            useChrome: true
+          }, {
+            webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-beauty' }]
+          });
+          runs.push({ id: run.id, actor: 'puppeteer-scraper-beauty', retailers: beautyStartUrls.map(u => u.userData.retailer) });
         }
 
         if (normalStartUrls.length > 0) {

@@ -81,17 +81,25 @@ export default async function handler(req, res) {
         date.setDate(date.getDate() - 28);
         const minDate = date.toISOString().split('T')[0];
 
-        // Start the actor
-        const run = await client.actor('harvestapi/linkedin-post-search').call({
+        const host = req.headers.host || 'boots-holland-sephora.vercel.app';
+        const webhookUrl = `https://${host}/api/run-status?workspace=linkedin`;
+
+        // Start the actor in the background with a webhook for sync
+        const run = await client.actor('harvestapi/linkedin-post-search').start({
             ...config,
             minDate: minDate,
             sortBy: 'date'
+        }, {
+            webhooks: [{
+                eventTypes: ['ACTOR.RUN.SUCCEEDED'],
+                requestUrl: webhookUrl
+            }]
         });
 
         return res.status(200).json({
             runId: run.id,
             status: run.status,
-            message: 'LinkedIn Scrape Started'
+            message: 'LinkedIn Scrape Started. Results will sync to sheet automatically when finished.'
         });
 
     } catch (error) {
