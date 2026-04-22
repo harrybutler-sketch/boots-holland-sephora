@@ -489,122 +489,68 @@ export default async function handler(request, response) {
                 return results;
             }
         }`;
+        const BEAUTY_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData }) => {
+            const url = request.url;
+            const retailer = url.includes('sephora') ? 'Sephora' : 'Holland & Barrett';
+            log.info(\`Scraping \${retailer}: \${url}\`);
 
-        const BEAUTY_STABLE_PAGE_FUNCTION = `async (context) => {
-            const { page, request, enqueueLinks, response, log } = context;
-            const { url, userData: { retailer, label } } = request;
-            
-            if (label === 'LISTING') {
-                log.info('Scraping listing: ' + url + ' (' + retailer + ')');
-                const selectors = {
-                    'Boots': 'a[href*="/product/"], a[href*="/p/"]',
-                    'Superdrug': 'a[href*="/p/"]',
-                    'Sephora': 'a[href*="/p/"]',
-                    'Holland & Barrett': 'a[href*="/shop/product/"]'
-                };
-                const selector = selectors[retailer] || 'a[href*="/product/"], a[href*="/p/"]';
-                
-                // Scrolling for hydration
-                await page.evaluate(async () => {
-                    await new Promise((resolve) => {
-                        let totalHeight = 0;
-                        let distance = 400;
-                        const timer = setInterval(() => {
-                            const scrollHeight = document.body.scrollHeight;
-                            window.scrollBy(0, distance);
-                            totalHeight += distance;
-                            if (totalHeight >= scrollHeight || totalHeight > 10000) {
-                                clearInterval(timer);
-                                resolve();
-                            }
-                        }, 200);
-                    });
-                });
+            // Helper for delays
+            const delay = ms => new Promise(r => setTimeout(r, ms));
 
-                await page.waitForSelector(selector, { timeout: 30000 }).catch(e => log.warning('Timeout of selector: ' + selector));
-                
-                const nextSelectors = {
-                    'Holland & Barrett': 'a.PagingButtons-module_pagingLinkWrapper__kjUec'
-                };
-                
-                await enqueueLinks({
-                    selector,
-                    label: 'DETAIL',
-                    userData: { retailer }
-                });
-
-                const nextSelector = nextSelectors[retailer];
-                if (nextSelector) {
-                    const nextButton = await page.$(nextSelector);
-                    if (nextButton) {
-                        await enqueueLinks({ selector: nextSelector, label: 'LISTING', userData: { retailer } });
-                    }
+            // Scroll and hydrate logic (April 13th baseline)
+            await page.evaluate(async () => {
+                for (let i = 0; i < 5; i++) {
+                    window.scrollBy(0, 1000);
+                    await new Promise(r => setTimeout(r, 1000));
                 }
-            } else if (label === 'DETAIL') {
-                await page.waitForSelector('h1', { timeout: 15000 }).catch(() => {});
-                const results = await page.evaluate((retailer) => {
-                    const res = {
-                        product_name: document.querySelector('h1')?.innerText?.trim() || 'N/A',
-                        retailer: retailer,
-                        price_display: 'N/A',
-                        reviews: 0,
-                        rating: '0.0',
-                        image_url: '',
-                        manufacturer: '',
-                        manufacturer_address: '',
-                        product_url: window.location.href,
-                        date_found: new Date().toISOString()
-                    };
+            });
 
-                    const priceSelectors = ['.pd__cost', '.product-details-tile__price', '.product-price', '.price', '[class*="price"]'];
-                    for (const sel of priceSelectors) {
-                        const el = document.querySelector(sel);
-                        if (el && el.innerText) { res.price_display = el.innerText.trim(); break; }
+            // Interaction to trigger hydration
+            await page.mouse.move(100, 100);
+            await delay(2000);
+
+            const products = await page.evaluate((retailer) => {
+                // Selector from my recent live inspection of H&B and Sephora
+                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"]';
+                const items = Array.from(document.querySelectorAll(cardSelector));
+                
+                return items.map(el => {
+                    const res = {};
+                    const linkEl = el.querySelector('a');
+                    res.product_url = linkEl ? linkEl.href : null;
+                    
+                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]');
+                    res.product_name = nameEl ? nameEl.innerText.trim() : 'Unknown Product';
+                    
+                    // Specific Own Brand filtering for April 13th restoration
+                    if (retailer === 'Sephora') {
+                        const brandText = el.innerText.toLowerCase();
+                        res.isOwnBrand = brandText.includes('sephora') || brandText.includes('sephora collection');
+                    } else if (retailer === 'Holland & Barrett') {
+                        const brandText = el.innerText.toLowerCase();
+                        res.isOwnBrand = brandText.includes('holland') || brandText.includes('h&b') || brandText.includes('holland & barrett');
                     }
-
-                    const imgSelectors = ['img.pd__image', '.pt-image__image', '.co-product-image img', 'figure img', 'picture img', 'img[itemprop="image"]'];
-                    for (const sel of imgSelectors) {
-                        const img = document.querySelector(sel);
-                        if (img && img.src) { res.image_url = img.src; break; }
-                    }
-
-                    const reviewSelectors = ['.review-summary__count', '.star-rating-link span', 'a[href="#reviews-title"] span', '[class*="starRating"] span', '.bv_numReviews_text'];
-                    for (const sel of reviewSelectors) {
-                        const el = document.querySelector(sel);
-                        if (el) {
-                            const match = el.innerText.match(/\\d+/);
-                            if (match) { res.reviews = parseInt(match[0]) || 0; break; }
-                        }
-                    }
-
-                    let addressText = '';
-                    const mfnSelectors = ['#brand-details-panel', '[data-testid="product-details-manufacturer"]', '#product-information'];
-                    for (const sel of mfnSelectors) {
-                        const el = document.querySelector(sel);
-                        if (el) addressText += ' ' + el.innerText;
-                    }
-                    res.manufacturer_address = addressText.trim().replace(/\\n/g, ' ');
-                    res.manufacturer = res.product_name.split(' ')[0];
-
+                    
+                    res.retailer = retailer;
+                    res.scraped_at = new Date().toISOString();
                     return res;
-                }, retailer);
+                });
+            }, retailer);
 
-                // Quality Filters (April 13th Version)
-                const ownBrandKeywords = ["Boots", "H&B", "Holland & Barrett", "Sephora", "Sephora Collection"];
-                const isOwnBrand = ownBrandKeywords.some(kw => results.product_name.toLowerCase().includes(kw.toLowerCase()));
-                
-                if (isOwnBrand) {
-                    log.info('Skipping Own Brand: ' + results.product_name);
-                    return null;
-                }
-                if (results.reviews > 5) {
-                    log.info('Skipping High Reviews (' + results.reviews + '): ' + results.product_name);
-                    return null;
-                }
+            log.info(\`Extracted \${products.length} products from \${retailer}\`);
 
-                return results;
+            if (products && products.length > 0) {
+                for (const p of products) {
+                    // Own Brand Filter (April 13th policy: Skip own brands)
+                    if (p.isOwnBrand) {
+                        log.info(\`Skipping own brand: \${p.product_name}\`);
+                        continue;
+                    }
+                    await pushData(p);
+                }
             }
         }`;
+
 
 
         // Separate Start URLs: Tesco vs Beauty vs The Rest
