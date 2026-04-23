@@ -553,11 +553,60 @@ export default async function handler(request, response) {
 
 
 
-        // Separate Start URLs: Tesco vs Beauty vs The Rest
+        const SAINSBURYS_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData }) => {
+            const url = request.url;
+            log.info(\`Scraping Sainsbury's: \${url}\`);
+
+            // Helper for delays
+            const delay = ms => new Promise(r => setTimeout(r, ms));
+
+            // Scroll for hydration
+            await page.evaluate(async () => {
+                for (let i = 0; i < 5; i++) {
+                    window.scrollBy(0, 1000);
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            });
+
+            await delay(2000);
+
+            const products = await page.evaluate(() => {
+                const items = Array.from(document.querySelectorAll('.product-header, [class*="productCard"], li[data-test-id="product-line"]'));
+                return items.map(el => {
+                    const res = {};
+                    const linkEl = el.querySelector('a');
+                    res.product_url = linkEl ? linkEl.href : null;
+                    
+                    const nameEl = el.querySelector('h2, h3, [class*="title"], [class*="Name"]');
+                    res.product_name = nameEl ? nameEl.innerText.trim() : 'Unknown Product';
+                    
+                    res.retailer = "Sainsbury's";
+                    res.scraped_at = new Date().toISOString();
+                    return res;
+                });
+            });
+
+            log.info(\`Extracted \${products.length} products from Sainsbury's\`);
+
+            if (products && products.length > 0) {
+                for (const p of products) {
+                    await pushData(p);
+                }
+            }
+        }`;
+
+
+        // Separate Start URLs: Tesco vs Beauty vs Sainsbury's vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');
         const beautyRetailers = ['Sephora', 'Holland & Barrett'];
         const beautyStartUrls = startUrls.filter(u => beautyRetailers.includes(u.userData.retailer));
-        const normalStartUrls = startUrls.filter(u => u.userData.retailer !== 'Tesco' && !beautyRetailers.includes(u.userData.retailer));
+        const sainsburysStartUrls = startUrls.filter(u => u.userData.retailer === "Sainsbury's" || u.userData.retailer === "Sainsburys");
+        const normalStartUrls = startUrls.filter(u => 
+            u.userData.retailer !== 'Tesco' && 
+            !beautyRetailers.includes(u.userData.retailer) && 
+            u.userData.retailer !== "Sainsbury's" && 
+            u.userData.retailer !== "Sainsburys"
+        );
 
         if (tescoStartUrls.length > 0) {
           const run = await client.actor('apify/puppeteer-scraper').start({
@@ -573,6 +622,24 @@ export default async function handler(request, response) {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-tesco' }]
           });
           runs.push({ id: run.id, actor: 'puppeteer-scraper-tesco', retailers: ['Tesco'] });
+        }
+
+        if (sainsburysStartUrls.length > 0) {
+          console.log('Starting Sainsbury\'s Dedicated Scraper...');
+          const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: sainsburysStartUrls,
+            pageFunction: SAINSBURYS_STABLE_PAGE_FUNCTION,
+            proxyConfiguration: { 
+              useApifyProxy: true, 
+              apifyProxyGroups: ['RESIDENTIAL'], 
+              countryCode: 'GB' 
+            },
+            useStealth: true,
+            useChrome: true
+          }, {
+            webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-sainsburys' }]
+          });
+          runs.push({ id: run.id, actor: 'puppeteer-scraper-sainsburys', retailers: ["Sainsbury's"] });
         }
 
         if (beautyStartUrls.length > 0) {
