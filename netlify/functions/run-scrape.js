@@ -270,7 +270,7 @@ export const handler = async (event, context) => {
             }).catch(() => {});
 
             return filtered;
-        }\`;
+        }`;
 
         const STABLE_PAGE_FUNCTION = `async (context) => {
             const { page, request, enqueueLinks, response } = context;
@@ -490,9 +490,142 @@ export const handler = async (event, context) => {
             }
         }`;
 
-        // Separate Start URLs: Tesco vs The Rest
+        const BEAUTY_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData }) => {
+            const url = request.url;
+            const retailer = url.includes('sephora') ? 'Sephora' : 'Holland & Barrett';
+            log.info(\`Scraping \${retailer}: \${url}\`);
+
+            // Helper for delays
+            const delay = ms => new Promise(r => setTimeout(r, ms));
+
+            // Scroll and hydrate logic (April 13th baseline)
+            await page.evaluate(async () => {
+                for (let i = 0; i < 5; i++) {
+                    window.scrollBy(0, 1000);
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            });
+
+            // Interaction to trigger hydration
+            await page.mouse.move(100, 100);
+            await delay(2000);
+
+            const products = await page.evaluate((retailer) => {
+                // Selector from my recent live inspection of H&B and Sephora
+                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"]';
+                const items = Array.from(document.querySelectorAll(cardSelector));
+                
+                return items.map(el => {
+                    const res = {};
+                    const linkEl = el.querySelector('a');
+                    res.product_url = linkEl ? linkEl.href : null;
+                    
+                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]');
+                    res.product_name = nameEl ? nameEl.innerText.trim() : 'Unknown Product';
+                    
+                    // Specific Own Brand filtering for April 13th restoration
+                    if (retailer === 'Sephora') {
+                        const brandText = el.innerText.toLowerCase();
+                        res.isOwnBrand = brandText.includes('sephora') || brandText.includes('sephora collection');
+                    } else if (retailer === 'Holland & Barrett') {
+                        const brandText = el.innerText.toLowerCase();
+                        res.isOwnBrand = brandText.includes('holland') || brandText.includes('h&b') || brandText.includes('holland & barrett');
+                    }
+                    
+                    res.retailer = retailer;
+                    res.scraped_at = new Date().toISOString();
+                    return res;
+                });
+            }, retailer);
+
+            log.info(\`Extracted \${products.length} products from \${retailer}\`);
+
+            if (products && products.length > 0) {
+                for (const p of products) {
+                    // Own Brand Filter (April 13th policy: Skip own brands)
+                    if (p.isOwnBrand) {
+                        log.info(\`Skipping own brand: \${p.product_name}\`);
+                        continue;
+                    }
+                    await pushData(p);
+                }
+            }
+        }`;
+
+        const SAINSBURYS_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData, enqueueLinks }) => {
+            const url = request.url;
+            log.info(\`Scraping Sainsbury's: \${url}\`);
+
+            // Helper for delays
+            const delay = ms => new Promise(r => setTimeout(r, ms));
+
+            // Intensive scroll for hydration (Sainsbury's is heavy on lazy loading)
+            log.info('Scrolling for hydration...');
+            for (let i = 0; i < 15; i++) {
+                await page.evaluate(() => window.scrollBy(0, 1000));
+                await delay(1000);
+                // Move mouse to trigger hover-based lazy loading
+                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+            }
+
+            await delay(2000);
+
+            const products = await page.evaluate(() => {
+                const links = Array.from(document.querySelectorAll('.pt__link'));
+                return links.map(linkEl => {
+                    const tile = linkEl.closest('article, [data-testid="product-tile"], li');
+                    const name = linkEl.innerText.trim();
+                    const link = linkEl.href;
+                    
+                    let price = 'N/A';
+                    let image = null;
+
+                    if (tile) {
+                        const priceEl = tile.querySelector('[data-testid="pt-retail-price"], .pt__cost');
+                        if (priceEl) price = priceEl.innerText.trim();
+                        const imgEl = tile.querySelector('img');
+                        if (imgEl) image = imgEl.src;
+                    }
+                    
+                    return { 
+                        product_name: name,
+                        product_url: link,
+                        price_display: price,
+                        image_url: image,
+                        retailer: "Sainsbury's",
+                        manufacturer: name.split(' ')[0],
+                        date_found: new Date().toISOString()
+                    };
+                }).filter(p => p.product_name && p.product_name.length > 5);
+            });
+
+            log.info(\`Extracted \${products.length} products from Sainsbury's\`);
+
+            if (products && products.length > 0) {
+                for (const p of products) {
+                    await pushData(p);
+                }
+            }
+
+            // Pagination support
+            await enqueueLinks({
+                selector: 'a[aria-label="Next page"]',
+                label: 'LISTING',
+                userData: { retailer: "Sainsbury's" }
+            }).catch(() => {});
+        }`;
+
+        // Separate Start URLs: Tesco vs Beauty vs Sainsbury's vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');
-        const normalStartUrls = startUrls.filter(u => u.userData.retailer !== 'Tesco');
+        const beautyRetailers = ['Sephora', 'Holland & Barrett'];
+        const beautyStartUrls = startUrls.filter(u => beautyRetailers.includes(u.userData.retailer));
+        const sainsburysStartUrls = startUrls.filter(u => u.userData.retailer === "Sainsbury's" || u.userData.retailer === "Sainsburys");
+        const normalStartUrls = startUrls.filter(u => 
+            u.userData.retailer !== 'Tesco' && 
+            !beautyRetailers.includes(u.userData.retailer) && 
+            u.userData.retailer !== "Sainsbury's" && 
+            u.userData.retailer !== "Sainsburys"
+        );
 
         if (tescoStartUrls.length > 0) {
           const run = await client.actor('apify/puppeteer-scraper').start({
@@ -508,6 +641,42 @@ export const handler = async (event, context) => {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-tesco' }]
           });
           runs.push({ id: run.id, actor: 'puppeteer-scraper-tesco', retailers: ['Tesco'] });
+        }
+
+        if (sainsburysStartUrls.length > 0) {
+          console.log('Starting Sainsbury\'s Dedicated Scraper...');
+          const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: sainsburysStartUrls,
+            pageFunction: SAINSBURYS_STABLE_PAGE_FUNCTION,
+            proxyConfiguration: { 
+              useApifyProxy: true, 
+              apifyProxyGroups: ['RESIDENTIAL'], 
+              countryCode: 'GB' 
+            },
+            useStealth: true,
+            useChrome: true
+          }, {
+            webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-sainsburys' }]
+          });
+          runs.push({ id: run.id, actor: 'puppeteer-scraper-sainsburys', retailers: ["Sainsbury's"] });
+        }
+
+        if (beautyStartUrls.length > 0) {
+          console.log('Starting Beauty Puppeteer Scraper (April 13th Stable Logic)...');
+          const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: beautyStartUrls,
+            pageFunction: BEAUTY_STABLE_PAGE_FUNCTION,
+            proxyConfiguration: { 
+              useApifyProxy: true, 
+              apifyProxyGroups: ['RESIDENTIAL'], 
+              countryCode: 'GB' 
+            },
+            useStealth: true,
+            useChrome: true
+          }, {
+            webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-beauty' }]
+          });
+          runs.push({ id: run.id, actor: 'puppeteer-scraper-beauty', retailers: beautyStartUrls.map(u => u.userData.retailer) });
         }
 
         if (normalStartUrls.length > 0) {

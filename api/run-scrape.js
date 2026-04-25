@@ -553,37 +553,51 @@ export default async function handler(request, response) {
 
 
 
-        const SAINSBURYS_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData }) => {
+        const SAINSBURYS_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData, enqueueLinks }) => {
             const url = request.url;
             log.info(\`Scraping Sainsbury's: \${url}\`);
 
             // Helper for delays
             const delay = ms => new Promise(r => setTimeout(r, ms));
 
-            // Scroll for hydration
-            await page.evaluate(async () => {
-                for (let i = 0; i < 5; i++) {
-                    window.scrollBy(0, 1000);
-                    await new Promise(r => setTimeout(r, 1000));
-                }
-            });
+            // Intensive scroll for hydration (Sainsbury's is heavy on lazy loading)
+            log.info('Scrolling for hydration...');
+            for (let i = 0; i < 15; i++) {
+                await page.evaluate(() => window.scrollBy(0, 1000));
+                await delay(1000);
+                // Move mouse to trigger hover-based lazy loading
+                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+            }
 
             await delay(2000);
 
             const products = await page.evaluate(() => {
-                const items = Array.from(document.querySelectorAll('.product-header, [class*="productCard"], li[data-test-id="product-line"]'));
-                return items.map(el => {
-                    const res = {};
-                    const linkEl = el.querySelector('a');
-                    res.product_url = linkEl ? linkEl.href : null;
+                const links = Array.from(document.querySelectorAll('.pt__link'));
+                return links.map(linkEl => {
+                    const tile = linkEl.closest('article, [data-testid="product-tile"], li');
+                    const name = linkEl.innerText.trim();
+                    const link = linkEl.href;
                     
-                    const nameEl = el.querySelector('h2, h3, [class*="title"], [class*="Name"]');
-                    res.product_name = nameEl ? nameEl.innerText.trim() : 'Unknown Product';
+                    let price = 'N/A';
+                    let image = null;
+
+                    if (tile) {
+                        const priceEl = tile.querySelector('[data-testid="pt-retail-price"], .pt__cost');
+                        if (priceEl) price = priceEl.innerText.trim();
+                        const imgEl = tile.querySelector('img');
+                        if (imgEl) image = imgEl.src;
+                    }
                     
-                    res.retailer = "Sainsbury's";
-                    res.scraped_at = new Date().toISOString();
-                    return res;
-                });
+                    return { 
+                        product_name: name,
+                        product_url: link,
+                        price_display: price,
+                        image_url: image,
+                        retailer: "Sainsbury's",
+                        manufacturer: name.split(' ')[0],
+                        date_found: new Date().toISOString()
+                    };
+                }).filter(p => p.product_name && p.product_name.length > 5);
             });
 
             log.info(\`Extracted \${products.length} products from Sainsbury's\`);
@@ -593,6 +607,13 @@ export default async function handler(request, response) {
                     await pushData(p);
                 }
             }
+
+            // Pagination support
+            await enqueueLinks({
+                selector: 'a[aria-label="Next page"]',
+                label: 'LISTING',
+                userData: { retailer: "Sainsbury's" }
+            }).catch(() => {});
         }`;
 
 
