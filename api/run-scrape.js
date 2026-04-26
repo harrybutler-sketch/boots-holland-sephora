@@ -109,7 +109,10 @@ export default async function handler(request, response) {
       if (pRetailers.some(r => r.includes('sainsbury'))) {
         const sainsburyUrls = [
           'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:2'
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:3'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
@@ -162,6 +165,18 @@ export default async function handler(request, response) {
             const thinkTime = Math.floor(Math.random() * 4000) + 3000;
             log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
             await new Promise(r => setTimeout(r, thinkTime));
+
+            // 3.5 Cookie Acceptance
+            try {
+                const cookieButton = await page.$('button.ddsweb-consent-banner__button, button[class*="consent"]');
+                if (cookieButton) {
+                    log.info('Accepting cookies...');
+                    await cookieButton.click();
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            } catch (e) {
+                log.warning('Could not click cookie button: ' + e.message);
+            }
 
             // 4. Content Check & Stealth Block Detection
             const blockInfo = await page.evaluate(() => {
@@ -256,11 +271,15 @@ export default async function handler(request, response) {
                     const name = nameEl?.innerText?.trim() || 'N/A';
                     if (name === 'N/A' || name.length < 3) return null;
 
-                    let price = priceEl?.innerText?.trim() || 'N/A';
-                    if (price === 'N/A' && tile) {
-                        const allP = Array.from(tile.querySelectorAll('p, span'));
-                        const pMatch = allP.find(p => p.innerText.includes('£'));
-                        if (pMatch) price = pMatch.innerText.trim();
+                    let price = 'N/A';
+                    if (tile) {
+                        const priceEl = tile.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
+                        price = priceEl?.innerText?.trim() || 'N/A';
+                        if (price === 'N/A') {
+                            const allP = Array.from(tile.querySelectorAll('p, span, div'));
+                            const pMatch = allP.find(p => p.innerText && p.innerText.includes('£') && p.children.length === 0);
+                            if (pMatch) price = pMatch.innerText.trim();
+                        }
                     }
 
                     const res = {
