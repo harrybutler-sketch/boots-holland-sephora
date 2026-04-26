@@ -186,16 +186,20 @@ export const handler = async (event, context) => {
                 await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
             }
 
-            // 6. Explicit MFE Hydration
-            log.info('Waiting for product grid hydration...');
-            await page.evaluate(() => window.scrollBy(0, 800));
-            await page.waitForSelector('.product-list--list-item, [class*="ProductTile"], .gyT8MW_titleLink', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
+            // 6. Intensive Hydration (MFE triggers)
+            log.info('Triggering MFE hydration via scrolling and mouse moves...');
+            for (let i = 0; i < 12; i++) {
+                await page.evaluate(() => window.scrollBy(0, 1000));
+                await new Promise(r => setTimeout(r, 1000));
+                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+            }
             await new Promise(r => setTimeout(r, 3000));
 
             // 7. Extraction via DOM
             log.info('Extracting products from DOM...');
             const products = await page.evaluate(() => {
                 const nameSelectors = [
+                    'h2[class*="title"] a',
                     'a.gyT8MW_titleLink',
                     'a[class*="titleLink"]', 
                     '[data-testid="product-tile"] h2 a',
@@ -208,6 +212,43 @@ export const handler = async (event, context) => {
                     if (titleLinks.length > 0) break;
                 }
 
+                // If still no links, try finding containers and pulling text
+                if (titleLinks.length === 0) {
+                   const tiles = Array.from(document.querySelectorAll('li[data-testid], [class*="ProductTile"], article'));
+                   return tiles.map(tile => {
+                       const linkEl = tile.querySelector('a[href*="/products/"]');
+                       if (!linkEl) return null;
+                       
+                       const name = linkEl.innerText.trim();
+                       if (!name || name.length < 3) return null;
+
+                       const priceEl = tile.querySelector('[class*="price"], [data-testid="unit-price"], .ddsweb-price--primary');
+                       const imgEl = tile.querySelector('img');
+                       const reviewEl = tile.querySelector('[class*="rating"], [class*="review"], .ddsweb-star-rating');
+
+                       const res = {
+                           product_name: name,
+                           retailer: 'Tesco',
+                           price_display: priceEl?.innerText?.trim() || 'N/A',
+                           reviews: 0,
+                           rating: '0.0',
+                           image_url: imgEl?.src || '',
+                           product_url: linkEl.href,
+                           manufacturer: name.split(' ')[0],
+                           date_found: new Date().toISOString()
+                       };
+
+                       if (reviewEl) {
+                           const rText = reviewEl.innerText;
+                           const match = rText.match(/(\\d+)/);
+                           if (match) res.reviews = parseInt(match[0]) || 0;
+                           const ratingMatch = rText.match(/(\\d+\\.\\d+)/);
+                           if (ratingMatch) res.rating = ratingMatch[1];
+                       }
+                       return res;
+                   }).filter(Boolean);
+                }
+
                 return titleLinks.map(nameEl => {
                     const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], div');
                     const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
@@ -217,7 +258,6 @@ export const handler = async (event, context) => {
                     const name = nameEl?.innerText?.trim() || 'N/A';
                     if (name === 'N/A' || name.length < 3) return null;
 
-                    // Improved price extraction
                     let price = priceEl?.innerText?.trim() || 'N/A';
                     if (price === 'N/A' && tile) {
                         const allP = Array.from(tile.querySelectorAll('p, span'));
@@ -253,16 +293,16 @@ export const handler = async (event, context) => {
                 return [];
             }
 
-            // 7. Filter
+            // 8. Filter (Quality Control)
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly');
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('creamsilk') || ln.includes('fred & flo');
                 return p.reviews <= 5 && !isOwnBrand;
             });
 
             log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
             
-            // 8. Pagination
+            // 9. Pagination
             await enqueueLinks({ 
                 selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
                 label: 'LISTING', 
