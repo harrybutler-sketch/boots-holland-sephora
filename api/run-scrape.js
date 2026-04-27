@@ -156,47 +156,58 @@ export default async function handler(request, response) {
 
             // Warming/Bypass
             log.info('Warming Tesco session...');
-            await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
-            await new Promise(r => setTimeout(r, 2000));
+            await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch(() => log.warning('Warming navigation timed out, continuing...'));
+            await new Promise(r => setTimeout(r, 3000));
+            
             log.info('Navigating to target: ' + url);
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+            const navResponse = await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
+                log.error('Primary navigation failed: ' + e.message);
+                return null;
+            });
+
+            if (!navResponse) {
+                log.warning('Attempting to proceed despite navigation error...');
+            }
 
             // Cookie Acceptance
             try {
                 const cookieId = 'button.ddsweb-consent-banner__button';
-                await page.waitForSelector(cookieId, { timeout: 5000 });
+                await page.waitForSelector(cookieId, { timeout: 8000 });
                 await page.click(cookieId);
-                await new Promise(r => setTimeout(r, 1000));
-            } catch (e) {}
+                await new Promise(r => setTimeout(r, 1500));
+            } catch (e) {
+                log.info('Cookie banner not found or already accepted.');
+            }
 
-            // Wait for products
+            // Wait for products - more robust selectors
             log.info('Waiting for product items...');
-            const productSelector = 'li[class*="Tile"], [data-testid="product-tile"], .product-list--item';
-            await page.waitForSelector(productSelector, { timeout: 30000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
+            const productSelector = 'li[class*="Tile"], [data-testid="product-tile"], .product-list--item, .styles__StyledTiledQueryResult-sc';
+            await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
 
             // Scroll for hydration
-            for (let i = 0; i < 8; i++) {
+            log.info('Scrolling for hydration...');
+            for (let i = 0; i < 12; i++) {
                 await page.evaluate(() => window.scrollBy(0, 800));
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 800));
             }
 
             // Extraction
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], .product-list--item, article'));
+                const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], .product-list--item, article, [class*="StyledTiledQueryResult"] li'));
                 return tiles.map(tile => {
-                    const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"]');
+                    const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"], [data-testid="product-title"]');
                     if (!nameEl) return null;
                     const name = nameEl.innerText.trim();
                     if (!name || name.length < 3) return null;
 
-                    const priceEl = tile.querySelector('p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price');
+                    const priceEl = tile.querySelector('p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price, .styles__StyledPrice-sc');
                     const imgEl = tile.querySelector('img');
 
                     return {
                         product_name: name,
                         retailer: 'Tesco',
                         price_display: priceEl?.innerText?.trim() || 'N/A',
-                        product_url: nameEl.href,
+                        product_url: nameEl.href || window.location.href,
                         image_url: imgEl?.src || '',
                         date_found: new Date().toISOString()
                     };
@@ -207,12 +218,14 @@ export default async function handler(request, response) {
 
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell');
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms price');
                 return !isOwnBrand;
             });
 
+            log.info(\`Filtered to \${filtered.length} non-own-brand products.\`);
+
             await enqueueLinks({ 
-                selector: 'a[aria-label*="next page"], [data-testid="pagination-next"]', 
+                selector: 'a[aria-label*="next page"], [data-testid="pagination-next"], a.pagination--button--next', 
                 label: 'LISTING', 
                 userData: { retailer: 'Tesco' } 
             }).catch(() => {});
@@ -224,50 +237,63 @@ export default async function handler(request, response) {
             const { url, userData: { retailer, label } } = request;
             
             await page.setViewport({ width: 1920, height: 1080 });
-            
+            await page.setExtraHTTPHeaders({
+                'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                'referer': 'https://www.google.com/'
+            });
+
             log.info('Warming Asda session...');
-            await page.goto('https://www.asda.com/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
-            await new Promise(r => setTimeout(r, 2000));
+            await page.goto('https://www.asda.com/', { waitUntil: 'networkidle2', timeout: 45000 }).catch(() => log.warning('Asda warm-up timed out.'));
+            await new Promise(r => setTimeout(r, 3000));
             
             log.info('Navigating to target: ' + url);
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+            const navResponse = await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
+                log.error('Asda navigation failed: ' + e.message);
+                return null;
+            });
             
             // Cookie Acceptance
             try {
                 const cookieId = '#onetrust-accept-btn-handler';
-                await page.waitForSelector(cookieId, { timeout: 8000 });
+                await page.waitForSelector(cookieId, { timeout: 10000 });
                 await page.click(cookieId);
-                await new Promise(r => setTimeout(r, 1000));
-            } catch (e) {}
+                await new Promise(r => setTimeout(r, 2000));
+            } catch (e) {
+                log.info('Asda cookie banner not found or handled.');
+            }
 
-            // Wait for products
+            // Wait for products - refined selector
             log.info('Waiting for Asda products...');
-            const asdaSelector = '[data-testid="product-tile"], .co-item';
-            await page.waitForSelector(asdaSelector, { timeout: 30000 }).catch(() => log.warning('No Asda products rendered after 30s.'));
+            const asdaSelector = '[data-testid="product-tile"], .co-item, .asda-product-tile';
+            await page.waitForSelector(asdaSelector, { timeout: 45000 }).catch(() => log.warning('No Asda products rendered after 45s. Attempting extraction anyway.'));
 
-            // Scroll
-            for (let i = 0; i < 10; i++) {
+            // Scroll for hydration
+            log.info('Scrolling for hydration...');
+            for (let i = 0; i < 15; i++) {
                 await page.evaluate(() => window.scrollBy(0, 1000));
                 await new Promise(r => setTimeout(r, 800));
             }
 
             // Extraction
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('[data-testid="product-tile"], .co-item'));
+                const tiles = Array.from(document.querySelectorAll('[data-testid="product-tile"], .co-item, .asda-product-tile, article[class*="product"]'));
                 return tiles.map(tile => {
-                    const nameEl = tile.querySelector('h3 a, .co-product__title a, a[href*="/product/"]');
+                    const nameEl = tile.querySelector('h3 a, .co-product__title a, a[href*="/product/"], [class*="title"] a');
                     if (!nameEl) return null;
                     const name = nameEl.innerText.trim();
                     if (!name || name.length < 3) return null;
 
-                    const priceEl = tile.querySelector('.co-product__price, [data-testid="price"], .product-price');
+                    const priceEl = tile.querySelector('.co-product__price, [data-testid="price"], .product-price, .co-item__price');
                     const imgEl = tile.querySelector('img');
 
                     return {
                         product_name: name,
                         retailer: 'Asda',
                         price_display: priceEl?.innerText?.trim() || 'N/A',
-                        product_url: nameEl.href,
+                        product_url: nameEl.href || window.location.href,
                         image_url: imgEl?.src || '',
                         date_found: new Date().toISOString()
                     };
@@ -278,18 +304,20 @@ export default async function handler(request, response) {
 
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('asda') || ln.includes('extra special');
+                const isOwnBrand = ln.includes('asda') || ln.includes('extra special') || ln.includes('just essentials') || ln.includes('smart price');
                 return !isOwnBrand;
             });
 
+            log.info(\`Filtered to \${filtered.length} non-own-brand Asda products.\`);
+
             await enqueueLinks({ 
-                selector: 'a[aria-label="Next page"], button[aria-label="Next page"]', 
+                selector: 'a[aria-label="Next page"], button[aria-label="Next page"], .co-pagination__next', 
                 label: 'LISTING', 
                 userData: { retailer: 'Asda' } 
             }).catch(() => {});
 
             return filtered;
-        }`;;
+        }\`;;
 
         const STABLE_PAGE_FUNCTION = `async (context) => {
             const { page, request, enqueueLinks, response } = context;
@@ -572,6 +600,128 @@ export default async function handler(request, response) {
 
 
 
+        const MORRISONS_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData, enqueueLinks }) => {
+            const url = request.url;
+            log.info(\`Scraping Morrisons (Listing-Only): \${url}\`);
+
+            await page.setViewport({ width: 1920, height: 1080 });
+            
+            // Cookie Acceptance
+            try {
+                const cookieId = '#onetrust-accept-btn-handler';
+                await page.waitForSelector(cookieId, { timeout: 8000 });
+                await page.click(cookieId);
+                await new Promise(r => setTimeout(r, 1000));
+            } catch (e) {}
+
+            // Intensive scroll for hydration
+            log.info('Scrolling for hydration...');
+            for (let i = 0; i < 15; i++) {
+                await page.evaluate(() => window.scrollBy(0, 800));
+                await new Promise(r => setTimeout(r, 800));
+                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+            }
+
+            const products = await page.evaluate(() => {
+                const tiles = Array.from(document.querySelectorAll('.product-card-container, .fop-item, .fops-item, li[class*="Product"]'));
+                return tiles.map(tile => {
+                    const nameEl = tile.querySelector('.title-container a, .fop-description a, a[href*="/products/"]');
+                    if (!nameEl) return null;
+                    const name = nameEl.innerText.trim();
+                    const link = nameEl.href;
+                    
+                    const priceEl = tile.querySelector('.price-container, .fop-price, .price, [class*="price"]');
+                    const imgEl = tile.querySelector('.image-container img, .fop-img, img');
+
+                    return {
+                        product_name: name,
+                        product_url: link,
+                        price_display: priceEl?.innerText?.trim() || 'N/A',
+                        image_url: imgEl?.src || '',
+                        retailer: 'Morrisons',
+                        date_found: new Date().toISOString()
+                    };
+                }).filter(Boolean);
+            });
+
+            log.info(\`Extracted \${products.length} products from Morrisons\`);
+
+            for (const p of products) {
+                const ln = p.product_name.toLowerCase();
+                const isOwnBrand = ln.includes('morrisons') || ln.includes('the best') || ln.includes('savers') || ln.includes('market street');
+                if (!isOwnBrand) {
+                    await pushData(p);
+                }
+            }
+
+            await enqueueLinks({
+                selector: 'a.next-page, a[aria-label*="Next"]',
+                label: 'LISTING',
+                userData: { retailer: 'Morrisons' }
+            }).catch(() => {});
+        }`;
+
+        const OCADO_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData, enqueueLinks }) => {
+            const url = request.url;
+            log.info(\`Scraping Ocado (Listing-Only): \${url}\`);
+
+            await page.setViewport({ width: 1920, height: 1080 });
+            
+            // Cookie Acceptance
+            try {
+                const cookieId = '#onetrust-accept-btn-handler';
+                await page.waitForSelector(cookieId, { timeout: 8000 });
+                await page.click(cookieId);
+                await new Promise(r => setTimeout(r, 1000));
+            } catch (e) {}
+
+            // Intensive scroll for hydration
+            log.info('Scrolling for hydration...');
+            for (let i = 0; i < 15; i++) {
+                await page.evaluate(() => window.scrollBy(0, 800));
+                await new Promise(r => setTimeout(r, 800));
+                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+            }
+
+            const products = await page.evaluate(() => {
+                const tiles = Array.from(document.querySelectorAll('.product-card-container, .fops-item, .fop-item, li[class*="Product"]'));
+                return tiles.map(tile => {
+                    const nameEl = tile.querySelector('.title-container a, .fop-description a, a[href*="/products/"], .fop-title');
+                    if (!nameEl) return null;
+                    const name = nameEl.innerText.trim();
+                    const link = nameEl.href || window.location.href;
+                    
+                    const priceEl = tile.querySelector('.price-container, .fop-price, .price, [class*="price"]');
+                    const imgEl = tile.querySelector('.image-container img, .fop-img, img');
+
+                    return {
+                        product_name: name,
+                        product_url: link,
+                        price_display: priceEl?.innerText?.trim() || 'N/A',
+                        image_url: imgEl?.src || '',
+                        retailer: 'Ocado',
+                        date_found: new Date().toISOString()
+                    };
+                }).filter(Boolean);
+            });
+
+            log.info(\`Extracted \${products.length} products from Ocado\`);
+
+            for (const p of products) {
+                const ln = p.product_name.toLowerCase();
+                const isOwnBrand = ln.includes('ocado') || ln.includes('m&s') || ln.includes('marks & spencer');
+                if (!isOwnBrand) {
+                    await pushData(p);
+                }
+            }
+
+            await enqueueLinks({
+                selector: 'a.next-page, a[aria-label*="Next"]',
+                label: 'LISTING',
+                userData: { retailer: 'Ocado' }
+            }).catch(() => {});
+        }`;
+
         const SAINSBURYS_STABLE_PAGE_FUNCTION = `async ({ page, request, log, pushData, enqueueLinks }) => {
             const url = request.url;
             log.info(\`Scraping Sainsbury's: \${url}\`);
@@ -636,18 +786,22 @@ export default async function handler(request, response) {
         }`;
 
 
-        // Separate Start URLs: Tesco vs Beauty vs Sainsbury's vs The Rest
+        // Separate Start URLs: Tesco vs Beauty vs Sainsbury's vs Morrisons vs Ocado vs The Rest
         const tescoStartUrls = startUrls.filter(u => u.userData.retailer === 'Tesco');
         const beautyRetailers = ['Sephora', 'Holland & Barrett'];
         const beautyStartUrls = startUrls.filter(u => beautyRetailers.includes(u.userData.retailer));
         const sainsburysStartUrls = startUrls.filter(u => u.userData.retailer === "Sainsbury's" || u.userData.retailer === "Sainsburys");
         const asdaStartUrls = startUrls.filter(u => u.userData.retailer === 'Asda');
+        const morrisonsStartUrls = startUrls.filter(u => u.userData.retailer === 'Morrisons');
+        const ocadoStartUrls = startUrls.filter(u => u.userData.retailer === 'Ocado');
         const normalStartUrls = startUrls.filter(u => 
             u.userData.retailer !== 'Tesco' && 
             !beautyRetailers.includes(u.userData.retailer) && 
             u.userData.retailer !== "Sainsbury's" && 
             u.userData.retailer !== "Sainsburys" &&
-            u.userData.retailer !== "Asda"
+            u.userData.retailer !== "Asda" &&
+            u.userData.retailer !== "Morrisons" &&
+            u.userData.retailer !== "Ocado"
         );
 
         if (tescoStartUrls.length > 0) {
@@ -658,8 +812,10 @@ export default async function handler(request, response) {
             useStealth: true,
             useChrome: true,
             maxConcurrency: 1,
-            requestHandlerTimeoutSecs: 300,
-            navigationTimeoutSecs: 90
+            requestHandlerTimeoutSecs: 600,
+            pageFunctionTimeoutSecs: 600,
+            handlePageTimeoutSecs: 600,
+            navigationTimeoutSecs: 120
           }, {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-tesco' }]
           });
@@ -713,11 +869,47 @@ export default async function handler(request, response) {
               countryCode: 'GB' 
             },
             useStealth: true,
-            useChrome: true
+            useChrome: true,
+            requestHandlerTimeoutSecs: 600,
+            pageFunctionTimeoutSecs: 600,
+            handlePageTimeoutSecs: 600,
+            navigationTimeoutSecs: 120
           }, {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-asda' }]
           });
           runs.push({ id: run.id, actor: 'puppeteer-scraper-asda', retailers: ["Asda"] });
+        }
+
+        if (morrisonsStartUrls.length > 0) {
+          console.log('Starting Morrisons Fast Scraper...');
+          const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: morrisonsStartUrls,
+            pageFunction: MORRISONS_STABLE_PAGE_FUNCTION,
+            proxyConfiguration: { useApifyProxy: true },
+            useStealth: true,
+            useChrome: true,
+            requestHandlerTimeoutSecs: 300,
+            pageFunctionTimeoutSecs: 300
+          }, {
+            webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-morrisons' }]
+          });
+          runs.push({ id: run.id, actor: 'puppeteer-scraper-morrisons', retailers: ["Morrisons"] });
+        }
+
+        if (ocadoStartUrls.length > 0) {
+          console.log('Starting Ocado Fast Scraper...');
+          const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: ocadoStartUrls,
+            pageFunction: OCADO_STABLE_PAGE_FUNCTION,
+            proxyConfiguration: { useApifyProxy: true },
+            useStealth: true,
+            useChrome: true,
+            requestHandlerTimeoutSecs: 300,
+            pageFunctionTimeoutSecs: 300
+          }, {
+            webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-ocado' }]
+          });
+          runs.push({ id: run.id, actor: 'puppeteer-scraper-ocado', retailers: ["Ocado"] });
         }
 
         if (normalStartUrls.length > 0) {

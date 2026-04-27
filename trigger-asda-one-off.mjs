@@ -26,133 +26,97 @@ async function triggerScrape() {
         const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls: [{ url: targetUrl, userData: { retailer: 'Asda', label: 'LISTING' } }],
             useChrome: true,
-            stealth: true,
-            maxPagesPerCrawl: 100,
+            useStealth: true,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
-            pageFunction: `async function pageFunction(context) {
-                const { page, request, log, enqueueLinks } = context;
-                const { label, retailer } = request.userData;
-                const url = request.url;
+            requestHandlerTimeoutSecs: 600,
+            pageFunctionTimeoutSecs: 600,
+            handlePageTimeoutSecs: 600,
+            navigationTimeoutSecs: 120,
+            pageFunction: `async ({ page, request, log, enqueueLinks, response }) => {
+                const { url, userData: { retailer, label } } = request;
+                
+                await page.setViewport({ width: 1920, height: 1080 });
+                await page.setExtraHTTPHeaders({
+                    'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                    'referer': 'https://www.google.com/'
+                });
 
-                if (label === 'LISTING') {
-                    log.info('Listing page (' + retailer + '): ' + url);
-                    
-                    // 1. Force desktop viewport
-                    await page.setViewport({ width: 1920, height: 1080 });
-
-                    // 2. Accept Cookies
-                    try {
-                        const cookieSelectors = ['#onetrust-accept-btn-handler', '#sp-cc-accept', 'button.accept-all', 'button#onetrust-accept-btn-handler'];
-                        for (const sel of cookieSelectors) {
-                            const btn = await page.$(sel);
-                            if (btn) {
-                                await btn.click();
-                                await new Promise(r => setTimeout(r, 2000));
-                                log.info('Accepted cookies');
-                                break; 
-                            }
-                        }
-                    } catch (e) {}
-                    
-                    // 3. Robust Dynamic Scroll
-                    await page.evaluate(async () => {
-                        await new Promise((resolve) => {
-                            let totalHeight = 0;
-                            let distance = 800;
-                            let timer = setInterval(() => {
-                                let scrollHeight = document.body.scrollHeight;
-                                window.scrollBy(0, distance);
-                                totalHeight += distance;
-                                if (totalHeight >= scrollHeight || totalHeight > 15000) {
-                                    clearInterval(timer);
-                                    resolve();
-                                }
-                            }, 300);
-                        });
-                    });
-
-                    // 4. Wait for products
-                    const selector = '.co-product-list a[href*="/product/"], .co-item a[href*="/product/"], a[href*="/groceries/product/"]';
-                    try {
-                        log.info('Waiting for selector: ' + selector);
-                        await page.waitForSelector(selector, { timeout: 45000 });
-                        await new Promise(r => setTimeout(r, 5000));
-                    } catch (e) {
-                        log.warning('Timeout waiting for products: ' + e.message);
-                    }
-
-                    // 5. Enqueue product links
-                    const productLinks = await page.evaluate((sel) => {
-                        return Array.from(document.querySelectorAll(sel))
-                            .map(a => a.href)
-                            .filter(href => href && href.includes('/product/'))
-                            .filter((value, index, self) => self.indexOf(value) === index);
-                    }, selector);
-
-                    log.info('Found ' + productLinks.length + ' product links');
-                    
-                    for (const link of productLinks) {
-                        await context.enqueueRequest({
-                            url: link,
-                            userData: { retailer, label: 'DETAIL' }
-                        });
-                    }
-                } else {
-                    log.info('Product page (' + retailer + '): ' + url);
-                    await new Promise(r => setTimeout(r, 5000));
-                    
-                    const extractionData = await page.evaluate((retailer) => {
-                        let name = document.title;
-                        const h1 = document.querySelector('h1');
-                        if (h1 && h1.innerText) {
-                            name = h1.innerText.trim();
-                        }
-                        
-                        name = name.replace(/ - Asda Groceries$/i, '').trim();
-
-                        const results = { url: window.location.href, retailer: retailer, name: name, reviews: 0, image: '' };
-                        
-                        // Extract Brand
-                        const brandEl = document.querySelector('.pdp-main-details__brand, .pdp-brand-logo img');
-                        if (brandEl) {
-                            results.brand = brandEl.alt || brandEl.innerText || '';
-                        }
-
-                        // JSON-LD
-                        const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-                        for (const s of scripts) {
-                            try {
-                                const json = JSON.parse(s.innerText);
-                                const product = Array.isArray(json) ? json.find(i => i['@type'] === 'Product') : (json['@type'] === 'Product' ? json : (json['@graph'] ? json['@graph'].find(g => g['@type'] === 'Product') : null));
-                                if (product) {
-                                    if (product.aggregateRating) {
-                                        results.reviews = parseInt(product.aggregateRating.reviewCount || product.aggregateRating.numberOfReviews) || 0;
-                                    }
-                                    if (product.image) {
-                                        results.image = typeof product.image === 'string' ? product.image : (product.image.url || (Array.isArray(product.image) ? product.image[0] : ''));
-                                    }
-                                    if (product.brand && product.brand.name) {
-                                        results.brand = product.brand.name;
-                                    }
-                                    if (product.offers && product.offers.price) {
-                                        results.price = product.offers.price;
-                                    }
-                                }
-                            } catch(e) {}
-                        }
-                        
-                        if (!results.image) {
-                            const img = document.querySelector('.co-product-image img, .pdp-main-details__image img');
-                            if (img) results.image = img.src;
-                        }
-
-                        return results;
-                    }, retailer);
-                    
-                    return extractionData;
+                log.info('Warming Asda session...');
+                await page.goto('https://www.asda.com/', { waitUntil: 'networkidle2', timeout: 45000 }).catch(() => log.warning('Asda warm-up timed out.'));
+                await new Promise(r => setTimeout(r, 3000));
+                
+                log.info('Navigating to target: ' + url);
+                const navResponse = await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
+                    log.error('Asda navigation failed: ' + e.message);
+                    return null;
+                });
+                
+                // Cookie Acceptance
+                try {
+                    const cookieId = '#onetrust-accept-btn-handler';
+                    await page.waitForSelector(cookieId, { timeout: 10000 });
+                    await page.click(cookieId);
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (e) {
+                    log.info('Asda cookie banner not found or handled.');
                 }
-            }`,
-            timeoutSecs: 3600
+
+                // Wait for products
+                log.info('Waiting for Asda products...');
+                const asdaSelector = '[data-testid="product-tile"], .co-item, .asda-product-tile';
+                await page.waitForSelector(asdaSelector, { timeout: 45000 }).catch(() => log.warning('No Asda products rendered after 45s.'));
+
+                // Scroll for hydration
+                log.info('Scrolling for hydration...');
+                for (let i = 0; i < 15; i++) {
+                    await page.evaluate(() => window.scrollBy(0, 1000));
+                    await new Promise(r => setTimeout(r, 800));
+                }
+
+                // Extraction
+                const products = await page.evaluate(() => {
+                    const tiles = Array.from(document.querySelectorAll('[data-testid="product-tile"], .co-item, .asda-product-tile, article[class*="product"]'));
+                    return tiles.map(tile => {
+                        const nameEl = tile.querySelector('h3 a, .co-product__title a, a[href*="/product/"], [class*="title"] a');
+                        if (!nameEl) return null;
+                        const name = nameEl.innerText.trim();
+                        if (!name || name.length < 3) return null;
+
+                        const priceEl = tile.querySelector('.co-product__price, [data-testid="price"], .product-price, .co-item__price');
+                        const imgEl = tile.querySelector('img');
+
+                        return {
+                            product_name: name,
+                            retailer: 'Asda',
+                            price_display: priceEl?.innerText?.trim() || 'N/A',
+                            product_url: nameEl.href || window.location.href,
+                            image_url: imgEl?.src || '',
+                            date_found: new Date().toISOString()
+                        };
+                    }).filter(Boolean);
+                });
+
+                log.info(\`Extracted \${products.length} Asda products.\`);
+
+                const filtered = products.filter(p => {
+                    const ln = p.product_name.toLowerCase();
+                    const isOwnBrand = ln.includes('asda') || ln.includes('extra special') || ln.includes('just essentials') || ln.includes('smart price');
+                    return !isOwnBrand;
+                });
+
+                log.info(\`Filtered to \${filtered.length} non-own-brand Asda products.\`);
+
+                await enqueueLinks({ 
+                    selector: 'a[aria-label="Next page"], button[aria-label="Next page"], .co-pagination__next', 
+                    label: 'LISTING', 
+                    userData: { retailer: 'Asda' } 
+                }).catch(() => {});
+
+                return filtered;
+            }`
         });
 
         console.log(`\nRun started: ${run.id}`);
@@ -163,6 +127,7 @@ async function triggerScrape() {
         
         if (finishedRun.status === 'SUCCEEDED') {
             console.log('\nScrape SUCCEEDED! Triggering sync to sheet...');
+            // We use the same script name as in the original file
             const { stdout, stderr } = await execPromise(`node sync-run-to-sheet.mjs ${run.id} --force`);
             console.log(stdout);
             if (stderr) console.error(stderr);

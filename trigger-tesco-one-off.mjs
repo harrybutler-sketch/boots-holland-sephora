@@ -9,7 +9,7 @@ async function triggerTescoScrape() {
         { url: 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24', userData: { retailer: 'Tesco', label: 'LISTING' } }
     ];
 
-    console.log('Triggering Tesco RESILIENT Scraper (April 7th Logic)...');
+    console.log('Triggering Tesco RESILIENT Scraper (Restored April 27th Logic)...');
 
     try {
         const run = await client.actor('apify/puppeteer-scraper').start({
@@ -22,10 +22,13 @@ async function triggerTescoScrape() {
             },
             useStealth: true,
             useChrome: true,
-            pageFunction: `async ({ page, request, log, response }) => {
+            requestHandlerTimeoutSecs: 600,
+            pageFunctionTimeoutSecs: 600,
+            handlePageTimeoutSecs: 600,
+            navigationTimeoutSecs: 120,
+            pageFunction: `async ({ page, request, log, enqueueLinks, response }) => {
                 const { url, userData: { retailer, label } } = request;
                 
-                // 1. Desktop Stealth Headers
                 await page.setViewport({ width: 1920, height: 1080 });
                 await page.setExtraHTTPHeaders({
                     'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
@@ -35,124 +38,92 @@ async function triggerTescoScrape() {
                     'referer': 'https://www.google.com/'
                 });
 
-                // 2. Initial Status Check
-                if (response && response.status === 403) {
-                    throw new Error('Tesco Block (Status ' + response.status + '). Rotating proxy...');
-                }
-
-                // 3. Human Mimicry: Initial Delay
-                const thinkTime = Math.floor(Math.random() * 4000) + 3000;
-                log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
-                await new Promise(r => setTimeout(r, thinkTime));
-
-                // 4. Content Check & Stealth Block Detection
-                const blockInfo = await page.evaluate(() => {
-                    const h1El = document.querySelector('h1');
-                    const h1 = h1El ? h1El.innerText.trim() : '';
-                    const title = document.title || '';
-                    const body = document.body ? document.body.innerText : '';
-                    return {
-                        isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied') || body.toLowerCase().includes("it's not you, it's us"),
-                        h1, title
-                    };
+                // Warming/Bypass
+                log.info('Warming Tesco session...');
+                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch(() => log.warning('Warming navigation timed out, continuing...'));
+                await new Promise(r => setTimeout(r, 3000));
+                
+                log.info('Navigating to target: ' + url);
+                const navResponse = await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
+                    log.error('Primary navigation failed: ' + e.message);
+                    return null;
                 });
 
-                // 5. Session Warming (Final resort bypass)
-                if (blockInfo.isOops || !url.includes('groceries')) {
-                    log.info('Warming Session: Hitting homepage first...');
-                    await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(e => log.warning('Warming failed: ' + e.message));
-                    await new Promise(r => setTimeout(r, 2000));
-                    log.info('Session Warmed. Retrying category: ' + url);
-                    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+                if (!navResponse) {
+                    log.warning('Attempting to proceed despite navigation error...');
                 }
 
-                // 6. Explicit MFE Hydration
-                log.info('Waiting for product grid hydration...');
-                await page.evaluate(() => window.scrollBy(0, 800));
-                await page.waitForSelector('.product-list--list-item, [class*="ProductTile"], .gyT8MW_titleLink', { timeout: 20000 }).catch(() => log.warning('Product grid timed out.'));
-                await new Promise(r => setTimeout(r, 3000));
+                // Cookie Acceptance
+                try {
+                    const cookieId = 'button.ddsweb-consent-banner__button';
+                    await page.waitForSelector(cookieId, { timeout: 8000 });
+                    await page.click(cookieId);
+                    await new Promise(r => setTimeout(r, 1500));
+                } catch (e) {
+                    log.info('Cookie banner not found or already accepted.');
+                }
 
-                // 7. Extraction via DOM
-                log.info('Extracting products from DOM...');
+                // Wait for products - more robust selectors
+                log.info('Waiting for product items...');
+                const productSelector = 'li[class*="Tile"], [data-testid="product-tile"], .product-list--item, .styles__StyledTiledQueryResult-sc';
+                await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
+
+                // Scroll for hydration
+                log.info('Scrolling for hydration...');
+                for (let i = 0; i < 12; i++) {
+                    await page.evaluate(() => window.scrollBy(0, 800));
+                    await new Promise(r => setTimeout(r, 800));
+                }
+
+                // Extraction
                 const products = await page.evaluate(() => {
-                    const nameSelectors = [
-                        'a.gyT8MW_titleLink',
-                        'a[class*="titleLink"]', 
-                        '[data-testid="product-tile"] h2 a',
-                        'a[href*="/products/"]'
-                    ];
-                    
-                    let titleLinks = [];
-                    for (const sel of nameSelectors) {
-                        titleLinks = Array.from(document.querySelectorAll(sel));
-                        if (titleLinks.length > 0) break;
-                    }
+                    const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], .product-list--item, article, [class*="StyledTiledQueryResult"] li'));
+                    return tiles.map(tile => {
+                        const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"], [data-testid="product-title"]');
+                        if (!nameEl) return null;
+                        const name = nameEl.innerText.trim();
+                        if (!name || name.length < 3) return null;
 
-                    return titleLinks.map(nameEl => {
-                        const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], div');
-                        const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
-                        const imgEl = tile?.querySelector('img[class*="product-image"], a[class*="imageContainer"] img, img');
-                        const reviewEl = tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"], [class*="review-count"]');
-                        
-                        const name = nameEl?.innerText?.trim() || 'N/A';
-                        if (name === 'N/A' || name.length < 3) return null;
+                        const priceEl = tile.querySelector('p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price, .styles__StyledPrice-sc');
+                        const imgEl = tile.querySelector('img');
 
-                        // Improved price extraction
-                        let price = priceEl?.innerText?.trim() || 'N/A';
-                        if (price === 'N/A' && tile) {
-                            const allP = Array.from(tile.querySelectorAll('p, span'));
-                            const pMatch = allP.find(p => p.innerText.includes('£'));
-                            if (pMatch) price = pMatch.innerText.trim();
-                        }
-
-                        const res = {
+                        return {
                             product_name: name,
                             retailer: 'Tesco',
-                            price_display: price,
-                            reviews: 0,
-                            rating: '0.0',
+                            price_display: priceEl?.innerText?.trim() || 'N/A',
+                            product_url: nameEl.href || window.location.href,
                             image_url: imgEl?.src || '',
-                            product_url: nameEl?.href || window.location.href,
-                            manufacturer: name.split(' ')[0],
                             date_found: new Date().toISOString()
                         };
-                        
-                        if (reviewEl) {
-                            const rText = reviewEl.innerText;
-                            const match = rText.match(/(\\d+)/);
-                            if (match) res.reviews = parseInt(match[0]) || 0;
-                            const ratingMatch = rText.match(/(\\d+\\.\\d+)/);
-                            if (ratingMatch) res.rating = ratingMatch[1];
-                        }
-                        return res;
                     }).filter(Boolean);
                 });
 
-                if (!products || products.length === 0) {
-                    log.warning('No products found on page. DOM might not have loaded or layout changed.');
-                    return [];
-                }
+                log.info(\`Found \${products.length} products total.\`);
 
-                // 7. Filter (Quality Control)
                 const filtered = products.filter(p => {
                     const ln = p.product_name.toLowerCase();
-                    const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly');
-                    return p.reviews <= 5 && !isOwnBrand;
+                    const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms price');
+                    return !isOwnBrand;
                 });
 
-                log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
-                
+                log.info(\`Filtered to \${filtered.length} non-own-brand products.\`);
+
+                await enqueueLinks({ 
+                    selector: 'a[aria-label*="next page"], [data-testid="pagination-next"], a.pagination--button--next', 
+                    label: 'LISTING', 
+                    userData: { retailer: 'Tesco' } 
+                }).catch(() => {});
+
                 return filtered;
             }`,
-            timeoutSecs: 2400
+            timeoutSecs: 3600
         });
 
         console.log('Scrape started! Run ID:', run.id);
-        console.log('View run at:', `https://console.apify.com/view/runs/${run.id}`);
+        console.log('View run at:', `https://console.apify.com/actors/apify/puppeteer-scraper/runs/${run.id}`);
     } catch (e) {
         console.error('Trigger Error:', e);
     }
 }
 
 triggerTescoScrape();
-
