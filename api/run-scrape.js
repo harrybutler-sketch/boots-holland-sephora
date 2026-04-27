@@ -145,7 +145,6 @@ export default async function handler(request, response) {
         const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
-            // 1. Desktop Stealth Headers
             await page.setViewport({ width: 1920, height: 1080 });
             await page.setExtraHTTPHeaders({
                 'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
@@ -154,97 +153,64 @@ export default async function handler(request, response) {
                 'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
                 'referer': 'https://www.google.com/'
             });
-            // 2. Initial Status Check
-            if (response && response.status() === 403) {
-                throw new Error('Tesco Block (Status ' + response.status() + '). Rotating proxy...');
-            }
 
-            // 3. Human Mimicry
-            const thinkTime = Math.floor(Math.random() * 4000) + 3000;
-            log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
-            await new Promise(r => setTimeout(r, thinkTime));
+            // Warming/Bypass
+            log.info('Warming Tesco session...');
+            await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+            await new Promise(r => setTimeout(r, 2000));
+            log.info('Navigating to target: ' + url);
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-            // 4. Cookie Acceptance
+            // Cookie Acceptance
             try {
-                const cookieButton = await page.$('button.ddsweb-consent-banner__button, button[class*="consent"]');
-                if (cookieButton) {
-                    log.info('Accepting cookies...');
-                    await cookieButton.click();
-                    await new Promise(r => setTimeout(r, 2000));
-                }
+                const cookieId = 'button.ddsweb-consent-banner__button';
+                await page.waitForSelector(cookieId, { timeout: 5000 });
+                await page.click(cookieId);
+                await new Promise(r => setTimeout(r, 1000));
             } catch (e) {}
 
-            // 5. Block Detection
-            const blockInfo = await page.evaluate(() => {
-                const h1 = document.querySelector('h1')?.innerText?.trim() || '';
-                const body = document.body?.innerText || '';
-                return {
-                    isBlocked: h1.toLowerCase().includes('oops') || body.toLowerCase().includes("it's not you, it's us") || document.title.includes('Access Denied')
-                };
-            });
+            // Wait for products
+            log.info('Waiting for product items...');
+            const productSelector = 'li[class*="Tile"], [data-testid="product-tile"], .product-list--item';
+            await page.waitForSelector(productSelector, { timeout: 30000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
 
-            // 6. Session Warming
-            if (blockInfo.isBlocked || !url.includes('groceries')) {
-                log.info('Warming Session: Visiting homepage...');
-                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
-                await new Promise(r => setTimeout(r, 3000));
-                log.info('Retrying target: ' + url);
-                await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+            // Scroll for hydration
+            for (let i = 0; i < 8; i++) {
+                await page.evaluate(() => window.scrollBy(0, 800));
+                await new Promise(r => setTimeout(r, 600));
             }
 
-            // 7. Hydration
-            console.log('Hydrating Tesco grid...');
-            for (let i = 0; i < 10; i++) {
-                await page.evaluate(() => window.scrollBy(0, 1000));
-                await new Promise(r => setTimeout(r, 800));
-            }
-            await new Promise(r => setTimeout(r, 3000));
-
-            // 8. Extraction
+            // Extraction
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], article'));
+                const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], .product-list--item, article'));
                 return tiles.map(tile => {
-                    const nameEl = tile.querySelector('h2 a, a[class*="titleLink"]');
+                    const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"]');
                     if (!nameEl) return null;
-                    
                     const name = nameEl.innerText.trim();
                     if (!name || name.length < 3) return null;
 
-                    // Improved price selectors
-                    const priceSelectors = [
-                        'p[class*="priceText"]',
-                        '.ddsweb-price--primary',
-                        '[data-testid="unit-price"]',
-                        '.price'
-                    ];
-                    let price = 'N/A';
-                    for (const sel of priceSelectors) {
-                        const el = tile.querySelector(sel);
-                        if (el && el.innerText.includes('£')) {
-                            price = el.innerText.trim();
-                            break;
-                        }
-                    }
+                    const priceEl = tile.querySelector('p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price');
+                    const imgEl = tile.querySelector('img');
 
                     return {
                         product_name: name,
                         retailer: 'Tesco',
-                        price_display: price,
+                        price_display: priceEl?.innerText?.trim() || 'N/A',
                         product_url: nameEl.href,
-                        date_found: new Date().toISOString(),
-                        reviews: 0
+                        image_url: imgEl?.src || '',
+                        date_found: new Date().toISOString()
                     };
                 }).filter(Boolean);
             });
 
-            // 9. Filter
+            log.info(\`Found \${products.length} products total.\`);
+
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('creamsilk');
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell');
                 return !isOwnBrand;
             });
 
-            // 10. Pagination
             await enqueueLinks({ 
                 selector: 'a[aria-label*="next page"], [data-testid="pagination-next"]', 
                 label: 'LISTING', 
@@ -257,88 +223,65 @@ export default async function handler(request, response) {
         const ASDA_STABLE_PAGE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
-            // 1. Stealth Setup
             await page.setViewport({ width: 1920, height: 1080 });
             
-            // 2. Session Warming (Asda is very sensitive to MFEs)
-            log.info('Warming Asda Session...');
+            log.info('Warming Asda session...');
             await page.goto('https://www.asda.com/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 2000));
             
-            log.info('Going to target: ' + url);
+            log.info('Navigating to target: ' + url);
             await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
             
-            // 3. Cookie Acceptance
+            // Cookie Acceptance
             try {
                 const cookieId = '#onetrust-accept-btn-handler';
-                await page.waitForSelector(cookieId, { timeout: 10000 });
-                log.info('Accepting Asda cookies...');
+                await page.waitForSelector(cookieId, { timeout: 8000 });
                 await page.click(cookieId);
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 1000));
             } catch (e) {}
 
-            // 4. Intensive Hydration
-            log.info('Hydrating Asda product grid...');
-            for (let i = 0; i < 15; i++) {
+            // Wait for products
+            log.info('Waiting for Asda products...');
+            const asdaSelector = '[data-testid="product-tile"], .co-item';
+            await page.waitForSelector(asdaSelector, { timeout: 30000 }).catch(() => log.warning('No Asda products rendered after 30s.'));
+
+            // Scroll
+            for (let i = 0; i < 10; i++) {
                 await page.evaluate(() => window.scrollBy(0, 1000));
-                await new Promise(r => setTimeout(r, 1000));
-                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+                await new Promise(r => setTimeout(r, 800));
             }
-            await new Promise(r => setTimeout(r, 5000));
 
-            // 5. Extraction
+            // Extraction
             const products = await page.evaluate(() => {
-                // Try multiple sources for tiles
-                const selectors = ['[data-testid="product-tile"]', '.co-item', '.product-listing-item'];
-                let tiles = [];
-                for (const sel of selectors) {
-                    const found = Array.from(document.querySelectorAll(sel));
-                    if (found.length > 0) {
-                        tiles = found;
-                        break;
-                    }
-                }
-
+                const tiles = Array.from(document.querySelectorAll('[data-testid="product-tile"], .co-item'));
                 return tiles.map(tile => {
                     const nameEl = tile.querySelector('h3 a, .co-product__title a, a[href*="/product/"]');
                     if (!nameEl) return null;
+                    const name = nameEl.innerText.trim();
+                    if (!name || name.length < 3) return null;
 
                     const priceEl = tile.querySelector('.co-product__price, [data-testid="price"], .product-price');
                     const imgEl = tile.querySelector('img');
-
-                    const name = nameEl.innerText.trim();
-                    if (!name || name.length < 3) return null;
 
                     return {
                         product_name: name,
                         retailer: 'Asda',
                         price_display: priceEl?.innerText?.trim() || 'N/A',
-                        reviews: 0,
-                        rating: '0.0',
-                        image_url: imgEl?.src || '',
                         product_url: nameEl.href,
-                        manufacturer: name.split(' ')[0],
+                        image_url: imgEl?.src || '',
                         date_found: new Date().toISOString()
                     };
                 }).filter(Boolean);
             });
 
-            if (!products || products.length === 0) {
-                log.warning('No Asda products found. Dumping HTML for debug.');
-                // In Apify, we can't save files easily but we can log snippets
-                return [];
-            }
+            log.info(\`Extracted \${products.length} Asda products.\`);
 
-            // 6. Filter
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
                 const isOwnBrand = ln.includes('asda') || ln.includes('extra special');
                 return !isOwnBrand;
             });
 
-            log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
-            
-            // 7. Pagination
             await enqueueLinks({ 
                 selector: 'a[aria-label="Next page"], button[aria-label="Next page"]', 
                 label: 'LISTING', 
@@ -346,7 +289,7 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }`;
+        }`;;
 
         const STABLE_PAGE_FUNCTION = `async (context) => {
             const { page, request, enqueueLinks, response } = context;
