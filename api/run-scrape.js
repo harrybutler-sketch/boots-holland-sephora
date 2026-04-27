@@ -317,7 +317,6 @@ export default async function handler(request, response) {
             });
 
             log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
-            
             // 9. Pagination
             await enqueueLinks({ 
                 selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
@@ -326,9 +325,9 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }\`;
+        }`;
 
-        const ASDA_STABLE_PAGE_FUNCTION = \`async ({ page, request, log, enqueueLinks, response }) => {
+        const ASDA_STABLE_PAGE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
             // 1. Stealth Setup
@@ -411,9 +410,9 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }\`;
+        }`;
 
-        const STABLE_PAGE_FUNCTION = \`async (context) => {
+        const STABLE_PAGE_FUNCTION = `async (context) => {
             const { page, request, enqueueLinks, response } = context;
             const { url, userData: { retailer, label } } = request;
             

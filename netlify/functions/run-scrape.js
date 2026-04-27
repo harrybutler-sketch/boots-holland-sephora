@@ -330,7 +330,7 @@ export const handler = async (event, context) => {
             return filtered;
         }`;
 
-        const ASDA_STABLE_PAGE_FUNCTION = \`async ({ page, request, log, enqueueLinks, response }) => {
+        const ASDA_STABLE_PAGE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
             const { url, userData: { retailer, label } } = request;
             
             // 1. Stealth Setup
@@ -413,7 +413,7 @@ export const handler = async (event, context) => {
             }).catch(() => {});
 
             return filtered;
-        }\`;
+        }`;
 
         const STABLE_PAGE_FUNCTION = `async (context) => {
             const { page, request, enqueueLinks, response } = context;
