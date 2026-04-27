@@ -154,18 +154,17 @@ export default async function handler(request, response) {
                 'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
                 'referer': 'https://www.google.com/'
             });
-
             // 2. Initial Status Check
             if (response && response.status() === 403) {
                 throw new Error('Tesco Block (Status ' + response.status() + '). Rotating proxy...');
             }
 
-            // 3. Human Mimicry: Initial Delay
+            // 3. Human Mimicry
             const thinkTime = Math.floor(Math.random() * 4000) + 3000;
             log.info(\`Mimicking human thinking for \${thinkTime}ms...\`);
             await new Promise(r => setTimeout(r, thinkTime));
 
-            // 3.5 Cookie Acceptance
+            // 4. Cookie Acceptance
             try {
                 const cookieButton = await page.$('button.ddsweb-consent-banner__button, button[class*="consent"]');
                 if (cookieButton) {
@@ -173,153 +172,81 @@ export default async function handler(request, response) {
                     await cookieButton.click();
                     await new Promise(r => setTimeout(r, 2000));
                 }
-            } catch (e) {
-                log.warning('Could not click cookie button: ' + e.message);
-            }
+            } catch (e) {}
 
-            // 4. Content Check & Stealth Block Detection
+            // 5. Block Detection
             const blockInfo = await page.evaluate(() => {
-                const h1El = document.querySelector('h1');
-                const h1 = h1El ? h1El.innerText.trim() : '';
-                const title = document.title || '';
-                const body = document.body ? document.body.innerText : '';
+                const h1 = document.querySelector('h1')?.innerText?.trim() || '';
+                const body = document.body?.innerText || '';
                 return {
-                    isOops: h1.toLowerCase().includes('oops') || h1.toLowerCase().includes('not down this aisle') || title.toLowerCase().includes('access denied') || body.toLowerCase().includes("it's not you, it's us"),
-                    h1, title
+                    isBlocked: h1.toLowerCase().includes('oops') || body.toLowerCase().includes("it's not you, it's us") || document.title.includes('Access Denied')
                 };
             });
 
-            // 5. Session Warming (Final resort bypass)
-            if (blockInfo.isOops || !url.includes('groceries')) {
-                log.info('Warming Session: Hitting homepage first...');
-                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(e => log.warning('Warming failed: ' + e.message));
-                await new Promise(r => setTimeout(r, 2000));
-                log.info('Session Warmed. Retrying category: ' + url);
+            // 6. Session Warming
+            if (blockInfo.isBlocked || !url.includes('groceries')) {
+                log.info('Warming Session: Visiting homepage...');
+                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+                await new Promise(r => setTimeout(r, 3000));
+                log.info('Retrying target: ' + url);
                 await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
             }
 
-            // 6. Intensive Hydration (MFE triggers)
-            log.info('Triggering MFE hydration via scrolling and mouse moves...');
-            for (let i = 0; i < 12; i++) {
+            // 7. Hydration
+            console.log('Hydrating Tesco grid...');
+            for (let i = 0; i < 10; i++) {
                 await page.evaluate(() => window.scrollBy(0, 1000));
-                await new Promise(r => setTimeout(r, 1000));
-                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+                await new Promise(r => setTimeout(r, 800));
             }
             await new Promise(r => setTimeout(r, 3000));
 
-            // 7. Extraction via DOM
-            log.info('Extracting products from DOM...');
+            // 8. Extraction
             const products = await page.evaluate(() => {
-                const nameSelectors = [
-                    'h2[class*="title"] a',
-                    'a.gyT8MW_titleLink',
-                    'a[class*="titleLink"]', 
-                    '[data-testid="product-tile"] h2 a',
-                    'a[href*="/products/"]'
-                ];
-                
-                let titleLinks = [];
-                for (const sel of nameSelectors) {
-                    titleLinks = Array.from(document.querySelectorAll(sel));
-                    if (titleLinks.length > 0) break;
-                }
-
-                // If still no links, try finding containers and pulling text
-                if (titleLinks.length === 0) {
-                   const tiles = Array.from(document.querySelectorAll('li[data-testid], [class*="ProductTile"], article'));
-                   return tiles.map(tile => {
-                       const linkEl = tile.querySelector('a[href*="/products/"]');
-                       if (!linkEl) return null;
-                       
-                       const name = linkEl.innerText.trim();
-                       if (!name || name.length < 3) return null;
-
-                       const priceEl = tile.querySelector('[class*="price"], [data-testid="unit-price"], .ddsweb-price--primary');
-                       const imgEl = tile.querySelector('img');
-                       const reviewEl = tile.querySelector('[class*="rating"], [class*="review"], .ddsweb-star-rating');
-
-                       const res = {
-                           product_name: name,
-                           retailer: 'Tesco',
-                           price_display: priceEl?.innerText?.trim() || 'N/A',
-                           reviews: 0,
-                           rating: '0.0',
-                           image_url: imgEl?.src || '',
-                           product_url: linkEl.href,
-                           manufacturer: name.split(' ')[0],
-                           date_found: new Date().toISOString()
-                       };
-
-                       if (reviewEl) {
-                           const rText = reviewEl.innerText;
-                           const match = rText.match(/(\\d+)/);
-                           if (match) res.reviews = parseInt(match[0]) || 0;
-                           const ratingMatch = rText.match(/(\\d+\\.\\d+)/);
-                           if (ratingMatch) res.rating = ratingMatch[1];
-                       }
-                       return res;
-                   }).filter(Boolean);
-                }
-
-                return titleLinks.map(nameEl => {
-                    const tile = nameEl.closest('li, div[class*="ProductTile"], [data-testid="product-tile"], div');
-                    const priceEl = tile?.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
-                    const imgEl = tile?.querySelector('img[class*="product-image"], a[class*="imageContainer"] img, img');
-                    const reviewEl = tile?.querySelector('div.ddsweb-star-rating, [data-testid="reviews-count"], [class*="review-count"]');
+                const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], article'));
+                return tiles.map(tile => {
+                    const nameEl = tile.querySelector('h2 a, a[class*="titleLink"]');
+                    if (!nameEl) return null;
                     
-                    const name = nameEl?.innerText?.trim() || 'N/A';
-                    if (name === 'N/A' || name.length < 3) return null;
+                    const name = nameEl.innerText.trim();
+                    if (!name || name.length < 3) return null;
 
+                    // Improved price selectors
+                    const priceSelectors = [
+                        'p[class*="priceText"]',
+                        '.ddsweb-price--primary',
+                        '[data-testid="unit-price"]',
+                        '.price'
+                    ];
                     let price = 'N/A';
-                    if (tile) {
-                        const priceEl = tile.querySelector('p.ddsweb-price--primary, [data-testid="unit-price"], .price, .ddsweb-price__text, [class*="price"]');
-                        price = priceEl?.innerText?.trim() || 'N/A';
-                        if (price === 'N/A') {
-                            const allP = Array.from(tile.querySelectorAll('p, span, div'));
-                            const pMatch = allP.find(p => p.innerText && p.innerText.includes('£') && p.children.length === 0);
-                            if (pMatch) price = pMatch.innerText.trim();
+                    for (const sel of priceSelectors) {
+                        const el = tile.querySelector(sel);
+                        if (el && el.innerText.includes('£')) {
+                            price = el.innerText.trim();
+                            break;
                         }
                     }
 
-                    const res = {
+                    return {
                         product_name: name,
                         retailer: 'Tesco',
                         price_display: price,
-                        reviews: 0,
-                        rating: '0.0',
-                        image_url: imgEl?.src || '',
-                        product_url: nameEl?.href || window.location.href,
-                        manufacturer: name.split(' ')[0],
-                        date_found: new Date().toISOString()
+                        product_url: nameEl.href,
+                        date_found: new Date().toISOString(),
+                        reviews: 0
                     };
-                    
-                    if (reviewEl) {
-                        const rText = reviewEl.innerText;
-                        const match = rText.match(/(\\d+)/);
-                        if (match) res.reviews = parseInt(match[0]) || 0;
-                        const ratingMatch = rText.match(/(\\d+\\.\\d+)/);
-                        if (ratingMatch) res.rating = ratingMatch[1];
-                    }
-                    return res;
                 }).filter(Boolean);
             });
 
-            if (!products || products.length === 0) {
-                log.warning('No products found on page. DOM might not have loaded or layout changed.');
-                return [];
-            }
-
-            // 8. Filter (Quality Control)
+            // 9. Filter
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('creamsilk') || ln.includes('fred & flo');
-                return p.reviews <= 5 && !isOwnBrand;
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms molly') || ln.includes('creamsilk');
+                return !isOwnBrand;
             });
 
-            log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
-            // 9. Pagination
+            // 10. Pagination
             await enqueueLinks({ 
-                selector: 'a[aria-label*="next page"], a.pagination--button--next, [data-testid="pagination-next"]', 
+                selector: 'a[aria-label*="next page"], [data-testid="pagination-next"]', 
                 label: 'LISTING', 
                 userData: { retailer: 'Tesco' } 
             }).catch(() => {});
@@ -333,41 +260,56 @@ export default async function handler(request, response) {
             // 1. Stealth Setup
             await page.setViewport({ width: 1920, height: 1080 });
             
-            // 2. Cookie Acceptance
+            // 2. Session Warming (Asda is very sensitive to MFEs)
+            log.info('Warming Asda Session...');
+            await page.goto('https://www.asda.com/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+            await new Promise(r => setTimeout(r, 3000));
+            
+            log.info('Going to target: ' + url);
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+            
+            // 3. Cookie Acceptance
             try {
                 const cookieId = '#onetrust-accept-btn-handler';
                 await page.waitForSelector(cookieId, { timeout: 10000 });
                 log.info('Accepting Asda cookies...');
                 await page.click(cookieId);
                 await new Promise(r => setTimeout(r, 2000));
-            } catch (e) {
-                log.warning('No Asda cookie banner found.');
-            }
+            } catch (e) {}
 
-            // 3. Intensive Hydration
+            // 4. Intensive Hydration
             log.info('Hydrating Asda product grid...');
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 15; i++) {
                 await page.evaluate(() => window.scrollBy(0, 1000));
                 await new Promise(r => setTimeout(r, 1000));
                 await page.mouse.move(Math.random() * 800, Math.random() * 600);
             }
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 5000));
 
-            // 4. Extraction
+            // 5. Extraction
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('[data-testid="product-tile"], .co-item'));
+                // Try multiple sources for tiles
+                const selectors = ['[data-testid="product-tile"]', '.co-item', '.product-listing-item'];
+                let tiles = [];
+                for (const sel of selectors) {
+                    const found = Array.from(document.querySelectorAll(sel));
+                    if (found.length > 0) {
+                        tiles = found;
+                        break;
+                    }
+                }
+
                 return tiles.map(tile => {
-                    const nameEl = tile.querySelector('h3 a, .co-product__title a, [data-testid="product-tile"] a');
+                    const nameEl = tile.querySelector('h3 a, .co-product__title a, a[href*="/product/"]');
                     if (!nameEl) return null;
 
                     const priceEl = tile.querySelector('.co-product__price, [data-testid="price"], .product-price');
                     const imgEl = tile.querySelector('img');
-                    const reviewEl = tile.querySelector('.co-product__reviews, [class*="rating"]');
 
                     const name = nameEl.innerText.trim();
                     if (!name || name.length < 3) return null;
 
-                    const res = {
+                    return {
                         product_name: name,
                         retailer: 'Asda',
                         price_display: priceEl?.innerText?.trim() || 'N/A',
@@ -378,31 +320,25 @@ export default async function handler(request, response) {
                         manufacturer: name.split(' ')[0],
                         date_found: new Date().toISOString()
                     };
-
-                    if (reviewEl) {
-                        const rText = reviewEl.innerText;
-                        const match = rText.match(/(\\d+)/);
-                        if (match) res.reviews = parseInt(match[0]) || 0;
-                    }
-                    return res;
                 }).filter(Boolean);
             });
 
             if (!products || products.length === 0) {
-                log.warning('No Asda products found.');
+                log.warning('No Asda products found. Dumping HTML for debug.');
+                // In Apify, we can't save files easily but we can log snippets
                 return [];
             }
 
-            // 5. Filter own brand
+            // 6. Filter
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
                 const isOwnBrand = ln.includes('asda') || ln.includes('extra special');
-                return p.reviews <= 5 && !isOwnBrand;
+                return !isOwnBrand;
             });
 
             log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
             
-            // 6. Pagination
+            // 7. Pagination
             await enqueueLinks({ 
                 selector: 'a[aria-label="Next page"], button[aria-label="Next page"]', 
                 label: 'LISTING', 
