@@ -317,7 +317,7 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }\`;;
+        }`;
 
         const STABLE_PAGE_FUNCTION = `async (context) => {
             const { page, request, enqueueLinks, response } = context;
