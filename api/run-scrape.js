@@ -326,11 +326,94 @@ export default async function handler(request, response) {
             }).catch(() => {});
 
             return filtered;
-        }`;
+        }\`;
 
-        console.log('Starting Puppeteer Scraper...');
-        
-        const STABLE_PAGE_FUNCTION = `async (context) => {
+        const ASDA_STABLE_PAGE_FUNCTION = \`async ({ page, request, log, enqueueLinks, response }) => {
+            const { url, userData: { retailer, label } } = request;
+            
+            // 1. Stealth Setup
+            await page.setViewport({ width: 1920, height: 1080 });
+            
+            // 2. Cookie Acceptance
+            try {
+                const cookieId = '#onetrust-accept-btn-handler';
+                await page.waitForSelector(cookieId, { timeout: 10000 });
+                log.info('Accepting Asda cookies...');
+                await page.click(cookieId);
+                await new Promise(r => setTimeout(r, 2000));
+            } catch (e) {
+                log.warning('No Asda cookie banner found.');
+            }
+
+            // 3. Intensive Hydration
+            log.info('Hydrating Asda product grid...');
+            for (let i = 0; i < 10; i++) {
+                await page.evaluate(() => window.scrollBy(0, 1000));
+                await new Promise(r => setTimeout(r, 1000));
+                await page.mouse.move(Math.random() * 800, Math.random() * 600);
+            }
+            await new Promise(r => setTimeout(r, 3000));
+
+            // 4. Extraction
+            const products = await page.evaluate(() => {
+                const tiles = Array.from(document.querySelectorAll('[data-testid="product-tile"], .co-item'));
+                return tiles.map(tile => {
+                    const nameEl = tile.querySelector('h3 a, .co-product__title a, [data-testid="product-tile"] a');
+                    if (!nameEl) return null;
+
+                    const priceEl = tile.querySelector('.co-product__price, [data-testid="price"], .product-price');
+                    const imgEl = tile.querySelector('img');
+                    const reviewEl = tile.querySelector('.co-product__reviews, [class*="rating"]');
+
+                    const name = nameEl.innerText.trim();
+                    if (!name || name.length < 3) return null;
+
+                    const res = {
+                        product_name: name,
+                        retailer: 'Asda',
+                        price_display: priceEl?.innerText?.trim() || 'N/A',
+                        reviews: 0,
+                        rating: '0.0',
+                        image_url: imgEl?.src || '',
+                        product_url: nameEl.href,
+                        manufacturer: name.split(' ')[0],
+                        date_found: new Date().toISOString()
+                    };
+
+                    if (reviewEl) {
+                        const rText = reviewEl.innerText;
+                        const match = rText.match(/(\\d+)/);
+                        if (match) res.reviews = parseInt(match[0]) || 0;
+                    }
+                    return res;
+                }).filter(Boolean);
+            });
+
+            if (!products || products.length === 0) {
+                log.warning('No Asda products found.');
+                return [];
+            }
+
+            // 5. Filter own brand
+            const filtered = products.filter(p => {
+                const ln = p.product_name.toLowerCase();
+                const isOwnBrand = ln.includes('asda') || ln.includes('extra special');
+                return p.reviews <= 5 && !isOwnBrand;
+            });
+
+            log.info(\`Extracted \${filtered.length} products (found \${products.length} total)\`);
+            
+            // 6. Pagination
+            await enqueueLinks({ 
+                selector: 'a[aria-label="Next page"], button[aria-label="Next page"]', 
+                label: 'LISTING', 
+                userData: { retailer: 'Asda' } 
+            }).catch(() => {});
+
+            return filtered;
+        }\`;
+
+        const STABLE_PAGE_FUNCTION = \`async (context) => {
             const { page, request, enqueueLinks, response } = context;
             const { url, userData: { retailer, label } } = request;
             
@@ -680,11 +763,13 @@ export default async function handler(request, response) {
         const beautyRetailers = ['Sephora', 'Holland & Barrett'];
         const beautyStartUrls = startUrls.filter(u => beautyRetailers.includes(u.userData.retailer));
         const sainsburysStartUrls = startUrls.filter(u => u.userData.retailer === "Sainsbury's" || u.userData.retailer === "Sainsburys");
+        const asdaStartUrls = startUrls.filter(u => u.userData.retailer === 'Asda');
         const normalStartUrls = startUrls.filter(u => 
             u.userData.retailer !== 'Tesco' && 
             !beautyRetailers.includes(u.userData.retailer) && 
             u.userData.retailer !== "Sainsbury's" && 
-            u.userData.retailer !== "Sainsburys"
+            u.userData.retailer !== "Sainsburys" &&
+            u.userData.retailer !== "Asda"
         );
 
         if (tescoStartUrls.length > 0) {
@@ -737,6 +822,24 @@ export default async function handler(request, response) {
             webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-beauty' }]
           });
           runs.push({ id: run.id, actor: 'puppeteer-scraper-beauty', retailers: beautyStartUrls.map(u => u.userData.retailer) });
+        }
+
+        if (asdaStartUrls.length > 0) {
+          console.log('Starting Asda Puppeteer Scraper (Specialized Logic)...');
+          const run = await client.actor('apify/puppeteer-scraper').start({
+            startUrls: asdaStartUrls,
+            pageFunction: ASDA_STABLE_PAGE_FUNCTION,
+            proxyConfiguration: { 
+              useApifyProxy: true, 
+              apifyProxyGroups: ['RESIDENTIAL'], 
+              countryCode: 'GB' 
+            },
+            useStealth: true,
+            useChrome: true
+          }, {
+            webhooks: [{ eventTypes: ['ACTOR.RUN.SUCCEEDED'], requestUrl: webhookUrl + '&source=puppeteer-asda' }]
+          });
+          runs.push({ id: run.id, actor: 'puppeteer-scraper-asda', retailers: ["Asda"] });
         }
 
         if (normalStartUrls.length > 0) {
