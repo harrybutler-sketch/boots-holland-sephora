@@ -728,6 +728,10 @@ export default async function handler(request, response) {
             // Helper for delays
             const delay = ms => new Promise(r => setTimeout(r, ms));
 
+            // Wait for products to load first
+            log.info('Waiting for products to render...');
+            await page.waitForSelector('.pt__link', { timeout: 45000 }).catch(() => log.warning('Timeout waiting for .pt__link'));
+
             // Intensive scroll for hydration (Sainsbury's is heavy on lazy loading)
             log.info('Scrolling for hydration...');
             for (let i = 0; i < 15; i++) {
