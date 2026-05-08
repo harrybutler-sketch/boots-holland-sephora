@@ -42,7 +42,7 @@ export default async function handler(request, response) {
       'Tesco': 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24',
       'Asda': 'https://www.asda.com/groceries/event/new-beer-wine-spirits',
       'Cult Beauty': 'https://www.cultbeauty.co.uk/c/whats-new/make-up/\nhttps://www.cultbeauty.co.uk/c/whats-new/skin-care/\nhttps://www.cultbeauty.co.uk/c/whats-new/skin-care/?pageNumber=2',
-      'Look Fantastic': 'https://www.lookfantastic.com/new-in.list',
+      'Look Fantastic': 'https://www.lookfantastic.com/c/health-beauty/new/new-in/\nhttps://www.lookfantastic.com/c/health-beauty/new/new-in/?pageNumber=2\nhttps://www.lookfantastic.com/c/health-beauty/new/new-in/?pageNumber=3',
       'Space NK': 'https://www.spacenk.com/uk/new/new-in',
       'Pets at Home': 'https://www.petsathome.com/shop/en/pets/new-in',
       'Zooplus': 'https://www.zooplus.co.uk/shop/new_products',
