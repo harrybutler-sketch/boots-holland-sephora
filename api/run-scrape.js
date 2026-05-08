@@ -44,7 +44,7 @@ export default async function handler(request, response) {
       'Cult Beauty': 'https://www.cultbeauty.co.uk/c/whats-new/make-up/\nhttps://www.cultbeauty.co.uk/c/whats-new/skin-care/\nhttps://www.cultbeauty.co.uk/c/whats-new/skin-care/?pageNumber=2',
       'Look Fantastic': 'https://www.lookfantastic.com/c/health-beauty/new/new-in/\nhttps://www.lookfantastic.com/c/health-beauty/new/new-in/?pageNumber=2\nhttps://www.lookfantastic.com/c/health-beauty/new/new-in/?pageNumber=3',
       'Space NK': 'https://www.spacenk.com/uk/new?srule=New_In_with_category_position',
-      'Pets at Home': 'https://www.petsathome.com/shop/en/pets/new-in',
+      'Pets at Home': 'https://www.petsathome.com/product/listing/cat?sortBy=new_in_date-desc',
       'Zooplus': 'https://www.zooplus.co.uk/shop/new_products',
       'John Lewis': 'https://www.johnlewis.com/new-in/c8000021',
       'Mammas & Pappas': 'https://www.mamasandpapas.com/collections/new-in'
