@@ -140,10 +140,10 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
         if (filterDealt === 'Not Dealt With' && item.dealtWith) return false;
 
         if (filterClient === 'Clients') {
-            if (!clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()))) return false;
+            if (!clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.product || '').toLowerCase().includes(c.toLowerCase()))) return false;
         }
         if (filterClient === 'Non-Clients') {
-            if (clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()))) return false;
+            if (clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.product || '').toLowerCase().includes(c.toLowerCase()))) return false;
         }
 
         return true;
@@ -322,7 +322,7 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     {item.brand}
-                                    {clientList.some(c => (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.manufacturer || '').toLowerCase().includes(c.toLowerCase())) && (
+                                    {clientList.some(c => (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.product || '').toLowerCase().includes(c.toLowerCase())) && (
                                         <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help', marginLeft: '4px' }}>⭐</span>
                                     )}
                                 </div>

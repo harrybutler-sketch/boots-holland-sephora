@@ -92,7 +92,7 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                         >
                                             {item.manufacturer}
                                         </a>
-                                        {clientList.some(c => item.manufacturer.toLowerCase().includes(c.toLowerCase())) && (
+                                        {clientList.some(c => item.manufacturer?.toLowerCase().includes(c.toLowerCase()) || item.product_name?.toLowerCase().includes(c.toLowerCase())) && (
                                             <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help' }}>⭐</span>
                                         )}
                                         <a
