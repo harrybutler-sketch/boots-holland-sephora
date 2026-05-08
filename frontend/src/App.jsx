@@ -125,15 +125,14 @@ function App() {
     'Waitrose': true,
     'Pets at Home': true,
     'Zooplus': true,
-    'John Lewis': true,
-    'Mammas & Pappas': true
+    'John Lewis': true
   });
 
   const handleRunScrape = async () => {
     // Get list of selected retailers based on workspace
     const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug', 'Cult Beauty', 'Look Fantastic', 'Space NK'];
     const groceryRetailers = ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
-    const lifestyleRetailers = ['Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'];
+    const lifestyleRetailers = ['Pets at Home', 'Zooplus', 'John Lewis'];
 
     const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : (workspace === 'grocery' ? groceryRetailers : lifestyleRetailers);
     const activeRetailers = activeWorkspaceRetailers.filter(r => selectedRetailers[r]);

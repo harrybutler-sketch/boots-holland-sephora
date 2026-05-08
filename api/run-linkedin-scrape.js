@@ -29,8 +29,7 @@ export default async function handler(req, res) {
             'Space NK',
             'Pets at Home',
             'Zooplus',
-            'John Lewis',
-            'Mammas & Pappas'
+            'John Lewis'
         ];
 
         // Targeted Grocer/Industry LinkedIn Pages
@@ -50,8 +49,7 @@ export default async function handler(req, res) {
             'https://www.linkedin.com/company/lookfantastic/',
             'https://www.linkedin.com/company/space-nk/',
             'https://www.linkedin.com/company/pets-at-home/',
-            'https://www.linkedin.com/company/zooplus/',
-            'https://www.linkedin.com/company/mamas-&-papas/'
+            'https://www.linkedin.com/company/zooplus/'
         ];
 
         let config = {};

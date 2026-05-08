@@ -33,9 +33,7 @@ export default async function handler(request, response) {
       'space nk': 'Space NK',
       'pets at home': 'Pets at Home',
       'zooplus': 'Zooplus',
-      'john lewis': 'John Lewis',
-      'mammas & pappas': 'Mammas & Pappas',
-      'mamas & papas': 'Mammas & Pappas'
+      'john lewis': 'John Lewis'
     };
 
     const groceryUrls = {
@@ -46,8 +44,7 @@ export default async function handler(request, response) {
       'Space NK': 'https://www.spacenk.com/uk/new?srule=New_In_with_category_position',
       'Pets at Home': 'https://www.petsathome.com/product/listing/cat?sortBy=new_in_date-desc',
       'Zooplus': 'https://www.zooplus.co.uk/shop/new_products',
-      'John Lewis': 'https://www.johnlewis.com/new-in/c8000021',
-      'Mammas & Pappas': 'https://www.mamasandpapas.com/collections/new-in'
+      'John Lewis': 'https://www.johnlewis.com/new-in/c8000021'
     };
 
     // 2. Categorize

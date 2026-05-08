@@ -5,7 +5,7 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
     // Retailer sets
     const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug', 'Cult Beauty', 'Look Fantastic', 'Space NK'];
     const groceryRetailers = ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
-    const lifestyleRetailers = ['Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'];
+    const lifestyleRetailers = ['Pets at Home', 'Zooplus', 'John Lewis'];
     const linkedinRetailers = [...new Set([...beautyRetailers, ...groceryRetailers, ...lifestyleRetailers, 'The Grocer'])].sort();
     
     const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : (workspace === 'grocery' ? groceryRetailers : (workspace === 'lifestyle' ? lifestyleRetailers : linkedinRetailers));

@@ -22,7 +22,6 @@ function extractRetailer(text) {
     if (lowerText.includes('pets at home')) return 'Pets at Home';
     if (lowerText.includes('zooplus')) return 'Zooplus';
     if (lowerText.includes('john lewis')) return 'John Lewis';
-    if (lowerText.includes('mamas') || lowerText.includes('mammas')) return 'Mammas & Pappas';
     if (lowerText.includes('the grocer')) return 'The Grocer';
     return 'Unknown';
 }
@@ -30,7 +29,7 @@ function extractRetailer(text) {
 function extractBrandLinkedin(text, authorName) {
     const genericAuthors = [
         'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
-        'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'
+        'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis'
     ];
     if (authorName && !genericAuthors.some(ga => authorName.toLowerCase().includes(ga.toLowerCase()))) return authorName;
     const brandMatch = text.match(/(?:Brand|Manufacturer):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
@@ -146,7 +145,7 @@ export default async function handler(request, response) {
                 // Relevance Check
                 const genericAuthors = [
                     'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
-                    'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'
+                    'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis'
                 ];
                 const isGenericAuthor = genericAuthors.some(ga => author.toLowerCase().includes(ga.toLowerCase()));
                 if (isGenericAuthor && !lowerText.includes('new')) continue;
@@ -309,7 +308,6 @@ export default async function handler(request, response) {
                 else if (lowerUrl.includes('petsathome.com')) retailer = 'Pets at Home';
                 else if (lowerUrl.includes('zooplus.co.uk')) retailer = 'Zooplus';
                 else if (lowerUrl.includes('johnlewis.com')) retailer = 'John Lewis';
-                else if (lowerUrl.includes('mamasandpapas.com')) retailer = 'Mammas & Pappas';
                 else if (lowerUrl.includes('sainsburys.co.uk')) retailer = 'Sainsburys';
                 else if (lowerUrl.includes('tesco.com')) retailer = 'Tesco';
                 else if (lowerUrl.includes('asda.com')) retailer = 'Asda';
@@ -431,7 +429,7 @@ export default async function handler(request, response) {
                     const secondOne = words[1] || '';
                     const firstTwo = words.slice(0, 2).join(' ');
 
-                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks', 'Superdrug', 'Boots', 'Sephora', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'];
+                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks', 'Superdrug', 'Boots', 'Sephora', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis'];
                     const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
 
                     if (isRetailerName) {
@@ -573,8 +571,7 @@ export default async function handler(request, response) {
                 'Space NK': ['space nk'],
                 'Pets at Home': ['pets at home', 'wainwright', 'wainwrights', 'wainwright\'s'],
                 'Zooplus': ['zooplus', 'wolf of wilderness', 'purizon', 'concept for life', 'smilla', 'feringa'],
-                'John Lewis': ['john lewis', 'anyday'],
-                'Mammas & Pappas': ['mamas & papas', 'mamas and papas', 'mammas & pappas']
+                'John Lewis': ['john lewis', 'anyday']
             };
 
             const lowercaseManufacturer = (manufacturer || '').toLowerCase();
