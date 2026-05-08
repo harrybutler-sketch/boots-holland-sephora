@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { clientList } from '../clients';
 
 const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
     const isRunning = runStatus === 'RUNNING';
@@ -13,6 +14,7 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
     const [filterRetailer, setFilterRetailer] = useState('All');
     const [filterDate, setFilterDate] = useState('All');
     const [filterDealt, setFilterDealt] = useState('Not Dealt With'); // Default to showing only non-dealt items
+    const [filterClient, setFilterClient] = useState('All');
 
     // Fetch Logic
     const fetchLinkedinResults = async () => {
@@ -137,6 +139,13 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
         if (filterDealt === 'Dealt With' && !item.dealtWith) return false;
         if (filterDealt === 'Not Dealt With' && item.dealtWith) return false;
 
+        if (filterClient === 'Clients') {
+            if (!clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()))) return false;
+        }
+        if (filterClient === 'Non-Clients') {
+            if (clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()))) return false;
+        }
+
         return true;
     });
 
@@ -257,6 +266,19 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
                         <option value="Dealt With">Dealt With</option>
                     </select>
                 </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Client Filter</label>
+                    <select 
+                        value={filterClient} 
+                        onChange={(e) => setFilterClient(e.target.value)}
+                        className="select"
+                        style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)', minWidth: '150px' }}
+                    >
+                        <option value="All">All Brands</option>
+                        <option value="Clients">Existing Clients</option>
+                        <option value="Non-Clients">Prospects</option>
+                    </select>
+                </div>
             </div>
 
             {error && (
@@ -300,6 +322,9 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     {item.brand}
+                                    {clientList.some(c => (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.manufacturer || '').toLowerCase().includes(c.toLowerCase())) && (
+                                        <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help', marginLeft: '4px' }}>⭐</span>
+                                    )}
                                 </div>
                                 <h3 style={{ margin: '0.25rem 0', fontSize: '1.25rem', fontWeight: 'bold' }}>
                                     {item.product}

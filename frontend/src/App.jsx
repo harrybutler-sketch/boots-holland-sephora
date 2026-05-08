@@ -4,6 +4,7 @@ import Filters from './components/Filters';
 import ResultsTable from './components/ResultsTable';
 import LinkedinFeed from './components/LinkedinFeed';
 import NewsFeed from './components/NewsFeed';
+import { clientList } from './clients';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'linkedin'
@@ -18,7 +19,8 @@ function App() {
     days: '28',
     q: '',
     review_range: '',
-    hideDealt: true
+    hideDealt: true,
+    clientStatus: 'All'
   });
 
   // Persist State Changes
@@ -220,7 +222,8 @@ function App() {
       days: '28',
       q: '',
       review_range: '',
-      hideDealt: true
+      hideDealt: true,
+      clientStatus: 'All'
     });
     // If we're in LinkedIn view, maybe switch back to dashboard or stay
     if (currentView !== 'dashboard') setCurrentView('dashboard');
@@ -258,6 +261,16 @@ function App() {
     document.body.removeChild(link);
   };
 
+
+  const displayData = data.filter(item => {
+    if (filters.clientStatus === 'Clients') {
+      return clientList.some(c => item.manufacturer?.toLowerCase().includes(c.toLowerCase()) || item.product_name?.toLowerCase().includes(c.toLowerCase()));
+    }
+    if (filters.clientStatus === 'Non-Clients') {
+      return !clientList.some(c => item.manufacturer?.toLowerCase().includes(c.toLowerCase()) || item.product_name?.toLowerCase().includes(c.toLowerCase()));
+    }
+    return true;
+  });
 
   return (
     <div className="container">
@@ -404,7 +417,7 @@ function App() {
           />
 
           <ResultsTable
-            data={data}
+            data={displayData}
             loading={loading}
             onToggleStatus={async (url, newStatus) => {
               // Optimistic update

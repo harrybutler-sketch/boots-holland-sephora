@@ -93,6 +93,21 @@ const Filters = ({ filters, onFilterChange, workspace = 'beauty' }) => {
                     <option value="show">Show All</option>
                 </select>
             </div>
+
+            <div className="form-group">
+                <label htmlFor="clientStatus">Client Filter</label>
+                <select
+                    id="clientStatus"
+                    name="clientStatus"
+                    className="select"
+                    value={filters.clientStatus || 'All'}
+                    onChange={handleChange}
+                >
+                    <option value="All">All Brands</option>
+                    <option value="Clients">Existing Clients</option>
+                    <option value="Non-Clients">Prospects</option>
+                </select>
+            </div>
         </div>
     );
 };

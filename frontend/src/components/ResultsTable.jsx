@@ -1,4 +1,5 @@
 import React from 'react';
+import { clientList } from '../clients';
 
 const ResultsTable = ({ data, loading, onToggleStatus }) => {
     if (loading) {
@@ -91,6 +92,9 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                         >
                                             {item.manufacturer}
                                         </a>
+                                        {clientList.some(c => item.manufacturer.toLowerCase().includes(c.toLowerCase())) && (
+                                            <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help' }}>⭐</span>
+                                        )}
                                         <a
                                             href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(item.manufacturer)}%20Founder`}
                                             target="_blank"
