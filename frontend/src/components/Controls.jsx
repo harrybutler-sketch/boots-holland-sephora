@@ -3,11 +3,12 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
     const isRunning = runStatus === 'RUNNING';
 
     // Retailer sets
-    const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug'];
+    const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug', 'Cult Beauty', 'Look Fantastic', 'Space NK'];
     const groceryRetailers = ['Sainsburys', 'Tesco', 'Asda', 'Morrisons', 'Ocado', 'Waitrose'];
-    const linkedinRetailers = [...new Set([...beautyRetailers, ...groceryRetailers, 'The Grocer'])].sort();
+    const lifestyleRetailers = ['Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'];
+    const linkedinRetailers = [...new Set([...beautyRetailers, ...groceryRetailers, ...lifestyleRetailers, 'The Grocer'])].sort();
     
-    const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : (workspace === 'grocery' ? groceryRetailers : linkedinRetailers);
+    const activeWorkspaceRetailers = workspace === 'beauty' ? beautyRetailers : (workspace === 'grocery' ? groceryRetailers : (workspace === 'lifestyle' ? lifestyleRetailers : linkedinRetailers));
 
     return (
         <div className="card controls" style={{ padding: '2rem' }}>
@@ -54,6 +55,26 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                             }}
                         >
                             <span>🛒 Grocery</span>
+                        </button>
+                        <button
+                            onClick={() => onWorkspaceChange('lifestyle')}
+                            style={{
+                                padding: '0.625rem 1.25rem',
+                                background: workspace === 'lifestyle' ? 'white' : 'transparent',
+                                border: 'none',
+                                borderRadius: '9999px',
+                                color: workspace === 'lifestyle' ? 'var(--color-purple)' : 'var(--color-text-secondary)',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                boxShadow: workspace === 'lifestyle' ? 'var(--shadow-sm)' : 'none',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            <span>🛍️ Lifestyle</span>
                         </button>
                     </div>
                     <div style={{ flex: 1 }}></div>

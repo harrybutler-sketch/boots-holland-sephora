@@ -23,7 +23,14 @@ export default async function handler(req, res) {
             'Boots',
             'Superdrug',
             'Sephora',
-            'Holland & Barrett'
+            'Holland & Barrett',
+            'Cult Beauty',
+            'Look Fantastic',
+            'Space NK',
+            'Pets at Home',
+            'Zooplus',
+            'John Lewis',
+            'Mammas & Pappas'
         ];
 
         // Targeted Grocer/Industry LinkedIn Pages
@@ -33,12 +40,18 @@ export default async function handler(req, res) {
             'https://www.linkedin.com/company/sainsbury\'s/',
             'https://www.linkedin.com/company/asda/',
             'https://www.linkedin.com/company/morrisons/',
-            'https://www.linkedin.com/company/johnlewisandpartners/', // Waitrose
+            'https://www.linkedin.com/company/johnlewisandpartners/', // Waitrose & John Lewis
             'https://www.linkedin.com/company/ocadogroup/',
             'https://www.linkedin.com/company/boots/',
             'https://www.linkedin.com/company/superdrug/',
             'https://www.linkedin.com/company/sephora/',
-            'https://www.linkedin.com/company/holland-&-barrett/'
+            'https://www.linkedin.com/company/holland-&-barrett/',
+            'https://www.linkedin.com/company/cult-beauty/',
+            'https://www.linkedin.com/company/lookfantastic/',
+            'https://www.linkedin.com/company/space-nk/',
+            'https://www.linkedin.com/company/pets-at-home/',
+            'https://www.linkedin.com/company/zooplus/',
+            'https://www.linkedin.com/company/mamas-&-papas/'
         ];
 
         let config = {};

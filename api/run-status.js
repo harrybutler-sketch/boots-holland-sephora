@@ -16,6 +16,13 @@ function extractRetailer(text) {
     if (lowerText.includes('holland') || lowerText.includes('barrett')) return 'Holland & Barrett';
     if (lowerText.includes('superdrug')) return 'Superdrug';
     if (lowerText.includes('sephora')) return 'Sephora';
+    if (lowerText.includes('cult beauty')) return 'Cult Beauty';
+    if (lowerText.includes('look fantastic') || lowerText.includes('lookfantastic')) return 'Look Fantastic';
+    if (lowerText.includes('space nk')) return 'Space NK';
+    if (lowerText.includes('pets at home')) return 'Pets at Home';
+    if (lowerText.includes('zooplus')) return 'Zooplus';
+    if (lowerText.includes('john lewis')) return 'John Lewis';
+    if (lowerText.includes('mamas') || lowerText.includes('mammas')) return 'Mammas & Pappas';
     if (lowerText.includes('the grocer')) return 'The Grocer';
     return 'Unknown';
 }
@@ -23,7 +30,7 @@ function extractRetailer(text) {
 function extractBrandLinkedin(text, authorName) {
     const genericAuthors = [
         'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
-        'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
+        'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'
     ];
     if (authorName && !genericAuthors.some(ga => authorName.toLowerCase().includes(ga.toLowerCase()))) return authorName;
     const brandMatch = text.match(/(?:Brand|Manufacturer):\s*([A-Z][a-zA-Z0-9&\s]+?)(?:\.|\n|,|$)/i);
@@ -139,7 +146,7 @@ export default async function handler(request, response) {
                 // Relevance Check
                 const genericAuthors = [
                     'Retail Gazette', 'The Grocer', 'New Food Magazine', 'Trends', 'News', 'Media', 'Insight',
-                    'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett'
+                    'Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'Boots', 'Superdrug', 'Sephora', 'Holland & Barrett', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'
                 ];
                 const isGenericAuthor = genericAuthors.some(ga => author.toLowerCase().includes(ga.toLowerCase()));
                 if (isGenericAuthor && !lowerText.includes('new')) continue;
@@ -188,7 +195,7 @@ export default async function handler(request, response) {
         }
 
         // Select tab based on workspace
-        const sheetTitle = workspace === 'grocery' ? 'Grocery' : 'New In';
+        const sheetTitle = workspace === 'grocery' ? 'Grocery' : (workspace === 'lifestyle' ? 'Lifestyle' : 'New In');
         let sheet = doc.sheetsByTitle[sheetTitle];
 
         if (!sheet) {
@@ -296,6 +303,13 @@ export default async function handler(request, response) {
                 else if (lowerUrl.includes('boots.com')) retailer = 'Boots';
                 else if (lowerUrl.includes('hollandandbarrett.com')) retailer = 'Holland & Barrett';
                 else if (lowerUrl.includes('superdrug.com')) retailer = 'Superdrug';
+                else if (lowerUrl.includes('cultbeauty.co.uk') || lowerUrl.includes('cultbeauty.com')) retailer = 'Cult Beauty';
+                else if (lowerUrl.includes('lookfantastic.com')) retailer = 'Look Fantastic';
+                else if (lowerUrl.includes('spacenk.com')) retailer = 'Space NK';
+                else if (lowerUrl.includes('petsathome.com')) retailer = 'Pets at Home';
+                else if (lowerUrl.includes('zooplus.co.uk')) retailer = 'Zooplus';
+                else if (lowerUrl.includes('johnlewis.com')) retailer = 'John Lewis';
+                else if (lowerUrl.includes('mamasandpapas.com')) retailer = 'Mammas & Pappas';
                 else if (lowerUrl.includes('sainsburys.co.uk')) retailer = 'Sainsburys';
                 else if (lowerUrl.includes('tesco.com')) retailer = 'Tesco';
                 else if (lowerUrl.includes('asda.com')) retailer = 'Asda';
@@ -417,7 +431,7 @@ export default async function handler(request, response) {
                     const secondOne = words[1] || '';
                     const firstTwo = words.slice(0, 2).join(' ');
 
-                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks', 'Superdrug', 'Boots', 'Sephora'];
+                    const retailerKeywords = ['Tesco', 'Sainsbury', 'Asda', 'Morrisons', 'Waitrose', 'Ocado', 'M&S', 'Marks', 'Superdrug', 'Boots', 'Sephora', 'Cult Beauty', 'Look Fantastic', 'Space NK', 'Pets at Home', 'Zooplus', 'John Lewis', 'Mammas & Pappas'];
                     const isRetailerName = retailerKeywords.some(kw => firstOne.toLowerCase().includes(kw.toLowerCase()));
 
                     if (isRetailerName) {
@@ -553,7 +567,14 @@ export default async function handler(request, response) {
                 'Morrisons': ['morrison', 'the best', 'savers', 'morrisons', 'nutmeg', 'market street', 'v taste'],
                 'Ocado': ['ocado', 'ocado own range', 'm&s', 'marks & spencer'],
                 'Waitrose': ['waitrose', 'essential waitrose', 'no.1', 'duchy organic', 'waitrose & partners', 'lovifeel', 'heston', 'duchy', 'essentials'],
-                'Superdrug': ['superdrug', 'b.', 'b. by superdrug', 'studio', 'solait', 'me+', 'optimum', 'artisan']
+                'Superdrug': ['superdrug', 'b.', 'b. by superdrug', 'studio', 'solait', 'me+', 'optimum', 'artisan'],
+                'Cult Beauty': ['cult beauty'],
+                'Look Fantastic': ['look fantastic', 'lookfantastic'],
+                'Space NK': ['space nk'],
+                'Pets at Home': ['pets at home', 'wainwright', 'wainwrights', 'wainwright\'s'],
+                'Zooplus': ['zooplus', 'wolf of wilderness', 'purizon', 'concept for life', 'smilla', 'feringa'],
+                'John Lewis': ['john lewis', 'anyday'],
+                'Mammas & Pappas': ['mamas & papas', 'mamas and papas', 'mammas & pappas']
             };
 
             const lowercaseManufacturer = (manufacturer || '').toLowerCase();
