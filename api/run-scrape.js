@@ -43,7 +43,7 @@ export default async function handler(request, response) {
       'Look Fantastic': 'https://www.lookfantastic.com/c/health-beauty/new/new-in/\nhttps://www.lookfantastic.com/c/health-beauty/new/new-in/?pageNumber=2\nhttps://www.lookfantastic.com/c/health-beauty/new/new-in/?pageNumber=3',
       'Space NK': 'https://www.spacenk.com/uk/new?srule=New_In_with_category_position',
       'Pets at Home': 'https://www.petsathome.com/product/listing/cat?sortBy=new_in_date-desc',
-      'Zooplus': 'https://www.zooplus.co.uk/shop/new_products',
+      'Zooplus': 'https://www.zooplus.co.uk/specials/dogs/new_products/snacks/496024\nhttps://www.zooplus.co.uk/specials/dogs/new_products/dry_food/496022',
       'John Lewis': 'https://www.johnlewis.com/new-in/c8000021'
     };
 
