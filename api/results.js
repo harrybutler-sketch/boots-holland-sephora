@@ -26,6 +26,8 @@ export default async function handler(request, response) {
             sheetTitle = 'Beauty';
         } else if (workspace === 'linkedin' || workspace === 'news') {
             sheetTitle = 'LinkedIn';
+        } else if (workspace === 'lifestyle') {
+            sheetTitle = 'Lifestyle';
         }
 
         const sheet = doc.sheetsByTitle[sheetTitle] || doc.sheetsByTitle['New In'];

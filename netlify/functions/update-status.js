@@ -25,6 +25,8 @@ export const handler = async (event, context) => {
             sheetTitle = 'LinkedIn';
         } else if (workspace === 'beauty') {
             sheetTitle = 'Beauty';
+        } else if (workspace === 'lifestyle') {
+            sheetTitle = 'Lifestyle';
         }
 
         const sheet = doc.sheetsByTitle[sheetTitle] || doc.sheetsByTitle['New In'];

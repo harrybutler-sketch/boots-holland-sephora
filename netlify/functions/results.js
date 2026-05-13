@@ -36,6 +36,8 @@ export const handler = async (event, context) => {
             sheetName = 'Beauty';
         } else if (workspace === 'linkedin' || workspace === 'news') {
             sheetName = 'LinkedIn';
+        } else if (workspace === 'lifestyle') {
+            sheetName = 'Lifestyle';
         }
 
         const sheet = doc.sheetsByTitle[sheetName] || doc.sheetsByTitle['New In'] || doc.sheetsByIndex[0];

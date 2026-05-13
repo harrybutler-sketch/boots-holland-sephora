@@ -263,6 +263,9 @@ function App() {
 
 
   const displayData = data.filter(item => {
+    if (filters.hideDealt && item.status === 'Dealt With') {
+      return false;
+    }
     if (filters.clientStatus === 'Clients') {
       return clientList.some(c => item.manufacturer?.toLowerCase().includes(c.toLowerCase()) || item.product_name?.toLowerCase().includes(c.toLowerCase()));
     }
@@ -426,14 +429,22 @@ function App() {
               ));
 
               try {
-                await fetch('/api/update-status', {
+                const response = await fetch('/api/update-status', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ productUrl: url, status: newStatus, workspace: workspace })
                 });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                const result = await response.json();
+                
+                if (!result.success) {
+                  console.error('Backend failed to update status:', result.error);
+                  fetchResults(); // Revert on logic error
+                }
               } catch (e) {
                 console.error('Failed to update status:', e);
-                // Revert on error
+                // Revert on network error
                 fetchResults();
               }
             }}
