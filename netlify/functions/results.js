@@ -57,6 +57,15 @@ export const handler = async (event, context) => {
         // Filter Logic
         let filteredRows = rows;
 
+        // 0. Hide Dealt Filter
+        const hide_dealt = event.queryStringParameters.hide_dealt;
+        if (hide_dealt === 'true') {
+            filteredRows = filteredRows.filter(row => {
+                const status = (row.get('Status') || row.get('status') || row.get('dealtWith') || '').toString().toLowerCase();
+                return status !== 'dealt with' && status !== 'done' && status !== 'finished' && status !== 'true';
+            });
+        }
+
         // 1. Retailer Filter
         if (retailer && retailer !== 'All' && retailer !== 'All Retailers') {
             const rLower = retailer.toLowerCase();
