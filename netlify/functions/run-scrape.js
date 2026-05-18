@@ -140,7 +140,11 @@ export const handler = async (event, context) => {
       }
       if (pRetailers.some(r => r.includes('ocado'))) {
         const ocadoUrls = [
-          'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=favorite'
+          'https://www.ocado.com/categories/beer-wine-spirits/6e54f4dd-e9b2-4e0c-9bb9-34eaac450d8c?boolean=new&sortBy=favorite',
+          'https://www.ocado.com/categories/soft-drinks-tea-coffee/513db630-94bc-4ed0-9b62-fe038f108bb7?boolean=new&sortBy=favorite',
+          'https://www.ocado.com/categories/frozen-food/7fda9543-48ee-42f8-9efc-24fa959889c9?boolean=new&sortBy=favorite',
+          'https://www.ocado.com/categories/food-cupboard/e67ba77e-b886-4d6d-a42e-7aa75cc0d52d?boolean=new&sortBy=favorite',
+          'https://www.ocado.com/categories/fresh-chilled-food/01f3d930-813f-4038-983b-51bfcc7cb44e?boolean=new&sortBy=favorite'
         ];
         ocadoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Ocado', label: 'LISTING' } }));
       }
