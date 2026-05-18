@@ -120,7 +120,9 @@ export default async function handler(request, response) {
                 reviews: data['Review Count'] || data.reviews || data.rating_count || 0,
                 rating: data.Rating || data.rating_value,
                 status: data.Status || data.status || 'Pending',
-                image_url: data['Image URL'] || data.image_url || ''
+                image_url: data['Image URL'] || data.image_url || '',
+                contact_name: data['Contact Name'] || '',
+                contact_linkedin: data['Contact LinkedIn'] || ''
             };
         });
 

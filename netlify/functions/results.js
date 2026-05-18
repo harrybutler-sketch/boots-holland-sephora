@@ -162,22 +162,22 @@ export const handler = async (event, context) => {
 
         // Map to JSON
         const results = slicedRows.map(row => {
-            const dealtVal = row.get('dealtWith') || row.get('Status') || row.get('status');
-            const isDealtWith = dealtVal === 'TRUE' || dealtVal === 'Dealt With' || dealtVal === 'Done' || dealtVal === 'Finished';
-
             return {
-                date_found: row.get(dateHeader),
-                retailer: row.get('retailer'),
-                manufacturer: row.get('manufacturer') || row.get('source'), 
-                product_name: row.get('product') || row.get('product_name') || row.get('headline'), 
+                id: row.get('id') || '',
+                date_found: row.get('Date Found') || row.get(dateHeader) || '',
+                retailer: row.get('Retailer') || row.get('retailer') || '',
+                product_name: row.get('product') || row.get('product_name') || row.get('headline'),
                 brand: row.get('brand'),
-                category: row.get('category') || row.get('type') || (workspace === 'linkedin' ? 'LinkedIn' : 'New In'),
-                product_url: row.get(productUrlHeader),
-                image_url: row.get('image_url') || '',
-                price_display: row.get(priceHeader) || 'N/A',
-                reviews: row.get(reviewsHeader) || 0,
-                rating: row.get(ratingHeader) || 0,
-                status: isDealtWith ? 'Dealt With' : 'Pending'
+                manufacturer: row.get('manufacturer') || row.get('source'),
+                category: row.get('Category') || row.get('category') || row.get('type') || (workspace === 'linkedin' ? 'LinkedIn' : 'New In'),
+                product_url: row.get('Product URL') || row.get(productUrlHeader) || '',
+                price_display: row.get('Price') || row.get(priceHeader) || 'N/A',
+                reviews: row.get('Review Count') || row.get(reviewsHeader) || 0,
+                rating: row.get('Rating') || row.get(ratingHeader) || 0,
+                status: row.get('Status') || row.get('status') || 'Pending',
+                image_url: row.get('Image URL') || row.get('image_url') || '',
+                contact_name: row.get('Contact Name') || '',
+                contact_linkedin: row.get('Contact LinkedIn') || ''
             };
         });
 
