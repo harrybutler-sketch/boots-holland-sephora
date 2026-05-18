@@ -1,6 +1,7 @@
 import { ApifyClient } from 'apify-client';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { getGoogleAuth } from '../../lib/google-auth.js';
+import { clientList } from '../../frontend/src/clients.js';
 
 // --- LINKEDIN & NEWS HELPERS ---
 function extractRetailer(text) {
@@ -577,12 +578,67 @@ export default async (req, context) => {
         // Batch write to avoid timeouts/limits
         if (newRows.length > 0) {
             const BATCH_SIZE = 50;
+            const prospectBrands = new Set();
+
             for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
                 const chunk = newRows.slice(i, i + BATCH_SIZE);
                 console.log(`Writing batch ${i / BATCH_SIZE + 1} of ${Math.ceil(newRows.length / BATCH_SIZE)}...`);
                 await sheet.addRows(chunk);
+
+                // Identify Prospects from this chunk
+                for (const row of chunk) {
+                    if (isLinkedInContext) continue;
+                    
+                    const brand = row.brand || '';
+                    const mfn = row.manufacturer || '';
+                    
+                    // Filter out blanks or very generic
+                    if (brand.length < 2 && mfn.length < 2) continue;
+
+                    // Check if it's already a client
+                    const isClient = clientList.some(c => 
+                        (mfn && mfn.toLowerCase().includes(c.toLowerCase())) || 
+                        (brand && brand.toLowerCase().includes(c.toLowerCase()))
+                    );
+
+                    if (!isClient && brand) {
+                        prospectBrands.add(brand);
+                    } else if (!isClient && mfn) {
+                        prospectBrands.add(mfn);
+                    }
+                }
             }
             appendedCount = newRows.length;
+
+            // Trigger LinkedIn Contact Scrape for New Prospects
+            if (prospectBrands.size > 0) {
+                console.log(`Discovered ${prospectBrands.size} new prospects. Triggering Contact Scrape...`);
+                try {
+                    const searchQueries = Array.from(prospectBrands).map(b => 
+                        `site:linkedin.com/in "${b}" AND ("Founder" OR "CEO" OR "Director" OR "Head")`
+                    );
+                    
+                    const host = req.headers.host || 'boots-holland-sephora.vercel.app';
+                    const contactWebhookUrl = `https://${host}/api/contact-webhook?workspace=${workspace}`;
+
+                    // Using apify/google-search-scraper
+                    await client.actor('apify/google-search-scraper').start({
+                        queries: searchQueries.join('\n'),
+                        maxPagesPerQuery: 1,
+                        resultsPerPage: 3,
+                        countryCode: "gb",
+                        customData: JSON.stringify({ brands: Array.from(prospectBrands) })
+                    }, {
+                        webhooks: [{
+                            eventTypes: ['ACTOR.RUN.SUCCEEDED'],
+                            requestUrl: contactWebhookUrl
+                        }]
+                    });
+                    console.log('Successfully triggered Contact Scrape for prospects.');
+                } catch (err) {
+                    console.error('Failed to trigger contact scrape:', err.message);
+                }
+            }
 
             // ZOHO FLOW INTEGRATION
             const ZOHO_WEBHOOK_URL = process.env.ZOHO_FLOW_WEBHOOK_URL;
