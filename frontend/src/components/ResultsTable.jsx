@@ -109,29 +109,74 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                                 </span>
                                             ) : null;
                                         })()}
-                                        {item.contact_linkedin ? (
-                                            <a
-                                                href={item.contact_linkedin}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title={`Contact: ${item.contact_name || 'View Profile'}`}
-                                                style={{
-                                                    fontSize: '12px',
-                                                    background: '#10b981', // Green to show we found them
-                                                    color: 'white',
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    borderRadius: '4px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    textDecoration: 'none',
-                                                    fontWeight: 'bold',
-                                                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
-                                                }}
-                                            >
-                                                👤
-                                            </a>
+                                        {item.contact_name ? (
+                                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                                                <button
+                                                    title="View Contacts"
+                                                    onMouseEnter={(e) => { e.currentTarget.nextElementSibling.style.display = 'block'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.nextElementSibling.style.display = 'none'; }}
+                                                    style={{
+                                                        fontSize: '12px',
+                                                        background: '#10b981',
+                                                        color: 'white',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '4px',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontWeight: 'bold',
+                                                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                                                    }}
+                                                >
+                                                    👥
+                                                </button>
+                                                <div 
+                                                    onMouseEnter={(e) => { e.currentTarget.style.display = 'block'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                    style={{
+                                                        display: 'none',
+                                                        position: 'absolute',
+                                                        left: '100%',
+                                                        top: '0',
+                                                        marginLeft: '8px',
+                                                        background: 'white',
+                                                        border: '1px solid #e2e8f0',
+                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                                        borderRadius: '6px',
+                                                        padding: '12px',
+                                                        zIndex: 50,
+                                                        width: 'max-content',
+                                                        minWidth: '220px',
+                                                        fontSize: '12px',
+                                                        color: 'var(--color-text-primary)'
+                                                    }}
+                                                >
+                                                    <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', color: 'var(--color-text-secondary)' }}>Suggested Contacts</div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {item.contact_name.split('\n').map((name, i) => {
+                                                            const urls = item.contact_linkedin ? item.contact_linkedin.split('\n') : [];
+                                                            const cleanName = name.replace(/^\d+\.\s*/, '');
+                                                            let cleanUrl = urls[i] ? urls[i].replace(/^\d+\.\s*/, '') : '';
+                                                            if (cleanUrl && !cleanUrl.startsWith('http')) cleanUrl = 'https://' + cleanUrl;
+                                                            return (
+                                                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                                                                    <span style={{ marginTop: '2px' }}>👤</span>
+                                                                    {cleanUrl ? (
+                                                                        <a href={cleanUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0a66c2', textDecoration: 'none', fontWeight: '500', lineHeight: '1.4' }}>
+                                                                            {cleanName}
+                                                                        </a>
+                                                                    ) : (
+                                                                        <span style={{ fontWeight: '500', lineHeight: '1.4' }}>{cleanName}</span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         ) : (
                                             <a
                                                 href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(item.manufacturer)}%20Founder`}
