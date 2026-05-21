@@ -639,10 +639,13 @@ export default async function handler(request, response) {
                     if (brand.length < 2 && mfn.length < 2) continue;
 
                     // Check if it's already a client
-                    const isClient = clientList.some(c => 
-                        (mfn && mfn.toLowerCase().includes(c.toLowerCase())) || 
-                        (brand && brand.toLowerCase().includes(c.toLowerCase()))
-                    );
+                    const isClient = clientList.some(c => {
+                        const term = c.trim();
+                        if (!term) return false;
+                        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`(^|[^a-zA-Z0-9])${escapeRegExp(term)}([^a-zA-Z0-9]|$)`, 'i');
+                        return regex.test(mfn || '') || regex.test(brand || '');
+                    });
 
                     if (!isClient && brand) {
                         prospectBrands.add(brand);
