@@ -92,9 +92,21 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                         >
                                             {item.manufacturer}
                                         </a>
-                                        {clientList.some(c => item.manufacturer?.toLowerCase().includes(c.toLowerCase()) || item.product_name?.toLowerCase().includes(c.toLowerCase())) && (
-                                            <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help' }}>⭐</span>
-                                        )}
+                                        {(() => {
+                                            const matchedClient = clientList.find(c => {
+                                                const term = c.trim().toLowerCase();
+                                                if (term.length === 0) return false;
+                                                return (item.manufacturer?.toLowerCase().includes(term)) || 
+                                                       (item.brand?.toLowerCase().includes(term)) ||
+                                                       (item.product_name?.toLowerCase().includes(term)) ||
+                                                       (item.product?.toLowerCase().includes(term));
+                                            });
+                                            return matchedClient ? (
+                                                <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(244, 185, 91, 0.2)', padding: '2px 6px', borderRadius: '4px', color: '#92400e', fontWeight: '700' }}>
+                                                    ⭐ <span style={{fontSize: '0.75rem', lineHeight: '1'}}>{matchedClient}</span>
+                                                </span>
+                                            ) : null;
+                                        })()}
                                         {item.contact_linkedin ? (
                                             <a
                                                 href={item.contact_linkedin}

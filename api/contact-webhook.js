@@ -50,17 +50,20 @@ export default async function handler(request, response) {
             const brand = brandMatch ? brandMatch[1] : null;
 
             if (brand && item.organicResults && item.organicResults.length > 0) {
-                // Get top result
-                const topResult = item.organicResults[0];
-                const url = topResult.url;
-                let name = topResult.title.split(' - ')[0].trim();
-                
-                // Clean up name (e.g. "John Doe - Founder")
-                if (name.includes('|')) name = name.split('|')[0].trim();
+                const names = [];
+                const urls = [];
+
+                for (let i = 0; i < Math.min(5, item.organicResults.length); i++) {
+                    const result = item.organicResults[i];
+                    let name = result.title.split(' - ')[0].trim();
+                    if (name.includes('|')) name = name.split('|')[0].trim();
+                    names.push(`${i + 1}. ${name}`);
+                    urls.push(`${i + 1}. ${result.url}`);
+                }
 
                 brandContacts[brand] = {
-                    name: name,
-                    url: url
+                    name: names.join('\n'),
+                    url: urls.join('\n')
                 };
             }
         }

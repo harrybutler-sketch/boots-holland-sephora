@@ -658,7 +658,7 @@ export default async function handler(request, response) {
                 console.log(`Discovered ${prospectBrands.size} new prospects. Triggering Contact Scrape...`);
                 try {
                     const searchQueries = Array.from(prospectBrands).map(b => 
-                        `site:linkedin.com/in "${b}" AND ("Founder" OR "CEO" OR "Director" OR "Head")`
+                        `site:uk.linkedin.com/in "${b}" ("Founder" OR "Co-Founder" OR "CEO" OR "Managing Director" OR "Sales Director" OR "Commercial Director" OR "Head of Sales" OR "Head of Commercial")`
                     );
                     
                     const host = request.headers.host || 'boots-holland-sephora.vercel.app';
@@ -668,7 +668,7 @@ export default async function handler(request, response) {
                     await client.actor('apify/google-search-scraper').start({
                         queries: searchQueries.join('\n'),
                         maxPagesPerQuery: 1,
-                        resultsPerPage: 3,
+                        resultsPerPage: 5,
                         countryCode: "gb",
                         customData: JSON.stringify({ brands: Array.from(prospectBrands) })
                     }, {

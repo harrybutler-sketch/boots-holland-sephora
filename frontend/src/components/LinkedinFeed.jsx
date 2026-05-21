@@ -139,11 +139,20 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
         if (filterDealt === 'Dealt With' && !item.dealtWith) return false;
         if (filterDealt === 'Not Dealt With' && item.dealtWith) return false;
 
+        const isClient = () => clientList.some(c => {
+            const term = c.trim().toLowerCase();
+            if (!term) return false;
+            return (item.manufacturer || '').toLowerCase().includes(term) || 
+                   (item.brand || '').toLowerCase().includes(term) || 
+                   (item.product || '').toLowerCase().includes(term) || 
+                   (item.product_name || '').toLowerCase().includes(term);
+        });
+
         if (filterClient === 'Clients') {
-            if (!clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.product || '').toLowerCase().includes(c.toLowerCase()))) return false;
+            if (!isClient()) return false;
         }
         if (filterClient === 'Non-Clients') {
-            if (clientList.some(c => (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.product || '').toLowerCase().includes(c.toLowerCase()))) return false;
+            if (isClient()) return false;
         }
 
         return true;
@@ -322,9 +331,21 @@ const LinkedinFeed = ({ onRunLinkedinScrape, runStatus }) => {
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     {item.brand}
-                                    {clientList.some(c => (item.brand || '').toLowerCase().includes(c.toLowerCase()) || (item.manufacturer || '').toLowerCase().includes(c.toLowerCase()) || (item.product || '').toLowerCase().includes(c.toLowerCase())) && (
-                                        <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help', marginLeft: '4px' }}>⭐</span>
-                                    )}
+                                    {(() => {
+                                        const matchedClient = clientList.find(c => {
+                                            const term = c.trim().toLowerCase();
+                                            if (!term) return false;
+                                            return (item.brand || '').toLowerCase().includes(term) || 
+                                                   (item.manufacturer || '').toLowerCase().includes(term) || 
+                                                   (item.product || '').toLowerCase().includes(term) || 
+                                                   (item.product_name || '').toLowerCase().includes(term);
+                                        });
+                                        return matchedClient ? (
+                                            <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help', marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(244, 185, 91, 0.2)', padding: '2px 6px', borderRadius: '4px', color: '#92400e', fontWeight: '700' }}>
+                                                ⭐ <span style={{fontSize: '0.75rem', lineHeight: '1'}}>{matchedClient}</span>
+                                            </span>
+                                        ) : null;
+                                    })()}
                                 </div>
                                 <h3 style={{ margin: '0.25rem 0', fontSize: '1.25rem', fontWeight: 'bold' }}>
                                     {item.product}
