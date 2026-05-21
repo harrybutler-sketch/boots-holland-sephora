@@ -94,12 +94,14 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                         </a>
                                         {(() => {
                                             const matchedClient = clientList.find(c => {
-                                                const term = c.trim().toLowerCase();
+                                                const term = c.trim();
                                                 if (term.length === 0) return false;
-                                                return (item.manufacturer?.toLowerCase().includes(term)) || 
-                                                       (item.brand?.toLowerCase().includes(term)) ||
-                                                       (item.product_name?.toLowerCase().includes(term)) ||
-                                                       (item.product?.toLowerCase().includes(term));
+                                                const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                                const regex = new RegExp(`(^|[^a-zA-Z0-9])${escapeRegExp(term)}([^a-zA-Z0-9]|$)`, 'i');
+                                                return regex.test(item.manufacturer || '') || 
+                                                       regex.test(item.brand || '') ||
+                                                       regex.test(item.product_name || '') ||
+                                                       regex.test(item.product || '');
                                             });
                                             return matchedClient ? (
                                                 <span title="Existing Client" style={{ fontSize: '1rem', cursor: 'help', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(244, 185, 91, 0.2)', padding: '2px 6px', borderRadius: '4px', color: '#92400e', fontWeight: '700' }}>
