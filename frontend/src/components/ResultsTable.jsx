@@ -113,8 +113,10 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                             <div style={{ position: 'relative', display: 'inline-block' }}>
                                                 <button
                                                     title="View Contacts"
-                                                    onMouseEnter={(e) => { e.currentTarget.nextElementSibling.style.display = 'block'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.nextElementSibling.style.display = 'none'; }}
+                                                    onClick={(e) => {
+                                                        const el = e.currentTarget.nextElementSibling;
+                                                        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+                                                    }}
                                                     style={{
                                                         fontSize: '12px',
                                                         background: '#10b981',
@@ -134,8 +136,6 @@ const ResultsTable = ({ data, loading, onToggleStatus }) => {
                                                     👥
                                                 </button>
                                                 <div 
-                                                    onMouseEnter={(e) => { e.currentTarget.style.display = 'block'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.display = 'none'; }}
                                                     style={{
                                                         display: 'none',
                                                         position: 'absolute',

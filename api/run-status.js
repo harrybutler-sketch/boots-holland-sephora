@@ -658,7 +658,7 @@ export default async function handler(request, response) {
                 console.log(`Discovered ${prospectBrands.size} new prospects. Triggering Contact Scrape...`);
                 try {
                     const searchQueries = Array.from(prospectBrands).map(b => 
-                        `site:uk.linkedin.com/in "${b}" ("Founder" OR "Co-Founder" OR "CEO" OR "Managing Director" OR "Sales Director" OR "Commercial Director" OR "Head of Sales" OR "Head of Commercial")`
+                        `site:uk.linkedin.com/in intitle:"${b}" ("Founder" OR "Co-Founder" OR "CEO" OR "Managing Director" OR "Sales Director" OR "Commercial Director" OR "Head of Sales" OR "Head of Commercial")`
                     );
                     
                     const host = request.headers.host || 'boots-holland-sephora.vercel.app';
