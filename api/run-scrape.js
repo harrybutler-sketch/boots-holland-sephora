@@ -585,17 +585,33 @@ export default async function handler(request, response) {
 
             const products = await page.evaluate((retailer) => {
                 // Selector from my recent live inspection of H&B and Sephora
-                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"]';
+                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"], li[data-feelunique-datalayer-push], a.Product-link';
                 const items = Array.from(document.querySelectorAll(cardSelector));
                 
                 return items.map(el => {
                     const res = {};
-                    const linkEl = el.querySelector('a');
+                    const linkEl = el.tagName === 'A' ? el : el.querySelector('a');
                     res.product_url = linkEl ? linkEl.href : null;
                     
-                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]');
-                    res.product_name = nameEl ? nameEl.innerText.trim() : 'Unknown Product';
+                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]') || (linkEl ? linkEl.querySelector('img') : null);
+                    res.product_name = nameEl ? (nameEl.innerText ? nameEl.innerText.trim() : (nameEl.alt ? nameEl.alt.trim() : 'Unknown Product')) : 'Unknown Product';
                     
+                    // Fallback to reading datalayer if available
+                    if (res.product_name === 'Unknown Product' && el.dataset.feeluniqueDatalayerPush) {
+                        try {
+                            const data = JSON.parse(el.dataset.feeluniqueDatalayerPush);
+                            if (data.click && data.click.products && data.click.products[0]) {
+                                res.product_name = data.click.products[0].name;
+                            }
+                        } catch(e) {}
+                    }
+                    
+                    if (res.product_name === 'Unknown Product' && el.tagName === 'A') {
+                        // Sephora sometimes puts title in the datalayer JSON or alt tag of img
+                        const img = el.querySelector('img');
+                        if (img && img.alt) res.product_name = img.alt;
+                    }
+
                     // Specific Own Brand filtering for April 13th restoration
                     if (retailer === 'Sephora') {
                         const brandText = el.innerText.toLowerCase();
