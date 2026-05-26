@@ -585,7 +585,7 @@ export default async function handler(request, response) {
 
             const products = await page.evaluate((retailer) => {
                 // Selector from my recent live inspection of H&B and Sephora
-                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"], li[data-feelunique-datalayer-push], a.Product-link';
+                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"], a.Product-link';
                 const items = Array.from(document.querySelectorAll(cardSelector));
                 
                 return items.map(el => {
