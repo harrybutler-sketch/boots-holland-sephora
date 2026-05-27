@@ -54,7 +54,10 @@ export default async function handler(request, response) {
                 const rowRetailer = (row.get('Retailer') || row.get('retailer') || '').toString().toLowerCase();
                 if (rLower.includes('holland') && rowRetailer.includes('holland')) return true;
                 if (rLower.includes('sephora') && rowRetailer.includes('sepho')) return true;
-                return rowRetailer === rLower;
+                
+                // Normalize by removing spaces and punctuation to handle Sainsbury's vs Sainsburys
+                const clean = s => s.replace(/[^a-z0-9]/g, '');
+                return clean(rowRetailer) === clean(rLower);
             });
         }
 

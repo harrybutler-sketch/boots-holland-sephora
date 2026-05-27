@@ -73,7 +73,10 @@ export const handler = async (event, context) => {
                 const rowRetailer = (row.get('retailer') || row.get('Retailer') || '').toString().toLowerCase();
                 if (rLower.includes('holland') && rowRetailer.includes('holland')) return true;
                 if (rLower.includes('sephora') && rowRetailer.includes('sepho')) return true;
-                return rowRetailer === rLower;
+                
+                // Normalize by removing spaces and punctuation to handle Sainsbury's vs Sainsburys
+                const clean = s => s.replace(/[^a-z0-9]/g, '');
+                return clean(rowRetailer) === clean(rLower);
             });
         }
 

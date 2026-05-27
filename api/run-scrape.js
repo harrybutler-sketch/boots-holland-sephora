@@ -169,7 +169,7 @@ export default async function handler(request, response) {
       }
 
       if (startUrls.length > 0) {
-        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, pushData }) => {
             const { url, userData: { retailer, label } } = request;
             
             await page.setViewport({ width: 1920, height: 1080 });
@@ -251,16 +251,18 @@ export default async function handler(request, response) {
 
             log.info(\`Filtered to \${filtered.length} non-own-brand products.\`);
 
+            for (const p of filtered) {
+                await pushData(p);
+            }
+
             await enqueueLinks({ 
                 selector: 'a[aria-label*="next page"], [data-testid="pagination-next"], a.pagination--button--next', 
                 label: 'LISTING', 
                 userData: { retailer: 'Tesco' } 
             }).catch(() => {});
-
-            return filtered;
         }`;
 
-        const ASDA_STABLE_PAGE_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
+        const ASDA_STABLE_PAGE_FUNCTION = `async ({ page, request, log, enqueueLinks, pushData }) => {
             const { url, userData: { retailer, label } } = request;
             
             await page.setViewport({ width: 1920, height: 1080 });
@@ -337,13 +339,15 @@ export default async function handler(request, response) {
 
             log.info(\`Filtered to \${filtered.length} non-own-brand Asda products.\`);
 
+            for (const p of filtered) {
+                await pushData(p);
+            }
+
             await enqueueLinks({ 
                 selector: 'a[aria-label="Next page"], button[aria-label="Next page"], .co-pagination__next', 
                 label: 'LISTING', 
                 userData: { retailer: 'Asda' } 
             }).catch(() => {});
-
-            return filtered;
         }`;
 
         const STABLE_PAGE_FUNCTION = `async (context) => {
@@ -585,33 +589,17 @@ export default async function handler(request, response) {
 
             const products = await page.evaluate((retailer) => {
                 // Selector from my recent live inspection of H&B and Sephora
-                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"], a.Product-link';
+                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"]';
                 const items = Array.from(document.querySelectorAll(cardSelector));
                 
                 return items.map(el => {
                     const res = {};
-                    const linkEl = el.tagName === 'A' ? el : el.querySelector('a');
+                    const linkEl = el.querySelector('a');
                     res.product_url = linkEl ? linkEl.href : null;
                     
-                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]') || (linkEl ? linkEl.querySelector('img') : null);
-                    res.product_name = nameEl ? (nameEl.innerText ? nameEl.innerText.trim() : (nameEl.alt ? nameEl.alt.trim() : 'Unknown Product')) : 'Unknown Product';
+                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]');
+                    res.product_name = nameEl ? nameEl.innerText.trim() : 'Unknown Product';
                     
-                    // Fallback to reading datalayer if available
-                    if (res.product_name === 'Unknown Product' && el.dataset.feeluniqueDatalayerPush) {
-                        try {
-                            const data = JSON.parse(el.dataset.feeluniqueDatalayerPush);
-                            if (data.click && data.click.products && data.click.products[0]) {
-                                res.product_name = data.click.products[0].name;
-                            }
-                        } catch(e) {}
-                    }
-                    
-                    if (res.product_name === 'Unknown Product' && el.tagName === 'A') {
-                        // Sephora sometimes puts title in the datalayer JSON or alt tag of img
-                        const img = el.querySelector('img');
-                        if (img && img.alt) res.product_name = img.alt;
-                    }
-
                     // Specific Own Brand filtering for April 13th restoration
                     if (retailer === 'Sephora') {
                         const brandText = el.innerText.toLowerCase();
