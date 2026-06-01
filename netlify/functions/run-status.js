@@ -139,7 +139,14 @@ export default async (req, context) => {
         await doc.loadInfo();
 
         // Select tab based on workspace/actor
-        let sheetTitle = workspace === 'grocery' ? 'Grocery' : 'Beauty';
+        let sheetTitle = 'New In';
+        if (workspace === 'grocery') {
+            sheetTitle = 'Grocery';
+        } else if (workspace === 'beauty') {
+            sheetTitle = 'Beauty';
+        } else if (workspace === 'lifestyle') {
+            sheetTitle = 'Lifestyle';
+        }
         if (isLinkedInContext) sheetTitle = 'LinkedIn';
 
         let sheet = doc.sheetsByTitle[sheetTitle];
@@ -304,8 +311,8 @@ export default async (req, context) => {
                 continue;
             }
 
-            if (!name) {
-                console.log('Skipping item with no product name:', JSON.stringify(item));
+            if (!name || name === 'Unknown Product' || name.toLowerCase() === 'unknown product') {
+                console.log('Skipping item with invalid/unknown product name:', JSON.stringify(item));
                 continue;
             }
 

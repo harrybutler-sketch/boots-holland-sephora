@@ -44,7 +44,23 @@ async function processRunLocally(runId) {
 
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
-        const sheet = doc.sheetsByIndex[0];
+        let workspace = 'beauty';
+        let sheetTitle = 'New In';
+        if (workspace === 'grocery') {
+            sheetTitle = 'Grocery';
+        } else if (workspace === 'beauty') {
+            sheetTitle = 'Beauty';
+        } else if (workspace === 'lifestyle') {
+            sheetTitle = 'Lifestyle';
+        }
+        let sheet = doc.sheetsByTitle[sheetTitle];
+        if (!sheet) {
+            console.log(`Creating new sheet tab: ${sheetTitle}`);
+            sheet = await doc.addSheet({
+                title: sheetTitle,
+                headerValues: ['Date Found', 'Retailer', 'Manufacturer', 'Product', 'Brand', 'Price', 'Review Count', 'Rating', 'Product URL', 'Status', 'Run ID', 'Timestamp', 'Category']
+            });
+        }
         console.log(`Sheet: ${sheet.title}`);
 
         // Fetch existing rows
@@ -81,9 +97,14 @@ async function processRunLocally(runId) {
                 else retailer = 'Unknown';
             }
 
+            let name = item.product_name || item.productName || item.name || item.title || '';
+            if (!name || name === 'Unknown Product' || name.toLowerCase() === 'unknown product') {
+                continue;
+            }
+
             // Using logic from run-status.js
             newRows.push({
-                'product': item.title || item.name || item.productName || item.product_name || '',
+                'product': name,
                 'retailer': retailer,
                 'product url': url,
                 'price': item.price_display || `${currency} ${price}`,
@@ -121,4 +142,4 @@ async function processRunLocally(runId) {
 }
 
 // Run ID from Step 1035
-processRunLocally('E27iC1Q8jIdoyZSrE');
+processRunLocally('XJkoW61kdt0cGdu83');

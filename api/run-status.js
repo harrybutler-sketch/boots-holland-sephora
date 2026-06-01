@@ -195,7 +195,14 @@ export default async function handler(request, response) {
         }
 
         // Select tab based on workspace
-        const sheetTitle = workspace === 'grocery' ? 'Grocery' : (workspace === 'lifestyle' ? 'Lifestyle' : 'New In');
+        let sheetTitle = 'New In';
+        if (workspace === 'grocery') {
+            sheetTitle = 'Grocery';
+        } else if (workspace === 'beauty') {
+            sheetTitle = 'Beauty';
+        } else if (workspace === 'lifestyle') {
+            sheetTitle = 'Lifestyle';
+        }
         let sheet = doc.sheetsByTitle[sheetTitle];
 
         if (!sheet) {
@@ -332,8 +339,8 @@ export default async function handler(request, response) {
                 continue;
             }
 
-            if (!name) {
-                console.log('Skipping item with no product name:', JSON.stringify(item));
+            if (!name || name === 'Unknown Product' || name.toLowerCase() === 'unknown product') {
+                console.log('Skipping item with invalid/unknown product name:', JSON.stringify(item));
                 continue;
             }
 

@@ -111,7 +111,7 @@ export default async function handler(request, response) {
         startUrls.push({ url: 'https://www.boots.com/new-to-boots', userData: { retailer: 'Boots', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('holland'))) {
-        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/highlights/new-in/?category=8939&page=2#products-list', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
+        startUrls.push({ url: 'https://www.hollandandbarrett.com/shop/highlights/new-in/?category=8939&so=New', userData: { retailer: 'Holland & Barrett', label: 'LISTING' } });
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
@@ -589,24 +589,40 @@ export default async function handler(request, response) {
 
             const products = await page.evaluate((retailer) => {
                 // Selector from my recent live inspection of H&B and Sephora
-                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"]';
+                const cardSelector = '.product-card, [class*="productCard"], .ProductCard, [class*="ProductCard"], a.Product-link, a[class*="ProductCard-module_link"]';
                 const items = Array.from(document.querySelectorAll(cardSelector));
                 
                 return items.map(el => {
                     const res = {};
-                    const linkEl = el.querySelector('a');
+                    const linkEl = el.tagName === 'A' ? el : el.querySelector('a');
                     res.product_url = linkEl ? linkEl.href : null;
                     
-                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]');
-                    res.product_name = nameEl ? nameEl.innerText.trim() : 'Unknown Product';
+                    const nameEl = el.querySelector('h3, [class*="title"], [class*="productName"]') || (linkEl ? linkEl.querySelector('img') : null);
+                    res.product_name = nameEl ? (nameEl.innerText ? nameEl.innerText.trim() : (nameEl.alt ? nameEl.alt.trim() : 'Unknown Product')) : 'Unknown Product';
                     
+                    // Fallback to reading datalayer if available
+                    if (res.product_name === 'Unknown Product' && el.dataset.feeluniqueDatalayerPush) {
+                        try {
+                            const data = JSON.parse(el.dataset.feeluniqueDatalayerPush);
+                            if (data.click && data.click.products && data.click.products[0]) {
+                                res.product_name = data.click.products[0].name;
+                            }
+                        } catch(e) {}
+                    }
+                    
+                    if (res.product_name === 'Unknown Product' && el.tagName === 'A') {
+                        // Sephora/H&B image alt tags fallback
+                        const img = el.querySelector('img');
+                        if (img && img.alt) res.product_name = img.alt;
+                    }
+
                     // Specific Own Brand filtering for April 13th restoration
                     if (retailer === 'Sephora') {
                         const brandText = el.innerText.toLowerCase();
                         res.isOwnBrand = brandText.includes('sephora') || brandText.includes('sephora collection');
                     } else if (retailer === 'Holland & Barrett') {
                         const brandText = el.innerText.toLowerCase();
-                        res.isOwnBrand = brandText.includes('holland') || brandText.includes('h&b') || brandText.includes('holland & barrett');
+                        res.isOwnBrand = brandText.includes('holland') || brandText.includes('h&b') || brandText.includes('holland & barrett') || brandText.includes('holland and barrett');
                     }
                     
                     res.retailer = retailer;
