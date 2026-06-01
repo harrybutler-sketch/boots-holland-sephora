@@ -896,6 +896,9 @@ export default async function handler(request, response) {
           const run = await client.actor('apify/puppeteer-scraper').start({
             startUrls: beautyStartUrls,
             pageFunction: BEAUTY_STABLE_PAGE_FUNCTION,
+            linkSelector: 'a.never-match-this-dummy-selector',
+            globs: [{ glob: 'https://nevermatch.com/dummy' }],
+            pseudoUrls: [{ purl: 'https://nevermatch.com/dummy' }],
             proxyConfiguration: { 
               useApifyProxy: true, 
               apifyProxyGroups: ['RESIDENTIAL'], 
