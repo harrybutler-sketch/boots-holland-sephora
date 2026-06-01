@@ -169,7 +169,9 @@ export default async function handler(request, response) {
       }
 
       if (startUrls.length > 0) {
-        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, pushData }) => {
+        const TESCO_RESILIENT_FUNCTION = `async (context) => {
+            const { page, request, log, enqueueLinks, pushData } = context;
+            log.info('Available context keys: ' + Object.keys(context).join(', '));
             const { url, userData: { retailer, label } } = request;
             
             await page.setViewport({ width: 1920, height: 1080 });
@@ -213,12 +215,20 @@ export default async function handler(request, response) {
 
             // Debugging capture
             try {
-                const { Actor } = await import('apify');
                 const screenshot = await page.screenshot({ fullPage: true });
-                await Actor.setValue('TESCO_PAGE_CAPTURE', screenshot, { contentType: 'image/png' });
-                const html = await page.content();
-                await Actor.setValue('TESCO_PAGE_HTML', html, { contentType: 'text/html' });
-                log.info('Saved TESCO_PAGE_CAPTURE and TESCO_PAGE_HTML to key-value store.');
+                if (context.keyValueStore) {
+                    await context.keyValueStore.setValue('TESCO_PAGE_CAPTURE', screenshot, { contentType: 'image/png' });
+                    const html = await page.content();
+                    await context.keyValueStore.setValue('TESCO_PAGE_HTML', html, { contentType: 'text/html' });
+                    log.info('Saved debug capture using context.keyValueStore.');
+                } else if (context.setValue) {
+                    await context.setValue('TESCO_PAGE_CAPTURE', screenshot, { contentType: 'image/png' });
+                    const html = await page.content();
+                    await context.setValue('TESCO_PAGE_HTML', html, { contentType: 'text/html' });
+                    log.info('Saved debug capture using context.setValue.');
+                } else {
+                    log.warning('No setValue or keyValueStore found in context.');
+                }
             } catch (err) {
                 log.warning('Failed to save debug capture: ' + err.message);
             }
