@@ -170,8 +170,7 @@ export const handler = async (event, context) => {
                 'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',
-                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-                'referer': 'https://www.google.com/'
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8'
             });
 
             log.info('Initial page URL: ' + page.url());
@@ -182,7 +181,7 @@ export const handler = async (event, context) => {
             await new Promise(r => setTimeout(r, 4000));
             
             log.info('Navigating to target browse URL: ' + targetUrl);
-            const navResponse = await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
+            const navResponse = await page.goto(targetUrl, { referer: 'https://www.tesco.com/groceries/en-GB/', waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
                 log.error('Primary target navigation failed: ' + e.message);
                 return null;
             });
