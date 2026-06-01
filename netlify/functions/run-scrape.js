@@ -158,10 +158,14 @@ export const handler = async (event, context) => {
       if (startUrls.length > 0) {
         console.log('Starting Puppeteer Scraper...');
         
-        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, response }) => {
-            const { url, userData: { retailer, label } } = request;
+        const TESCO_RESILIENT_FUNCTION = `async (context) => {
+            const { page, request, log, enqueueLinks, pushData } = context;
+            log.info('Available context keys: ' + Object.keys(context).join(', '));
+            const { url, userData } = request;
+            const targetUrl = (userData && userData.targetUrl) ? userData.targetUrl : url;
             
             await page.setViewport({ width: 1920, height: 1080 });
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
             await page.setExtraHTTPHeaders({
                 'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
                 'sec-ch-ua-mobile': '?0',
@@ -170,49 +174,62 @@ export const handler = async (event, context) => {
                 'referer': 'https://www.google.com/'
             });
 
+            log.info('Initial page URL: ' + page.url());
+
             // Warming/Bypass
-            log.info('Warming Tesco session...');
-            await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
-            await new Promise(r => setTimeout(r, 2000));
-            log.info('Navigating to target: ' + url);
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+            log.info('Warming Tesco Groceries session...');
+            await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch((e) => log.warning('Warming groceries navigation failed: ' + e.message + ', continuing...'));
+            await new Promise(r => setTimeout(r, 4000));
+            
+            log.info('Navigating to target browse URL: ' + targetUrl);
+            const navResponse = await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
+                log.error('Primary target navigation failed: ' + e.message);
+                return null;
+            });
+
+            if (!navResponse) {
+                log.warning('Attempting to proceed despite target navigation error...');
+            }
 
             // Cookie Acceptance
             try {
                 const cookieId = 'button.ddsweb-consent-banner__button';
-                await page.waitForSelector(cookieId, { timeout: 5000 });
+                await page.waitForSelector(cookieId, { timeout: 8000 });
                 await page.click(cookieId);
-                await new Promise(r => setTimeout(r, 1000));
-            } catch (e) {}
+                await new Promise(r => setTimeout(r, 1500));
+            } catch (e) {
+                log.info('Cookie banner not found or already accepted.');
+            }
 
-            // Wait for products
+            // Wait for products - more robust selectors
             log.info('Waiting for product items...');
-            const productSelector = 'li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item';
-            await page.waitForSelector(productSelector, { timeout: 30000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
+            const productSelector = 'li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, .styles__StyledTiledQueryResult-sc';
+            await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
 
             // Scroll for hydration
-            for (let i = 0; i < 8; i++) {
+            log.info('Scrolling for hydration...');
+            for (let i = 0; i < 12; i++) {
                 await page.evaluate(() => window.scrollBy(0, 800));
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 800));
             }
 
             // Extraction
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, article'));
+                const tiles = Array.from(document.querySelectorAll('li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, article, [class*="StyledTiledQueryResult"] li'));
                 return tiles.map(tile => {
-                    const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"]');
+                    const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"], [data-testid="product-title"]');
                     if (!nameEl) return null;
                     const name = nameEl.innerText.trim();
                     if (!name || name.length < 3) return null;
 
-                    const priceEl = tile.querySelector('p[class*="PriceText"], p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price');
+                    const priceEl = tile.querySelector('p[class*="PriceText"], p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price, .styles__StyledPrice-sc');
                     const imgEl = tile.querySelector('img');
 
                     return {
                         product_name: name,
                         retailer: 'Tesco',
                         price_display: priceEl?.innerText?.trim() || 'N/A',
-                        product_url: nameEl.href,
+                        product_url: nameEl.href || window.location.href,
                         image_url: imgEl?.src || '',
                         date_found: new Date().toISOString()
                     };
@@ -223,12 +240,18 @@ export const handler = async (event, context) => {
 
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
-                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell');
+                const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms price');
                 return !isOwnBrand;
             });
 
+            log.info(\`Filtered to \${filtered.length} non-own-brand products.\`);
+
+            for (const p of filtered) {
+                await pushData(p);
+            }
+
             await enqueueLinks({ 
-                selector: 'a[aria-label*="next page"], [data-testid="pagination-next"]', 
+                selector: 'a[aria-label*="next page"], [data-testid="pagination-next"], a.pagination--button--next', 
                 label: 'LISTING', 
                 userData: { retailer: 'Tesco' } 
             }).catch(() => {});
@@ -685,8 +708,15 @@ export const handler = async (event, context) => {
         );
 
         if (tescoStartUrls.length > 0) {
+          const mappedTescoUrls = tescoStartUrls.map(u => ({
+            url: 'https://www.tesco.com/',
+            userData: {
+              ...u.userData,
+              targetUrl: u.url
+            }
+          }));
           const run = await client.actor('apify/puppeteer-scraper').start({
-            startUrls: tescoStartUrls,
+            startUrls: mappedTescoUrls,
             pageFunction: TESCO_RESILIENT_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             useStealth: true,

@@ -172,9 +172,11 @@ export default async function handler(request, response) {
         const TESCO_RESILIENT_FUNCTION = `async (context) => {
             const { page, request, log, enqueueLinks, pushData } = context;
             log.info('Available context keys: ' + Object.keys(context).join(', '));
-            const { url, userData: { retailer, label } } = request;
+            const { url, userData } = request;
+            const targetUrl = (userData && userData.targetUrl) ? userData.targetUrl : url;
             
             await page.setViewport({ width: 1920, height: 1080 });
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
             await page.setExtraHTTPHeaders({
                 'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
                 'sec-ch-ua-mobile': '?0',
@@ -183,19 +185,21 @@ export default async function handler(request, response) {
                 'referer': 'https://www.google.com/'
             });
 
+            log.info('Initial page URL: ' + page.url());
+
             // Warming/Bypass
-            log.info('Warming Tesco session...');
-            await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch(() => log.warning('Warming navigation timed out, continuing...'));
-            await new Promise(r => setTimeout(r, 3000));
+            log.info('Warming Tesco Groceries session...');
+            await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch((e) => log.warning('Warming groceries navigation failed: ' + e.message + ', continuing...'));
+            await new Promise(r => setTimeout(r, 4000));
             
-            log.info('Navigating to target: ' + url);
-            const navResponse = await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
-                log.error('Primary navigation failed: ' + e.message);
+            log.info('Navigating to target browse URL: ' + targetUrl);
+            const navResponse = await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
+                log.error('Primary target navigation failed: ' + e.message);
                 return null;
             });
 
             if (!navResponse) {
-                log.warning('Attempting to proceed despite navigation error...');
+                log.warning('Attempting to proceed despite target navigation error...');
             }
 
             // Cookie Acceptance
@@ -211,7 +215,7 @@ export default async function handler(request, response) {
             // Wait for products - more robust selectors
             log.info('Waiting for product items...');
             const productSelector = 'li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, .styles__StyledTiledQueryResult-sc';
-            await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
+            await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));`;
 
             // Debugging capture
             try {
@@ -878,8 +882,15 @@ export default async function handler(request, response) {
         );
 
         if (tescoStartUrls.length > 0) {
+          const mappedTescoUrls = tescoStartUrls.map(u => ({
+            url: 'https://www.tesco.com/',
+            userData: {
+              ...u.userData,
+              targetUrl: u.url
+            }
+          }));
           const run = await client.actor('apify/puppeteer-scraper').start({
-            startUrls: tescoStartUrls,
+            startUrls: mappedTescoUrls,
             pageFunction: TESCO_RESILIENT_FUNCTION,
             proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'], countryCode: 'GB' },
             useStealth: true,
