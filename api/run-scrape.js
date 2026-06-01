@@ -169,7 +169,7 @@ export default async function handler(request, response) {
       }
 
       if (startUrls.length > 0) {
-        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, pushData, setValue }) => {
+        const TESCO_RESILIENT_FUNCTION = `async ({ page, request, log, enqueueLinks, pushData }) => {
             const { url, userData: { retailer, label } } = request;
             
             await page.setViewport({ width: 1920, height: 1080 });
@@ -213,10 +213,11 @@ export default async function handler(request, response) {
 
             // Debugging capture
             try {
+                const { Actor } = await import('apify');
                 const screenshot = await page.screenshot({ fullPage: true });
-                await setValue('TESCO_PAGE_CAPTURE', screenshot, { contentType: 'image/png' });
+                await Actor.setValue('TESCO_PAGE_CAPTURE', screenshot, { contentType: 'image/png' });
                 const html = await page.content();
-                await setValue('TESCO_PAGE_HTML', html, { contentType: 'text/html' });
+                await Actor.setValue('TESCO_PAGE_HTML', html, { contentType: 'text/html' });
                 log.info('Saved TESCO_PAGE_CAPTURE and TESCO_PAGE_HTML to key-value store.');
             } catch (err) {
                 log.warning('Failed to save debug capture: ' + err.message);
