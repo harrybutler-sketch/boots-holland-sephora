@@ -115,7 +115,7 @@ export default async function handler(request, response) {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24'
+          'https://www.tesco.com/shop/en-GB/browse/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24#top'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
@@ -208,7 +208,7 @@ export default async function handler(request, response) {
 
             // Wait for products - more robust selectors
             log.info('Waiting for product items...');
-            const productSelector = 'li[class*="Tile"], [data-testid="product-tile"], .product-list--item, .styles__StyledTiledQueryResult-sc';
+            const productSelector = 'li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, .styles__StyledTiledQueryResult-sc';
             await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
 
             // Scroll for hydration
@@ -220,14 +220,14 @@ export default async function handler(request, response) {
 
             // Extraction
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], .product-list--item, article, [class*="StyledTiledQueryResult"] li'));
+                const tiles = Array.from(document.querySelectorAll('li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, article, [class*="StyledTiledQueryResult"] li'));
                 return tiles.map(tile => {
                     const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"], [data-testid="product-title"]');
                     if (!nameEl) return null;
                     const name = nameEl.innerText.trim();
                     if (!name || name.length < 3) return null;
 
-                    const priceEl = tile.querySelector('p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price, .styles__StyledPrice-sc');
+                    const priceEl = tile.querySelector('p[class*="PriceText"], p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price, .styles__StyledPrice-sc');
                     const imgEl = tile.querySelector('img');
 
                     return {

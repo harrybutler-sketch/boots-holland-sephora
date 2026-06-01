@@ -102,7 +102,7 @@ export const handler = async (event, context) => {
       }
       if (pRetailers.some(r => r.includes('tesco'))) {
         const tescoUrls = [
-          'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24'
+          'https://www.tesco.com/shop/en-GB/browse/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24#top'
         ];
         tescoUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Tesco', label: 'LISTING' } }));
       }
@@ -187,7 +187,7 @@ export const handler = async (event, context) => {
 
             // Wait for products
             log.info('Waiting for product items...');
-            const productSelector = 'li[class*="Tile"], [data-testid="product-tile"], .product-list--item';
+            const productSelector = 'li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item';
             await page.waitForSelector(productSelector, { timeout: 30000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
 
             // Scroll for hydration
@@ -198,14 +198,14 @@ export const handler = async (event, context) => {
 
             // Extraction
             const products = await page.evaluate(() => {
-                const tiles = Array.from(document.querySelectorAll('li[class*="Tile"], [data-testid="product-tile"], .product-list--item, article'));
+                const tiles = Array.from(document.querySelectorAll('li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, article'));
                 return tiles.map(tile => {
                     const nameEl = tile.querySelector('h2 a, a[class*="titleLink"], a[href*="/products/"]');
                     if (!nameEl) return null;
                     const name = nameEl.innerText.trim();
                     if (!name || name.length < 3) return null;
 
-                    const priceEl = tile.querySelector('p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price');
+                    const priceEl = tile.querySelector('p[class*="PriceText"], p[class*="priceText"], .ddsweb-price--primary, [data-testid="unit-price"], .price');
                     const imgEl = tile.querySelector('img');
 
                     return {
