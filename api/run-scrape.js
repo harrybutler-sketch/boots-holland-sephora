@@ -215,7 +215,7 @@ export default async function handler(request, response) {
             // Wait for products - more robust selectors
             log.info('Waiting for product items...');
             const productSelector = 'li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, .styles__StyledTiledQueryResult-sc';
-            await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));`;
+            await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
 
             // Debugging capture
             try {
@@ -266,17 +266,17 @@ export default async function handler(request, response) {
                     };
                 }).filter(Boolean);
             });
-
-            log.info(\`Found \${products.length} products total.\`);
-
+ 
+            log.info('Found ' + products.length + ' products total.');
+ 
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
                 const isOwnBrand = ln.includes('tesco') || ln.includes('finest') || ln.includes('stockwell') || ln.includes('ms price');
                 return !isOwnBrand;
             });
-
-            log.info(\`Filtered to \${filtered.length} non-own-brand products.\`);
-
+ 
+            log.info('Filtered to ' + filtered.length + ' non-own-brand products.');
+ 
             for (const p of filtered) {
                 await pushData(p);
             }

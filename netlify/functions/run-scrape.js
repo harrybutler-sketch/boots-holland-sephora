@@ -236,7 +236,7 @@ export const handler = async (event, context) => {
                 }).filter(Boolean);
             });
 
-            log.info(\`Found \${products.length} products total.\`);
+            log.info('Found ' + products.length + ' products total.');
 
             const filtered = products.filter(p => {
                 const ln = p.product_name.toLowerCase();
@@ -244,7 +244,7 @@ export const handler = async (event, context) => {
                 return !isOwnBrand;
             });
 
-            log.info(\`Filtered to \${filtered.length} non-own-brand products.\`);
+            log.info('Filtered to ' + filtered.length + ' non-own-brand products.');
 
             for (const p of filtered) {
                 await pushData(p);
