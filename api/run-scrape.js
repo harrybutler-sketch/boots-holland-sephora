@@ -211,6 +211,18 @@ export default async function handler(request, response) {
             const productSelector = 'li.product-list--list-item, li[class*="Tile"], [data-testid="product-tile"], [class*="product-list"] li, .product-list--item, .styles__StyledTiledQueryResult-sc';
             await page.waitForSelector(productSelector, { timeout: 45000 }).catch(() => log.warning('Timeout waiting for products. Still attempting extraction.'));
 
+            // Debugging capture
+            try {
+                const { Actor } = require('apify');
+                const screenshot = await page.screenshot({ fullPage: true });
+                await Actor.setValue('TESCO_PAGE_CAPTURE', screenshot, { contentType: 'image/png' });
+                const html = await page.content();
+                await Actor.setValue('TESCO_PAGE_HTML', html, { contentType: 'text/html' });
+                log.info('Saved TESCO_PAGE_CAPTURE and TESCO_PAGE_HTML to key-value store.');
+            } catch (err) {
+                log.warning('Failed to save debug capture: ' + err.message);
+            }
+
             // Scroll for hydration
             log.info('Scrolling for hydration...');
             for (let i = 0; i < 12; i++) {
