@@ -6,7 +6,14 @@ const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
 
 async function triggerTescoScrape() {
     const startUrls = [
-        { url: 'https://www.tesco.com/groceries/en-GB/shop/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24', userData: { retailer: 'Tesco', label: 'LISTING' } }
+        { 
+            url: 'https://www.tesco.com/', 
+            userData: { 
+                retailer: 'Tesco', 
+                label: 'LISTING',
+                targetUrl: 'https://www.tesco.com/shop/en-GB/browse/drinks/all?sortBy=relevance&facetsArgs=new%3Atrue&count=24#top' 
+            } 
+        }
     ];
 
     console.log('Triggering Tesco RESILIENT Scraper (Restored April 27th Logic)...');
@@ -26,31 +33,47 @@ async function triggerTescoScrape() {
             pageFunctionTimeoutSecs: 600,
             handlePageTimeoutSecs: 600,
             navigationTimeoutSecs: 120,
-            pageFunction: `async ({ page, request, log, enqueueLinks, response }) => {
-                const { url, userData: { retailer, label } } = request;
+            pageFunction: `async ({ page, request, log, enqueueLinks, response, keyValueStore }) => {
+                const { userData: { targetUrl, retailer, label } } = request;
                 
+                await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
                 await page.setViewport({ width: 1920, height: 1080 });
                 await page.setExtraHTTPHeaders({
                     'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
                     'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-                    'referer': 'https://www.google.com/'
+                    'sec-ch-ua-platform': '"Linux"',
+                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8'
                 });
 
                 // Warming/Bypass
                 log.info('Warming Tesco session...');
-                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch(() => log.warning('Warming navigation timed out, continuing...'));
-                await new Promise(r => setTimeout(r, 3000));
+                await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch((err) => log.warning('Warming navigation timed out: ' + err.message + ', continuing...'));
+                await new Promise(r => setTimeout(r, 4000));
                 
-                log.info('Navigating to target: ' + url);
-                const navResponse = await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
-                    log.error('Primary navigation failed: ' + e.message);
-                    return null;
-                });
+                // Map targetUrl to groceries format if needed
+                let finalUrl = targetUrl;
+                if (finalUrl && finalUrl.includes('/shop/en-GB/browse/')) {
+                    finalUrl = finalUrl.replace('/shop/en-GB/browse/', '/groceries/en-GB/shop/');
+                }
+                
+                log.info('Navigating to target: ' + finalUrl);
+                await page.evaluate((target) => {
+                    window.location.href = target;
+                }, finalUrl);
 
-                if (!navResponse) {
-                    log.warning('Attempting to proceed despite navigation error...');
+                await page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }).catch(e => {
+                    log.warning('Target navigation timed out: ' + e.message + ', continuing...');
+                });
+                await new Promise(r => setTimeout(r, 5000));
+
+                // Save debug capture
+                try {
+                    const screenshot = await page.screenshot({ fullPage: true });
+                    await keyValueStore.setValue('TESCO_PAGE_CAPTURE', screenshot, { contentType: 'image/png' });
+                    const html = await page.content();
+                    await keyValueStore.setValue('TESCO_PAGE_HTML', html, { contentType: 'text/html' });
+                } catch (e) {
+                    log.warning('Failed to save captures: ' + e.message);
                 }
 
                 // Cookie Acceptance

@@ -117,7 +117,22 @@ export const handler = async (event, context) => {
           'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:2',
           'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:3',
           'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:4',
-          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:5'
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:5',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-chilled/opt/page:6',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-frozen/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newhousehold',
+          'https://www.sainsburys.co.uk/gol-ui/features/newhousehold/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:3',
+          'https://www.sainsburys.co.uk/gol-ui/features/newdrinks/opt/page:4',
+          'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard/opt/page:2',
+          'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard/opt/page:3',
+          'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard/opt/page:4',
+          'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard/opt/page:5',
+          'https://www.sainsburys.co.uk/gol-ui/features/newfoodcupboard/opt/page:6',
+          'https://www.sainsburys.co.uk/gol-ui/features/new-in-bakery'
         ];
         sainsburyUrls.forEach(url => startUrls.push({ url, userData: { retailer: 'Sainsburys', label: 'LISTING' } }));
       }
@@ -180,15 +195,22 @@ export const handler = async (event, context) => {
             await page.goto('https://www.tesco.com/groceries/en-GB/', { waitUntil: 'networkidle2', timeout: 60000 }).catch((e) => log.warning('Warming groceries navigation failed: ' + e.message + ', continuing...'));
             await new Promise(r => setTimeout(r, 4000));
             
-            log.info('Navigating to target browse URL: ' + targetUrl);
-            const navResponse = await page.goto(targetUrl, { referer: 'https://www.tesco.com/groceries/en-GB/', waitUntil: 'networkidle2', timeout: 90000 }).catch(e => {
-                log.error('Primary target navigation failed: ' + e.message);
-                return null;
-            });
-
-            if (!navResponse) {
-                log.warning('Attempting to proceed despite target navigation error...');
+            // Map targetUrl to groceries format to naturally trigger session validation redirects
+            let finalTargetUrl = targetUrl;
+            if (finalTargetUrl.includes('/shop/en-GB/browse/')) {
+                finalTargetUrl = finalTargetUrl.replace('/shop/en-GB/browse/', '/groceries/en-GB/shop/');
             }
+            
+            log.info('Navigating to target browse URL via client-side window.location.href: ' + finalTargetUrl);
+            await page.evaluate((url) => {
+                window.location.href = url;
+            }, finalTargetUrl);
+
+            // Wait for navigation load event (preserves TLS session context of established connection)
+            await page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }).catch(e => {
+                log.warning('Primary target navigation wait timed out: ' + e.message + ', continuing...');
+            });
+            await new Promise(r => setTimeout(r, 5000));
 
             // Cookie Acceptance
             try {
