@@ -229,8 +229,24 @@ function App() {
     if (currentView !== 'dashboard') setCurrentView('dashboard');
   };
 
-  const handleExportCSV = () => {
-    if (data.length === 0) {
+  const handleExportCSV = (filterType = 'filtered') => {
+    let exportData = data;
+    
+    if (filterType === 'prospects') {
+      exportData = data.filter(item => {
+        if (filters.hideDealt && item.status === 'Dealt With') return false;
+        return !clientList.some(c => item.manufacturer?.toLowerCase().includes(c.toLowerCase()) || item.product_name?.toLowerCase().includes(c.toLowerCase()));
+      });
+    } else if (filterType === 'clients') {
+      exportData = data.filter(item => {
+        if (filters.hideDealt && item.status === 'Dealt With') return false;
+        return clientList.some(c => item.manufacturer?.toLowerCase().includes(c.toLowerCase()) || item.product_name?.toLowerCase().includes(c.toLowerCase()));
+      });
+    } else {
+      exportData = displayData;
+    }
+
+    if (exportData.length === 0) {
       alert('No data to export.');
       return;
     }
@@ -238,7 +254,7 @@ function App() {
     const headers = ['Date Found', 'Retailer', 'Manufacturer', 'Product', 'Price', 'Rating', 'Review Count', 'Product URL', 'Image URL'];
     const csvContent = [
       headers.join(','),
-      ...data.map(item => [
+      ...exportData.map(item => [
         item.date_found,
         `"${item.retailer}"`,
         `"${item.manufacturer}"`,
@@ -255,7 +271,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `scraper_export_${workspace}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `scraper_export_${filterType}_${workspace}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

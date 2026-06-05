@@ -1,6 +1,8 @@
+import React, { useState } from 'react';
 
 function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrape, onReset, onExportCSV, selectedRetailers, onToggleRetailer, onTestConnection }) {
     const isRunning = runStatus === 'RUNNING';
+    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
     // Retailer sets
     const beautyRetailers = ['Sephora', 'Holland & Barrett', 'Boots', 'Superdrug', 'Cult Beauty', 'Look Fantastic', 'Space NK'];
@@ -78,13 +80,116 @@ function Controls({ workspace, onWorkspaceChange, runStatus, lastRun, onRunScrap
                         </button>
                     </div>
                     <div style={{ flex: 1 }}></div>
-                    <button
-                        className="btn"
-                        onClick={onExportCSV}
-                        style={{ padding: '0.75rem 1.5rem', fontSize: '0.9rem', background: 'white', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
-                    >
-                        📥 Export CSV
-                    </button>
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            className="btn"
+                            onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                            style={{
+                                padding: '0.75rem 1.5rem',
+                                fontSize: '0.9rem',
+                                background: 'white',
+                                color: 'var(--color-text-primary)',
+                                border: '1px solid var(--color-border)',
+                                boxShadow: 'var(--shadow-sm)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <span>📥 Export CSV</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>▼</span>
+                        </button>
+                        {exportDropdownOpen && (
+                            <>
+                                <div 
+                                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} 
+                                    onClick={() => setExportDropdownOpen(false)} 
+                                />
+                                <div style={{
+                                    position: 'absolute',
+                                    right: 0,
+                                    top: 'calc(100% + 8px)',
+                                    background: 'white',
+                                    borderRadius: 'var(--radius-md)',
+                                    boxShadow: 'var(--shadow-lg)',
+                                    border: '1px solid var(--color-border)',
+                                    zIndex: 1000,
+                                    minWidth: '240px',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'stretch'
+                                }}>
+                                    <button 
+                                        onClick={() => { onExportCSV('prospects'); setExportDropdownOpen(false); }}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            textAlign: 'left',
+                                            background: 'none',
+                                            border: 'none',
+                                            borderBottom: '1px solid var(--color-border)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.875rem',
+                                            color: 'var(--color-text-primary)',
+                                            fontWeight: '500',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            width: '100%'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                        <span>🔍</span> Export Prospects (Non-Clients)
+                                    </button>
+                                    <button 
+                                        onClick={() => { onExportCSV('clients'); setExportDropdownOpen(false); }}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            textAlign: 'left',
+                                            background: 'none',
+                                            border: 'none',
+                                            borderBottom: '1px solid var(--color-border)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.875rem',
+                                            color: 'var(--color-text-primary)',
+                                            fontWeight: '500',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            width: '100%'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                        <span>⭐</span> Export Existing Clients
+                                    </button>
+                                    <button 
+                                        onClick={() => { onExportCSV('filtered'); setExportDropdownOpen(false); }}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            textAlign: 'left',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontSize: '0.875rem',
+                                            color: 'var(--color-text-primary)',
+                                            fontWeight: '500',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            width: '100%'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                        <span>📄</span> Export Current View (Filtered)
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
